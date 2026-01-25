@@ -1,0 +1,58 @@
+{
+  "common": {
+    "internal": "An internal error occurred",
+    "notFound": "Resource not found",
+    "badRequest": "Invalid request",
+    "unauthorized": "Not authenticated",
+    "forbidden": "Access forbidden",
+    "conflict": "Data conflict",
+    "tooManyRequests": "Too many requests, please try again later",
+    "serviceUnavailable": "Service temporarily unavailable"
+  },
+  "auth": {
+    "invalidCredentials": "Invalid email or password",
+    "emailNotVerified": "Please verify your email before logging in",
+    "accountDisabled": "Your account has been disabled",
+    "tokenExpired": "Your session has expired, please log in again",
+    "tokenInvalid": "Invalid token",
+    "2faRequired": "2FA verification code required",
+    "2faInvalid": "Invalid 2FA code",
+    "2faExpired": "2FA code expired, please request a new one",
+    "refreshTokenInvalid": "Invalid session, please log in again"
+  },
+  "user": {
+    "notFound": "User not found",
+    "emailExists": "This email address is already in use",
+    "invalidPassword": "Current password is incorrect",
+    "cannotDeleteWithActiveSubscriptions": "Cannot delete account with active subscriptions"
+  },
+  "catalog": {
+    "productNotFound": "Product not found",
+    "categoryNotFound": "Category not found",
+    "categoryHasProducts": "Cannot delete a category containing products",
+    "invalidProductType": "Invalid product type"
+  },
+  "order": {
+    "cartEmpty": "Your cart is empty",
+    "cartItemNotFound": "Item not found in cart",
+    "saasNotInCart": "SaaS services must be subscribed directly, not via cart",
+    "productUnavailable": "This product is no longer available",
+    "insufficientStock": "Insufficient stock for {productName} (available: {available})",
+    "checkoutExpired": "Your checkout session has expired",
+    "orderNotFound": "Order not found",
+    "invalidOrderStatus": "Invalid status transition",
+    "cannotCancelPaidOrder": "Cannot cancel an already paid order"
+  },
+  "payment": {
+    "failed": "Payment failed",
+    "subscriptionNotFound": "Subscription not found",
+    "subscriptionAlreadyCancelled": "This subscription is already cancelled",
+    "invalidBillingPeriod": "Invalid billing period",
+    "paymentMethodNotFound": "Payment method not found",
+    "cannotDeleteDefaultPaymentMethod": "Cannot delete default payment method"
+  },
+  "content": {
+    "slideNotFound": "Slide not found",
+    "messageNotFound": "Message not found"
+  }
+}

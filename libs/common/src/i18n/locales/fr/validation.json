@@ -1,0 +1,56 @@
+{
+  "password": {
+    "weak": "Le mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial",
+    "minLength": "Le mot de passe doit contenir au moins {min} caractères",
+    "maxLength": "Le mot de passe ne doit pas dépasser {max} caractères"
+  },
+  "email": {
+    "invalid": "L'adresse email n'est pas valide",
+    "required": "L'adresse email est requise",
+    "maxLength": "L'adresse email ne doit pas dépasser {max} caractères"
+  },
+  "string": {
+    "required": "Ce champ est requis",
+    "minLength": "Ce champ doit contenir au moins {min} caractères",
+    "maxLength": "Ce champ ne doit pas dépasser {max} caractères",
+    "notEmpty": "Ce champ ne peut pas être vide"
+  },
+  "number": {
+    "min": "La valeur doit être supérieure ou égale à {min}",
+    "max": "La valeur doit être inférieure ou égale à {max}",
+    "positive": "La valeur doit être positive",
+    "integer": "La valeur doit être un nombre entier"
+  },
+  "phone": {
+    "invalid": "Le numéro de téléphone n'est pas valide"
+  },
+  "slug": {
+    "invalid": "Le slug doit contenir uniquement des lettres minuscules, des chiffres et des tirets"
+  },
+  "code2fa": {
+    "invalid": "Le code doit contenir exactement 6 chiffres"
+  },
+  "confirmation": {
+    "delete": "La confirmation doit être \"DELETE\""
+  },
+  "array": {
+    "minSize": "Le tableau doit contenir au moins {min} élément(s)",
+    "maxSize": "Le tableau ne doit pas contenir plus de {max} élément(s)"
+  },
+  "uuid": {
+    "invalid": "L'identifiant n'est pas valide"
+  },
+  "enum": {
+    "invalid": "La valeur doit être parmi: {values}"
+  },
+  "date": {
+    "invalid": "La date n'est pas valide"
+  },
+  "url": {
+    "invalid": "L'URL n'est pas valide"
+  },
+  "file": {
+    "invalidType": "Type de fichier non supporté",
+    "tooLarge": "Le fichier est trop volumineux (max: {max})"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "common": {
+    "internal": "Une erreur interne est survenue",
+    "notFound": "Ressource non trouvée",
+    "badRequest": "Requête invalide",
+    "unauthorized": "Non authentifié",
+    "forbidden": "Accès interdit",
+    "conflict": "Conflit de données",
+    "tooManyRequests": "Trop de requêtes, veuillez réessayer plus tard",
+    "serviceUnavailable": "Service temporairement indisponible"
+  },
+  "auth": {
+    "invalidCredentials": "Email ou mot de passe incorrect",
+    "emailNotVerified": "Veuillez vérifier votre email avant de vous connecter",
+    "accountDisabled": "Votre compte a été désactivé",
+    "tokenExpired": "Votre session a expiré, veuillez vous reconnecter",
+    "tokenInvalid": "Token invalide",
+    "2faRequired": "Code de vérification 2FA requis",
+    "2faInvalid": "Code 2FA invalide",
+    "2faExpired": "Code 2FA expiré, veuillez en demander un nouveau",
+    "refreshTokenInvalid": "Session invalide, veuillez vous reconnecter"
+  },
+  "user": {
+    "notFound": "Utilisateur non trouvé",
+    "emailExists": "Cette adresse email est déjà utilisée",
+    "invalidPassword": "Le mot de passe actuel est incorrect",
+    "cannotDeleteWithActiveSubscriptions": "Impossible de supprimer un compte avec des abonnements actifs"
+  },
+  "catalog": {
+    "productNotFound": "Produit non trouvé",
+    "categoryNotFound": "Catégorie non trouvée",
+    "categoryHasProducts": "Impossible de supprimer une catégorie contenant des produits",
+    "invalidProductType": "Type de produit invalide"
+  },
+  "order": {
+    "cartEmpty": "Votre panier est vide",
+    "cartItemNotFound": "Article non trouvé dans le panier",
+    "saasNotInCart": "Les services SaaS doivent être souscrits directement, pas via le panier",
+    "productUnavailable": "Ce produit n'est plus disponible",
+    "insufficientStock": "Stock insuffisant pour {productName} (disponible: {available})",
+    "checkoutExpired": "Votre session de paiement a expiré",
+    "orderNotFound": "Commande non trouvée",
+    "invalidOrderStatus": "Transition de statut invalide",
+    "cannotCancelPaidOrder": "Impossible d'annuler une commande déjà payée"
+  },
+  "payment": {
+    "failed": "Le paiement a échoué",
+    "subscriptionNotFound": "Abonnement non trouvé",
+    "subscriptionAlreadyCancelled": "Cet abonnement est déjà annulé",
+    "invalidBillingPeriod": "Période de facturation invalide",
+    "paymentMethodNotFound": "Méthode de paiement non trouvée",
+    "cannotDeleteDefaultPaymentMethod": "Impossible de supprimer la méthode de paiement par défaut"
+  },
+  "content": {
+    "slideNotFound": "Slide non trouvé",
+    "messageNotFound": "Message non trouvé"
+  }
+}

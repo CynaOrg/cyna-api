@@ -1,0 +1,44 @@
+{
+  "success": {
+    "created": "Created successfully",
+    "updated": "Updated successfully",
+    "deleted": "Deleted successfully",
+    "saved": "Saved successfully"
+  },
+  "messages": {
+    "welcome": "Welcome to CYNA",
+    "loggedOut": "Logged out successfully",
+    "verificationEmailSent": "A verification email has been sent",
+    "passwordResetEmailSent": "A password reset email has been sent",
+    "emailVerified": "Email verified successfully",
+    "passwordReset": "Password reset successfully",
+    "2faCodeSent": "2FA code sent by email",
+    "2faCodeResent": "2FA code resent"
+  },
+  "labels": {
+    "email": "Email",
+    "password": "Password",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "companyName": "Company",
+    "phone": "Phone",
+    "address": "Address",
+    "city": "City",
+    "postalCode": "Postal code",
+    "country": "Country"
+  },
+  "pagination": {
+    "page": "Page",
+    "of": "of",
+    "results": "results",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "pending": "Pending",
+    "completed": "Completed",
+    "cancelled": "Cancelled"
+  }
+}

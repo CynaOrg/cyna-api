@@ -1,0 +1,56 @@
+{
+  "password": {
+    "weak": "Password must contain at least 8 characters, one uppercase, one lowercase, one number and one special character",
+    "minLength": "Password must be at least {min} characters",
+    "maxLength": "Password must not exceed {max} characters"
+  },
+  "email": {
+    "invalid": "Email address is not valid",
+    "required": "Email address is required",
+    "maxLength": "Email must not exceed {max} characters"
+  },
+  "string": {
+    "required": "This field is required",
+    "minLength": "This field must be at least {min} characters",
+    "maxLength": "This field must not exceed {max} characters",
+    "notEmpty": "This field cannot be empty"
+  },
+  "number": {
+    "min": "Value must be greater than or equal to {min}",
+    "max": "Value must be less than or equal to {max}",
+    "positive": "Value must be positive",
+    "integer": "Value must be an integer"
+  },
+  "phone": {
+    "invalid": "Phone number is not valid"
+  },
+  "slug": {
+    "invalid": "Slug must contain only lowercase letters, numbers and hyphens"
+  },
+  "code2fa": {
+    "invalid": "Code must be exactly 6 digits"
+  },
+  "confirmation": {
+    "delete": "Confirmation must be \"DELETE\""
+  },
+  "array": {
+    "minSize": "Array must contain at least {min} element(s)",
+    "maxSize": "Array must not contain more than {max} element(s)"
+  },
+  "uuid": {
+    "invalid": "Identifier is not valid"
+  },
+  "enum": {
+    "invalid": "Value must be one of: {values}"
+  },
+  "date": {
+    "invalid": "Date is not valid"
+  },
+  "url": {
+    "invalid": "URL is not valid"
+  },
+  "file": {
+    "invalidType": "File type not supported",
+    "tooLarge": "File is too large (max: {max})"
+  }
+}

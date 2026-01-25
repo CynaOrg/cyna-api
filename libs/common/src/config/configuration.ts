@@ -29,6 +29,20 @@ export interface AppConfiguration {
   cors: {
     origins: string[];
   };
+  database: {
+    host: string;
+    port: number;
+    username: string;
+    password: string;
+    database: string;
+    synchronize: boolean;
+    logging: boolean;
+  };
+  redis: {
+    host: string;
+    port: number;
+    ttl: number;
+  };
 }
 
 export default (): AppConfiguration => ({
@@ -56,5 +70,19 @@ export default (): AppConfiguration => ({
   },
   cors: {
     origins: (process.env.CORS_ORIGINS || 'http://localhost:4200').split(','),
+  },
+  database: {
+    host: process.env.DATABASE_HOST || 'localhost',
+    port: parseInt(process.env.DATABASE_PORT || '5432', 10),
+    username: process.env.DATABASE_USER || 'cyna',
+    password: process.env.DATABASE_PASSWORD || 'cyna_dev',
+    database: process.env.DATABASE_NAME || 'cyna_db',
+    synchronize: process.env.DATABASE_SYNC === 'true',
+    logging: process.env.DATABASE_LOGGING === 'true',
+  },
+  redis: {
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    ttl: parseInt(process.env.REDIS_TTL || '3600', 10),
   },
 });

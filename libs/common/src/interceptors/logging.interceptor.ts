@@ -8,7 +8,7 @@ import {
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Request, Response } from 'express';
-import { getCorrelationId } from '@cyna/common/logger';
+import { getCorrelationId } from '@cyna-api/common/logger';
 
 /**
  * Logging Interceptor

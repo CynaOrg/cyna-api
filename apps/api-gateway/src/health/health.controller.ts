@@ -1,7 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
-import { RabbitMQService, Public } from '@cyna/common';
+import { RabbitMQService, Public } from '@cyna-api/common';
 
 interface HealthResponse {
   status: 'ok' | 'degraded' | 'error';

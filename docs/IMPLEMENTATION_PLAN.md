@@ -17,7 +17,7 @@
 │                                                                 │
 │   ✅ ON FAIT :                                                  │
 │      • API Gateway (structure vide, pas de routes métier)      │
-│      • Bibliothèque @cyna/common partagée                      │
+│      • Bibliothèque @cyna-api/common partagée                      │
 │      • Connexion RabbitMQ + Exchanges + Patterns               │
 │      • Swagger, Logger, i18n, Exceptions                       │
 │                                                                 │
@@ -82,7 +82,7 @@ RabbitMQ: 5672 (AMQP) / 15672 (Management)
 ```
 Créer un monorepo NestJS 11 avec :
 - Une seule application : api-gateway
-- Une bibliothèque partagée : @cyna/common
+- Une bibliothèque partagée : @cyna-api/common
 
 NE PAS créer d'autres applications.
 Les microservices seront ajoutés plus tard via "nest g app <name>".

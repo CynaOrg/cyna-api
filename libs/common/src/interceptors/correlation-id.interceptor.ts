@@ -10,7 +10,7 @@ import {
   runWithContext,
   generateCorrelationId,
   RequestContext,
-} from '@cyna/common/logger';
+} from '@cyna-api/common/logger';
 
 const CORRELATION_ID_HEADER = 'x-correlation-id';
 

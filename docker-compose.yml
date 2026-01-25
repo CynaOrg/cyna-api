@@ -10,6 +10,7 @@ services:
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+      - ./docker/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 30s
@@ -18,8 +19,45 @@ services:
     networks:
       - cyna-network
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: cyna-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: cyna
+      POSTGRES_PASSWORD: cyna_dev
+      POSTGRES_DB: cyna_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cyna -d cyna_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cyna-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: cyna-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - cyna-network
+
 volumes:
   rabbitmq_data:
+  postgres_data:
+  redis_data:
 
 networks:
   cyna-network:

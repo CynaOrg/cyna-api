@@ -35,4 +35,18 @@ export const envValidationSchema = Joi.object({
 
   // CORS
   CORS_ORIGINS: Joi.string().default('http://localhost:4200,http://localhost:8100'),
+
+  // PostgreSQL
+  DATABASE_HOST: Joi.string().default('localhost'),
+  DATABASE_PORT: Joi.number().port().default(5432),
+  DATABASE_USER: Joi.string().default('cyna'),
+  DATABASE_PASSWORD: Joi.string().default('cyna_dev'),
+  DATABASE_NAME: Joi.string().default('cyna_db'),
+  DATABASE_SYNC: Joi.boolean().default(false),
+  DATABASE_LOGGING: Joi.boolean().default(true),
+
+  // Redis
+  REDIS_HOST: Joi.string().default('localhost'),
+  REDIS_PORT: Joi.number().port().default(6379),
+  REDIS_TTL: Joi.number().integer().positive().default(3600),
 }).unknown(true); // Allow other environment variables

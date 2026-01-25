@@ -13,7 +13,7 @@ import {
   LoggingInterceptor,
   TransformInterceptor,
   CorrelationIdInterceptor,
-} from '@cyna/common';
+} from '@cyna-api/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(GatewayModule, {

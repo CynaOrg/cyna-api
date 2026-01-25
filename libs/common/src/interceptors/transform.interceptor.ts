@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { getCorrelationId } from '@cyna/common/logger';
+import { getCorrelationId } from '@cyna-api/common/logger';
 
 /**
  * Standard API Response structure

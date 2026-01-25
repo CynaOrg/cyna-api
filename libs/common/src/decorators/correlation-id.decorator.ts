@@ -1,5 +1,5 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { getCorrelationId } from '@cyna/common/logger';
+import { getCorrelationId } from '@cyna-api/common/logger';
 
 /**
  * @CorrelationId() decorator

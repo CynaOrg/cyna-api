@@ -4,7 +4,7 @@ import {
   LoggerModule,
   CynaI18nModule,
   RabbitMQModule,
-} from '@cyna/common';
+} from '@cyna-api/common';
 import { HealthModule } from './health/health.module';
 
 /**
@@ -13,7 +13,7 @@ import { HealthModule } from './health/health.module';
  */
 @Module({
   imports: [
-    // Core modules from @cyna/common
+    // Core modules from @cyna-api/common
     CynaConfigModule,
     LoggerModule,
     CynaI18nModule,

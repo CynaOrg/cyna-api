@@ -97,7 +97,7 @@ function createClientOptions(name: string, queue: string): ClientAsyncOptions {
         queueOptions: {
           durable: true,
         },
-        noAck: false,
+        noAck: true,
         prefetchCount: 10,
       },
     }),

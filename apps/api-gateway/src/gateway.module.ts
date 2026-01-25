@@ -6,6 +6,7 @@ import {
   RabbitMQModule,
 } from '@cyna-api/common';
 import { HealthModule } from './health/health.module';
+import { AuthModule } from './auth/auth.module';
 
 /**
  * Gateway Module
@@ -21,6 +22,7 @@ import { HealthModule } from './health/health.module';
 
     // Feature modules
     HealthModule,
+    AuthModule,
   ],
 })
 export class GatewayModule {}

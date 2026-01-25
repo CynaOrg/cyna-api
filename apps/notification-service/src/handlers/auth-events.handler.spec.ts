@@ -1,0 +1,226 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { ConfigService } from '@nestjs/config';
+import { AuthEventsHandler } from './auth-events.handler';
+import { EmailService } from '../email/email.service';
+import { EmailTemplateService } from '../email/email-template.service';
+import { CynaLoggerService } from '@cyna-api/common';
+
+describe('AuthEventsHandler', () => {
+  let handler: AuthEventsHandler;
+  let mockEmailService: {
+    sendEmail: jest.Mock;
+  };
+  let mockEmailTemplateService: {
+    render: jest.Mock;
+  };
+  let mockLogger: {
+    log: jest.Mock;
+    error: jest.Mock;
+  };
+  let mockChannel: {
+    ack: jest.Mock;
+    nack: jest.Mock;
+  };
+  let mockContext: {
+    getChannelRef: jest.Mock;
+    getMessage: jest.Mock;
+  };
+
+  beforeEach(async () => {
+    mockEmailService = {
+      sendEmail: jest.fn().mockResolvedValue(true),
+    };
+
+    mockEmailTemplateService = {
+      render: jest.fn().mockReturnValue('<html>Rendered template</html>'),
+    };
+
+    mockLogger = {
+      log: jest.fn(),
+      error: jest.fn(),
+    };
+
+    mockChannel = {
+      ack: jest.fn(),
+      nack: jest.fn(),
+    };
+
+    mockContext = {
+      getChannelRef: jest.fn().mockReturnValue(mockChannel),
+      getMessage: jest.fn().mockReturnValue({}),
+    };
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        AuthEventsHandler,
+        {
+          provide: EmailService,
+          useValue: mockEmailService,
+        },
+        {
+          provide: EmailTemplateService,
+          useValue: mockEmailTemplateService,
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn((key: string, defaultValue: string) => {
+              const config: Record<string, string> = {
+                FRONTEND_URL: 'http://localhost:4200',
+                BACKOFFICE_URL: 'http://localhost:4201',
+              };
+              return config[key] ?? defaultValue;
+            }),
+          },
+        },
+        {
+          provide: CynaLoggerService,
+          useValue: mockLogger,
+        },
+      ],
+    }).compile();
+
+    handler = module.get<AuthEventsHandler>(AuthEventsHandler);
+  });
+
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('handleUserRegistered', () => {
+    const userRegisteredEvent = {
+      userId: 'user-123',
+      email: 'test@example.com',
+      firstName: 'John',
+      lastName: 'Doe',
+      verificationToken: 'verification-token-123',
+      language: 'fr' as const,
+    };
+
+    it('should send verification email and acknowledge message', async () => {
+      await handler.handleUserRegistered(userRegisteredEvent, mockContext as any);
+
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
+        'email-verification',
+        'fr',
+        {
+          firstName: 'John',
+          lastName: 'Doe',
+          verificationLink: 'http://localhost:4200/auth/verify-email?token=verification-token-123',
+          frontendUrl: 'http://localhost:4200',
+        },
+      );
+
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith({
+        to: 'test@example.com',
+        subject: 'Vérifiez votre adresse email - CYNA',
+        html: '<html>Rendered template</html>',
+      });
+
+      expect(mockChannel.ack).toHaveBeenCalled();
+      expect(mockLogger.log).toHaveBeenCalledWith(
+        'Verification email sent successfully to test@example.com',
+        'AuthEventsHandler',
+      );
+    });
+
+    it('should use English subject for English language', async () => {
+      const englishEvent = { ...userRegisteredEvent, language: 'en' as const };
+
+      await handler.handleUserRegistered(englishEvent, mockContext as any);
+
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Verify your email address - CYNA',
+        }),
+      );
+    });
+
+    it('should nack message on error', async () => {
+      mockEmailService.sendEmail.mockRejectedValueOnce(new Error('SMTP error'));
+
+      await handler.handleUserRegistered(userRegisteredEvent, mockContext as any);
+
+      expect(mockChannel.nack).toHaveBeenCalledWith({}, false, true);
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('handlePasswordResetRequested', () => {
+    const passwordResetEvent = {
+      userId: 'user-123',
+      email: 'test@example.com',
+      firstName: 'John',
+      resetToken: 'reset-token-123',
+      language: 'fr' as const,
+    };
+
+    it('should send password reset email and acknowledge message', async () => {
+      await handler.handlePasswordResetRequested(passwordResetEvent, mockContext as any);
+
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
+        'password-reset',
+        'fr',
+        {
+          firstName: 'John',
+          resetLink: 'http://localhost:4200/auth/reset-password?token=reset-token-123',
+          frontendUrl: 'http://localhost:4200',
+        },
+      );
+
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith({
+        to: 'test@example.com',
+        subject: 'Réinitialisez votre mot de passe - CYNA',
+        html: '<html>Rendered template</html>',
+      });
+
+      expect(mockChannel.ack).toHaveBeenCalled();
+    });
+  });
+
+  describe('handleAdmin2FACodeRequested', () => {
+    const admin2FAEvent = {
+      adminId: 'admin-123',
+      email: 'admin@example.com',
+      firstName: 'Admin',
+      code: '123456',
+      expiresInMinutes: 5,
+      language: 'fr' as const,
+    };
+
+    it('should send 2FA code email and acknowledge message', async () => {
+      await handler.handleAdmin2FACodeRequested(admin2FAEvent, mockContext as any);
+
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
+        'admin-2fa-code',
+        'fr',
+        {
+          firstName: 'Admin',
+          code: '123456',
+          expiresInMinutes: 5,
+          backofficeUrl: 'http://localhost:4201',
+        },
+      );
+
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith({
+        to: 'admin@example.com',
+        subject: 'Votre code de vérification - CYNA Admin',
+        html: '<html>Rendered template</html>',
+      });
+
+      expect(mockChannel.ack).toHaveBeenCalled();
+    });
+
+    it('should use English subject for English language', async () => {
+      const englishEvent = { ...admin2FAEvent, language: 'en' as const };
+
+      await handler.handleAdmin2FACodeRequested(englishEvent, mockContext as any);
+
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subject: 'Your verification code - CYNA Admin',
+        }),
+      );
+    });
+  });
+});

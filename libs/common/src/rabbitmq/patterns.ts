@@ -127,6 +127,7 @@ export const EVENT_PATTERNS = {
     USER_VERIFIED: 'auth.user.verified',
     USER_LOGIN: 'auth.user.login',
     ADMIN_LOGIN: 'auth.admin.login',
+    ADMIN_2FA_CODE_REQUESTED: 'auth.admin.2fa_code_requested',
     PASSWORD_RESET_REQUESTED: 'auth.password.reset.requested',
     PASSWORD_RESET_COMPLETED: 'auth.password.reset.completed',
   },

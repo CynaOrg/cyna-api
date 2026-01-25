@@ -8,9 +8,9 @@ import {
 } from '@nestjs/common';
 import { Response, Request } from 'express';
 import { I18nService, I18nContext } from 'nestjs-i18n';
-import { BaseException } from '../exceptions/base.exception';
-import { ERROR_CODES } from '../exceptions/error-codes';
-import { getCorrelationId } from '../logger/correlation-id.context';
+import { BaseException } from '@cyna/common/exceptions';
+import { ERROR_CODES } from '@cyna/common/exceptions';
+import { getCorrelationId } from '@cyna/common/logger';
 
 interface ErrorResponse {
   error: {

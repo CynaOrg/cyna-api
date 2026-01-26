@@ -9,8 +9,6 @@ import {
   ResendVerificationDto,
   ForgotPasswordDto,
   ResetPasswordDto,
-  RefreshTokenDto,
-  LogoutDto,
   AdminLoginDto,
   Verify2FADto,
   Resend2FADto,
@@ -40,9 +38,8 @@ export class AuthService {
   }
 
   async resendVerification(dto: ResendVerificationDto) {
-    return this.sendMessage(MESSAGE_PATTERNS.AUTH.VERIFY_EMAIL, {
+    return this.sendMessage(MESSAGE_PATTERNS.AUTH.RESEND_VERIFICATION, {
       email: dto.email,
-      resend: true
     });
   }
 
@@ -54,11 +51,11 @@ export class AuthService {
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.RESET_PASSWORD, dto);
   }
 
-  async refreshToken(dto: RefreshTokenDto) {
+  async refreshToken(dto: { refreshToken: string }) {
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.REFRESH_TOKEN, dto);
   }
 
-  async logout(userId: string, dto: LogoutDto) {
+  async logout(userId: string, dto: { refreshToken?: string }) {
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.LOGOUT, {
       userId,
       refreshToken: dto.refreshToken,
@@ -79,14 +76,14 @@ export class AuthService {
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.ADMIN_RESEND_2FA, dto);
   }
 
-  async adminRefreshToken(dto: RefreshTokenDto) {
+  async adminRefreshToken(dto: { refreshToken: string }) {
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.REFRESH_TOKEN, {
       ...dto,
       isAdmin: true,
     });
   }
 
-  async adminLogout(adminId: string, dto: LogoutDto) {
+  async adminLogout(adminId: string, dto: { refreshToken?: string }) {
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.LOGOUT, {
       adminId,
       refreshToken: dto.refreshToken,

@@ -69,7 +69,7 @@ export class AuthController {
     }
   }
 
-  @MessagePattern({ cmd: 'auth.resend_verification' })
+  @MessagePattern(MESSAGE_PATTERNS.AUTH.RESEND_VERIFICATION)
   async resendVerification(
     @Payload() data: ResendVerificationDto,
     @Ctx() context: RmqContext,

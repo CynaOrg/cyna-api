@@ -1,16 +1,8 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import * as jwt from 'jsonwebtoken';
-import {
-  IS_PUBLIC_KEY,
-  TokenInvalidException,
-  TokenExpiredException,
-} from '@cyna-api/common';
+import { IS_PUBLIC_KEY, TokenExpiredException, TokenInvalidException, } from '@cyna-api/common';
 import { JwtPayload, RequestUser } from '../interfaces';
 
 /**
@@ -49,13 +41,12 @@ export class JwtAuthGuard implements CanActivate {
       const payload = jwt.verify(token, secret) as JwtPayload;
 
       // 4. Attach user to request
-      const user: RequestUser = {
+      request.user = {
         id: payload.sub,
         email: payload.email,
         type: payload.type,
         role: payload.role,
       };
-      request.user = user;
 
       return true;
     } catch (error: any) {

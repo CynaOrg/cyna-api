@@ -4,7 +4,10 @@ import {
   Body,
   HttpCode,
   HttpStatus,
-  Request,
+  UseGuards,
+  Res,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -12,6 +15,9 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
+import { Request, Response } from 'express';
+import { Public } from '@cyna-api/common';
 import { AuthService } from './auth.service';
 import {
   AdminLoginDto,
@@ -20,12 +26,25 @@ import {
   RefreshTokenDto,
   LogoutDto,
 } from './dto';
+import { JwtAdminAuthGuard } from './guards';
+import { CurrentUser } from './decorators';
+
+const ADMIN_REFRESH_TOKEN_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'strict' as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  path: '/api/v1/auth/admin',
+};
 
 @ApiTags('Auth')
 @Controller('auth/admin')
+@UseGuards(JwtAdminAuthGuard)
 export class AdminAuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 req/min
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Admin login (Step 1) - Sends 2FA code' })
@@ -43,10 +62,13 @@ export class AdminAuthController {
   })
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ status: 403, description: 'Account disabled' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async adminLogin(@Body() dto: AdminLoginDto) {
     return this.authService.adminLogin(dto);
   }
 
+  @Public()
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 req/min for 2FA attempts
   @Post('verify-2fa')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Admin login (Step 2) - Verify 2FA code' })
@@ -57,7 +79,6 @@ export class AdminAuthController {
       example: {
         accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
         expiresIn: 900,
-        refreshToken: 'abc123...',
         admin: {
           id: 'uuid',
           email: 'admin@cyna.io',
@@ -70,10 +91,26 @@ export class AdminAuthController {
   })
   @ApiResponse({ status: 400, description: 'Invalid or expired code' })
   @ApiResponse({ status: 401, description: 'Invalid temp token' })
-  async verify2FA(@Body() dto: Verify2FADto) {
-    return this.authService.adminVerify2FA(dto);
+  @ApiResponse({ status: 429, description: 'Too many requests' })
+  async verify2FA(
+    @Body() dto: Verify2FADto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const result = await this.authService.adminVerify2FA(dto);
+
+    // Set refresh token as HTTP-only cookie
+    if (result.refreshToken) {
+      res.cookie('admin_refresh_token', result.refreshToken, ADMIN_REFRESH_TOKEN_COOKIE_OPTIONS);
+      // Return response without refreshToken in body
+      const { refreshToken, ...responseWithoutToken } = result;
+      return responseWithoutToken;
+    }
+
+    return result;
   }
 
+  @Public()
+  @Throttle({ default: { limit: 3, ttl: 300000 } }) // 3 req/5min
   @Post('resend-2fa')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Resend 2FA code' })
@@ -90,27 +127,72 @@ export class AdminAuthController {
     },
   })
   @ApiResponse({ status: 401, description: 'Invalid temp token' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async resend2FA(@Body() dto: Resend2FADto) {
     return this.authService.adminResend2FA(dto);
   }
 
+  @Public()
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 req/min
   @Post('refresh-token')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Refresh admin access token' })
   @ApiResponse({ status: 200, description: 'Token refreshed successfully' })
   @ApiResponse({ status: 401, description: 'Invalid refresh token' })
-  async refreshToken(@Body() dto: RefreshTokenDto) {
-    return this.authService.adminRefreshToken(dto);
+  @ApiResponse({ status: 429, description: 'Too many requests' })
+  async refreshToken(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: RefreshTokenDto,
+  ) {
+    // Get refresh token from cookie first, then fallback to body
+    const refreshToken = req.cookies?.['admin_refresh_token'] || dto.refreshToken;
+
+    if (!refreshToken) {
+      throw new UnauthorizedException('Refresh token missing');
+    }
+
+    const result = await this.authService.adminRefreshToken({ refreshToken });
+
+    // Set new refresh token cookie
+    if (result.refreshToken) {
+      res.cookie('admin_refresh_token', result.refreshToken, ADMIN_REFRESH_TOKEN_COOKIE_OPTIONS);
+      // Return response without refreshToken in body
+      const { refreshToken: _, ...responseWithoutToken } = result;
+      return responseWithoutToken;
+    }
+
+    return result;
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 req/min
   @Post('logout')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Admin logout' })
   @ApiResponse({ status: 200, description: 'Logout successful' })
-  async logout(@Request() req: any, @Body() dto: LogoutDto) {
-    // TODO: Extract adminId from JWT token when auth guard is implemented
-    const adminId = req.user?.id || 'anonymous';
-    return this.authService.adminLogout(adminId, dto);
+  @ApiResponse({ status: 401, description: 'Invalid or missing token' })
+  @ApiResponse({ status: 403, description: 'Admin access required' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
+  async logout(
+    @CurrentUser('id') adminId: string,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+    @Body() dto: LogoutDto,
+  ) {
+    // Get refresh token from cookie first, then fallback to body
+    const refreshToken = req.cookies?.['admin_refresh_token'] || dto.refreshToken;
+
+    await this.authService.adminLogout(adminId, { refreshToken });
+
+    // Clear refresh token cookie
+    res.clearCookie('admin_refresh_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/api/v1/auth/admin',
+    });
+
+    return { message: 'Logged out successfully' };
   }
 }

@@ -27,6 +27,7 @@ export const MESSAGE_PATTERNS = {
     VALIDATE_USER: { cmd: 'auth.validate_user' },
     REGISTER_USER: { cmd: 'auth.register_user' },
     VERIFY_EMAIL: { cmd: 'auth.verify_email' },
+    RESEND_VERIFICATION: { cmd: 'auth.resend_verification' },
     REFRESH_TOKEN: { cmd: 'auth.refresh_token' },
     LOGOUT: { cmd: 'auth.logout' },
     FORGOT_PASSWORD: { cmd: 'auth.forgot_password' },

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import * as jwt from 'jsonwebtoken';
 import { IS_PUBLIC_KEY, TokenExpiredException, TokenInvalidException, } from '@cyna-api/common';
-import { JwtPayload, RequestUser } from '../interfaces';
+import { JwtPayload } from '../interfaces';
 
 /**
  * JWT Auth Guard

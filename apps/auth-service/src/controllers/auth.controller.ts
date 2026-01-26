@@ -1,15 +1,15 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload, Ctx, RmqContext } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS } from '@cyna-api/common';
-import { AuthService } from '../services/auth.service';
-import { CreateUserDto } from '../dto/create-user.dto';
-import { LoginUserDto } from '../dto/login-user.dto';
-import { VerifyEmailDto } from '../dto/verify-email.dto';
-import { ResendVerificationDto } from '../dto/resend-verification.dto';
-import { ForgotPasswordDto } from '../dto/forgot-password.dto';
-import { ResetPasswordDto } from '../dto/reset-password.dto';
-import { RefreshTokenDto } from '../dto/refresh-token.dto';
-import { LogoutDto } from '../dto/logout.dto';
+import { AuthService } from '../services';
+import { CreateUserDto } from '../dto';
+import { LoginUserDto } from '../dto';
+import { VerifyEmailDto } from '../dto';
+import { ResendVerificationDto } from '../dto';
+import { ForgotPasswordDto } from '../dto';
+import { ResetPasswordDto } from '../dto';
+import { RefreshTokenDto } from '../dto';
+import { LogoutDto } from '../dto';
 
 @Controller()
 export class AuthController {

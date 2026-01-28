@@ -23,7 +23,7 @@ services:
     image: postgres:16-alpine
     container_name: cyna-postgres
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_USER: cyna
       POSTGRES_PASSWORD: cyna_dev

@@ -73,6 +73,20 @@ export const MESSAGE_PATTERNS = {
     CREATE_PRODUCT: { cmd: 'catalog.admin.create_product' },
     UPDATE_PRODUCT: { cmd: 'catalog.admin.update_product' },
     DELETE_PRODUCT: { cmd: 'catalog.admin.delete_product' },
+    // Product Images - Admin
+    GET_PRODUCT_IMAGES: { cmd: 'catalog.admin.get_product_images' },
+    ADD_PRODUCT_IMAGE: { cmd: 'catalog.admin.add_product_image' },
+    UPDATE_PRODUCT_IMAGE: { cmd: 'catalog.admin.update_product_image' },
+    DELETE_PRODUCT_IMAGE: { cmd: 'catalog.admin.delete_product_image' },
+    SET_PRIMARY_IMAGE: { cmd: 'catalog.admin.set_primary_image' },
+    REORDER_IMAGES: { cmd: 'catalog.admin.reorder_images' },
+    // Product Characteristics - Admin
+    GET_PRODUCT_CHARACTERISTICS: { cmd: 'catalog.admin.get_product_characteristics' },
+    ADD_PRODUCT_CHARACTERISTIC: { cmd: 'catalog.admin.add_product_characteristic' },
+    UPDATE_PRODUCT_CHARACTERISTIC: { cmd: 'catalog.admin.update_product_characteristic' },
+    DELETE_PRODUCT_CHARACTERISTIC: { cmd: 'catalog.admin.delete_product_characteristic' },
+    BULK_UPSERT_CHARACTERISTICS: { cmd: 'catalog.admin.bulk_upsert_characteristics' },
+    REORDER_CHARACTERISTICS: { cmd: 'catalog.admin.reorder_characteristics' },
     // Stock
     GET_STOCK: { cmd: 'catalog.get_stock' },
     RESERVE_STOCK: { cmd: 'catalog.reserve_stock' },

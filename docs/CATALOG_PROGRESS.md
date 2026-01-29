@@ -120,19 +120,63 @@ nest build catalog-service  # ✅ Successful
 
 ---
 
-## Phase 3: Images + Characteristics ⏳ PENDING
+## Phase 3: Images + Characteristics ✅ COMPLETED
 
 **Branch:** `feat/catalog-images-characteristics`
-**Status:** Not started
+**Status:** Completed
 
-### Planned Files
+### Files Created
 
-- [ ] `entities/product-image.entity.ts`
-- [ ] `entities/product-characteristic.entity.ts`
-- [ ] `dto/product-image.dto.ts`
-- [ ] `dto/product-characteristic.dto.ts`
-- [ ] `services/product-image.service.ts`
-- [ ] `services/product-characteristic.service.ts`
+| File | Status | Description |
+|------|--------|-------------|
+| `apps/catalog-service/src/entities/product-image.entity.ts` | ✅ | ProductImage entity |
+| `apps/catalog-service/src/entities/product-characteristic.entity.ts` | ✅ | ProductCharacteristic entity |
+| `apps/catalog-service/src/dto/product-image.dto.ts` | ✅ | Image DTOs (create, update, response) |
+| `apps/catalog-service/src/dto/product-characteristic.dto.ts` | ✅ | Characteristic DTOs |
+| `apps/catalog-service/src/services/product-image.service.ts` | ✅ | Image CRUD + reorder + set primary |
+| `apps/catalog-service/src/services/product-characteristic.service.ts` | ✅ | Characteristic CRUD + bulk upsert |
+| `apps/catalog-service/src/controllers/product-image.controller.ts` | ✅ | Image message handlers |
+| `apps/catalog-service/src/controllers/product-characteristic.controller.ts` | ✅ | Characteristic message handlers |
+
+### Updated Files
+
+| File | Status | Changes |
+|------|--------|---------|
+| `apps/catalog-service/src/entities/product.entity.ts` | ✅ | Added OneToMany relations |
+| `apps/catalog-service/src/dto/product-response.dto.ts` | ✅ | Include images/characteristics in response |
+| `apps/catalog-service/src/services/product.service.ts` | ✅ | Include relations in queries |
+| `apps/catalog-service/src/catalog.module.ts` | ✅ | Added new entities/services/controllers |
+| `libs/common/src/rabbitmq/patterns.ts` | ✅ | Added image/characteristic patterns |
+
+### Message Patterns Implemented
+
+| Pattern | Type | Description |
+|---------|------|-------------|
+| `catalog.admin.get_product_images` | Admin | Get all images for a product |
+| `catalog.admin.add_product_image` | Admin | Add image to product |
+| `catalog.admin.update_product_image` | Admin | Update image |
+| `catalog.admin.delete_product_image` | Admin | Delete image |
+| `catalog.admin.set_primary_image` | Admin | Set image as primary |
+| `catalog.admin.reorder_images` | Admin | Reorder images |
+| `catalog.admin.get_product_characteristics` | Admin | Get all characteristics |
+| `catalog.admin.add_product_characteristic` | Admin | Add characteristic |
+| `catalog.admin.update_product_characteristic` | Admin | Update characteristic |
+| `catalog.admin.delete_product_characteristic` | Admin | Delete characteristic |
+| `catalog.admin.bulk_upsert_characteristics` | Admin | Replace all characteristics |
+| `catalog.admin.reorder_characteristics` | Admin | Reorder characteristics |
+
+### Business Rules Implemented
+
+- One primary image per product (automatically managed)
+- Images and characteristics are cascade deleted with product
+- Display order for sorting
+- Localized alt text and characteristic key/value
+
+### Build Status
+
+```bash
+nest build catalog-service  # ✅ Successful
+```
 
 ---
 

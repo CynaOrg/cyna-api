@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
 import { CynaLoggerService } from '@cyna-api/common';
-import { Product, Category, ProductCharacteristic } from '../entities';
+import { Product, Category, ProductCharacteristic, ProductImage } from '../entities';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -33,6 +33,8 @@ export class ProductService {
     private readonly categoryRepository: Repository<Category>,
     @InjectRepository(ProductCharacteristic)
     private readonly characteristicRepository: Repository<ProductCharacteristic>,
+    @InjectRepository(ProductImage)
+    private readonly imageRepository: Repository<ProductImage>,
     private readonly logger: CynaLoggerService,
   ) {}
 
@@ -341,6 +343,159 @@ export class ProductService {
       },
     };
   }
+
+  // ==================== Image Management ====================
+
+  async addImage(
+    productId: string,
+    imageUrl: string,
+    altTextFr?: string,
+    altTextEn?: string,
+    isPrimary?: boolean,
+  ): Promise<ProductImage> {
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+      relations: ['images'],
+    });
+
+    if (!product) {
+      this.logger.warn(`Product not found: ${productId}`);
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Product not found',
+        code: 'PRODUCT_NOT_FOUND',
+      });
+    }
+
+    const existingImages = product.images || [];
+    const isFirstImage = existingImages.length === 0;
+    const shouldBePrimary = isPrimary ?? isFirstImage;
+
+    if (shouldBePrimary && existingImages.length > 0) {
+      await this.imageRepository.update({ productId }, { isPrimary: false });
+    }
+
+    const maxDisplayOrder = existingImages.reduce(
+      (max, img) => Math.max(max, img.displayOrder),
+      -1,
+    );
+
+    const image = this.imageRepository.create({
+      productId,
+      imageUrl,
+      altTextFr,
+      altTextEn,
+      isPrimary: shouldBePrimary,
+      displayOrder: maxDisplayOrder + 1,
+    });
+
+    await this.imageRepository.save(image);
+    this.logger.log(`Image added to product ${productId}: ${image.id}`);
+
+    return image;
+  }
+
+  async deleteImage(productId: string, imageId: string): Promise<void> {
+    const image = await this.imageRepository.findOne({
+      where: { id: imageId, productId },
+    });
+
+    if (!image) {
+      this.logger.warn(`Image not found: ${imageId} for product ${productId}`);
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Image not found',
+        code: 'IMAGE_NOT_FOUND',
+      });
+    }
+
+    const wasPrimary = image.isPrimary;
+    await this.imageRepository.remove(image);
+
+    if (wasPrimary) {
+      const nextImage = await this.imageRepository.findOne({
+        where: { productId },
+        order: { displayOrder: 'ASC' },
+      });
+
+      if (nextImage) {
+        nextImage.isPrimary = true;
+        await this.imageRepository.save(nextImage);
+        this.logger.log(`New primary image set for product ${productId}: ${nextImage.id}`);
+      }
+    }
+
+    this.logger.log(`Image deleted from product ${productId}: ${imageId}`);
+  }
+
+  async setPrimaryImage(productId: string, imageId: string): Promise<ProductImage> {
+    const image = await this.imageRepository.findOne({
+      where: { id: imageId, productId },
+    });
+
+    if (!image) {
+      this.logger.warn(`Image not found: ${imageId} for product ${productId}`);
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Image not found',
+        code: 'IMAGE_NOT_FOUND',
+      });
+    }
+
+    await this.imageRepository.update({ productId }, { isPrimary: false });
+
+    image.isPrimary = true;
+    await this.imageRepository.save(image);
+
+    this.logger.log(`Primary image set for product ${productId}: ${imageId}`);
+
+    return image;
+  }
+
+  async reorderImages(productId: string, imageIds: string[]): Promise<ProductImage[]> {
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+      relations: ['images'],
+    });
+
+    if (!product) {
+      this.logger.warn(`Product not found: ${productId}`);
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Product not found',
+        code: 'PRODUCT_NOT_FOUND',
+      });
+    }
+
+    const existingImageIds = new Set(product.images.map((img) => img.id));
+    const invalidIds = imageIds.filter((id) => !existingImageIds.has(id));
+
+    if (invalidIds.length > 0) {
+      this.logger.warn(`Invalid image IDs for product ${productId}: ${invalidIds.join(', ')}`);
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Some image IDs do not belong to this product',
+        code: 'INVALID_IMAGE_IDS',
+      });
+    }
+
+    const updates = imageIds.map((id, index) =>
+      this.imageRepository.update({ id }, { displayOrder: index }),
+    );
+
+    await Promise.all(updates);
+
+    const reorderedImages = await this.imageRepository.find({
+      where: { productId },
+      order: { displayOrder: 'ASC' },
+    });
+
+    this.logger.log(`Images reordered for product ${productId}`);
+
+    return reorderedImages;
+  }
+
+  // ==================== Private Helpers ====================
 
   private createBaseQueryBuilder(): SelectQueryBuilder<Product> {
     return this.productRepository

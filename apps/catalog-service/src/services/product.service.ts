@@ -128,12 +128,14 @@ export class ProductService {
     await this.eventsPublisher.emitProductCreated({
       productId: createdProduct.id,
       sku: createdProduct.sku,
-      productName: createdProduct.nameEn || createdProduct.nameFr,
+      name: createdProduct.nameEn || createdProduct.nameFr,
       productType: createdProduct.productType,
       categoryId: createdProduct.categoryId,
-      priceMonthly: createdProduct.priceMonthly ?? undefined,
-      priceYearly: createdProduct.priceYearly ?? undefined,
-      priceUnit: createdProduct.priceUnit ?? undefined,
+      price: {
+        monthly: createdProduct.priceMonthly ?? undefined,
+        yearly: createdProduct.priceYearly ?? undefined,
+        unit: createdProduct.priceUnit ?? undefined,
+      },
       createdAt: createdProduct.createdAt,
     });
 
@@ -275,8 +277,7 @@ export class ProductService {
     await this.eventsPublisher.emitProductUpdated({
       productId: updatedProduct.id,
       sku: updatedProduct.sku,
-      productName: updatedProduct.nameEn || updatedProduct.nameFr,
-      changedFields: Object.keys(dto),
+      updatedFields: Object.keys(dto),
       updatedAt: updatedProduct.updatedAt,
     });
 

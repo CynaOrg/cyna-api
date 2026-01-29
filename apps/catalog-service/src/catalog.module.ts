@@ -11,6 +11,7 @@ import {
 } from './entities';
 import { CategoryService, ProductService, StockService } from './services';
 import { StockCleanupCron } from './cron';
+import { CatalogController } from './controllers';
 
 @Module({
   imports: [
@@ -36,7 +37,7 @@ import { StockCleanupCron } from './cron';
       StockReservation,
     ]),
   ],
-  controllers: [],
+  controllers: [CatalogController],
   providers: [CategoryService, ProductService, StockService, StockCleanupCron],
 })
 export class CatalogModule {}

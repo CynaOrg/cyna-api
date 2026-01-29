@@ -3,6 +3,7 @@ import { BaseEntity } from '@cyna-api/common';
 import { Category } from './category.entity';
 import { ProductImage } from './product-image.entity';
 import { ProductCharacteristic } from './product-characteristic.entity';
+import { StockReservation } from './stock-reservation.entity';
 
 export enum ProductType {
   SAAS = 'saas',
@@ -96,4 +97,7 @@ export class Product extends BaseEntity {
 
   @OneToMany(() => ProductCharacteristic, (characteristic) => characteristic.product)
   characteristics: ProductCharacteristic[];
+
+  @OneToMany(() => StockReservation, (reservation) => reservation.product)
+  stockReservations: StockReservation[];
 }

@@ -1,8 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CynaConfigModule, LoggerModule } from '@cyna-api/common';
-import { Category, Product, ProductImage, ProductCharacteristic } from './entities';
-import { CategoryService, ProductService } from './services';
+import {
+  Category,
+  Product,
+  ProductImage,
+  ProductCharacteristic,
+  StockReservation,
+} from './entities';
+import { CategoryService, ProductService, StockService } from './services';
 
 @Module({
   imports: [
@@ -15,13 +21,19 @@ import { CategoryService, ProductService } from './services';
       username: process.env.DATABASE_USER || 'cyna',
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
-      entities: [Category, Product, ProductImage, ProductCharacteristic],
+      entities: [Category, Product, ProductImage, ProductCharacteristic, StockReservation],
       synchronize: process.env.NODE_ENV !== 'production',
       logging: process.env.NODE_ENV === 'development',
     }),
-    TypeOrmModule.forFeature([Category, Product, ProductImage, ProductCharacteristic]),
+    TypeOrmModule.forFeature([
+      Category,
+      Product,
+      ProductImage,
+      ProductCharacteristic,
+      StockReservation,
+    ]),
   ],
   controllers: [],
-  providers: [CategoryService, ProductService],
+  providers: [CategoryService, ProductService, StockService],
 })
 export class CatalogModule {}

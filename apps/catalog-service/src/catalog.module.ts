@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CynaConfigModule, LoggerModule } from '@cyna-api/common';
-import { Category, Product } from './entities';
+import { Category, Product, ProductImage, ProductCharacteristic } from './entities';
 
 @Module({
   imports: [
@@ -14,11 +14,11 @@ import { Category, Product } from './entities';
       username: process.env.DATABASE_USER || 'cyna',
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
-      entities: [Category, Product],
+      entities: [Category, Product, ProductImage, ProductCharacteristic],
       synchronize: process.env.NODE_ENV !== 'production',
       logging: process.env.NODE_ENV === 'development',
     }),
-    TypeOrmModule.forFeature([Category, Product]),
+    TypeOrmModule.forFeature([Category, Product, ProductImage, ProductCharacteristic]),
   ],
   controllers: [],
   providers: [],

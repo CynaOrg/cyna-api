@@ -1,6 +1,8 @@
-import { Entity, Column, Index, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, Column, Index, ManyToOne, OneToMany, JoinColumn } from 'typeorm';
 import { BaseEntity } from '@cyna-api/common';
 import { Category } from './category.entity';
+import { ProductImage } from './product-image.entity';
+import { ProductCharacteristic } from './product-characteristic.entity';
 
 export enum ProductType {
   SAAS = 'saas',
@@ -88,4 +90,10 @@ export class Product extends BaseEntity {
   @ManyToOne(() => Category, (category) => category.products)
   @JoinColumn({ name: 'category_id' })
   category: Category;
+
+  @OneToMany(() => ProductImage, (image) => image.product)
+  images: ProductImage[];
+
+  @OneToMany(() => ProductCharacteristic, (characteristic) => characteristic.product)
+  characteristics: ProductCharacteristic[];
 }

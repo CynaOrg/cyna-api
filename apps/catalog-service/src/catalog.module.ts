@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
@@ -14,16 +15,18 @@ import { CategoryService, ProductService, StockService } from './services';
 import { StockCleanupCron } from './cron';
 import { CatalogController } from './controllers';
 import { CatalogEventsPublisher } from './events';
+import { catalogConfig } from './config';
 
 @Module({
   imports: [
     CynaConfigModule,
+    ConfigModule.forFeature(catalogConfig),
     LoggerModule,
     ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',
-      port: parseInt(process.env.DATABASE_PORT || '5432', 10),
+      port: parseInt(process.env.DATABASE_PORT || '5433', 10),
       username: process.env.DATABASE_USER || 'cyna',
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',

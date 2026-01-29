@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, IsNull } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
@@ -11,10 +12,11 @@ import {
 } from '../dto';
 import { CatalogEventsPublisher, StockReleaseReason } from '../events';
 
-const RESERVATION_EXPIRY_MINUTES = 15;
-
 @Injectable()
 export class StockService {
+  private readonly reservationExpiryMinutes: number;
+  private readonly alertDefaultThreshold: number;
+
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
@@ -22,7 +24,17 @@ export class StockService {
     private readonly reservationRepository: Repository<StockReservation>,
     private readonly logger: CynaLoggerService,
     private readonly eventsPublisher: CatalogEventsPublisher,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.reservationExpiryMinutes = this.configService.get<number>(
+      'catalog.stock.reservationExpiryMinutes',
+      15,
+    );
+    this.alertDefaultThreshold = this.configService.get<number>(
+      'catalog.stock.alertDefaultThreshold',
+      10,
+    );
+  }
 
   async updateStock(
     productId: string,
@@ -390,6 +402,6 @@ export class StockService {
   }
 
   private getExpirationDate(): Date {
-    return new Date(Date.now() + RESERVATION_EXPIRY_MINUTES * 60 * 1000);
+    return new Date(Date.now() + this.reservationExpiryMinutes * 60 * 1000);
   }
 }

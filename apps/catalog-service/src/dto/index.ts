@@ -8,3 +8,4 @@ export * from './product-query.dto';
 export * from './product-response.dto';
 export * from './product-image.dto';
 export * from './product-characteristic.dto';
+export * from './stock-reservation.dto';

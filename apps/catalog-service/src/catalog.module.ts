@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CynaConfigModule, LoggerModule } from '@cyna-api/common';
 import { Category, Product, ProductImage, ProductCharacteristic } from './entities';
+import { CategoryService } from './services';
 
 @Module({
   imports: [
@@ -21,6 +22,6 @@ import { Category, Product, ProductImage, ProductCharacteristic } from './entiti
     TypeOrmModule.forFeature([Category, Product, ProductImage, ProductCharacteristic]),
   ],
   controllers: [],
-  providers: [],
+  providers: [CategoryService],
 })
 export class CatalogModule {}

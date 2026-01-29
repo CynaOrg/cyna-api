@@ -248,21 +248,26 @@ export class StockService {
       reservation.releasedAt = now;
     }
 
-    await this.reservationRepository.save(reservations);
+    const releasedData = reservations.map((r) => ({
+      reservationId: r.id,
+      productId: r.productId,
+      quantity: r.quantity,
+    }));
+
     await this.reservationRepository.remove(reservations);
 
-    for (const reservation of reservations) {
+    for (const data of releasedData) {
       await this.eventsPublisher.emitStockReleased({
-        reservationId: reservation.id,
-        productId: reservation.productId,
+        reservationId: data.reservationId,
+        productId: data.productId,
         cartId,
-        quantity: reservation.quantity,
+        quantity: data.quantity,
         reason,
         releasedAt: now,
       });
     }
 
-    this.logger.log(`Released ${reservations.length} reservations for cart ${cartId}`);
+    this.logger.log(`Released ${releasedData.length} reservations for cart ${cartId}`);
   }
 
   async confirmReservation(cartId: string, orderId?: string): Promise<void> {
@@ -319,11 +324,8 @@ export class StockService {
           });
         }
       }
-
-      reservation.confirmedAt = now;
     }
 
-    await this.reservationRepository.save(reservations);
     await this.reservationRepository.remove(reservations);
 
     this.logger.log(`Confirmed ${reservations.length} reservations for cart ${cartId}`);

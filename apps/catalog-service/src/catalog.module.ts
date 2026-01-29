@@ -1,0 +1,24 @@
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { CynaConfigModule, LoggerModule } from '@cyna-api/common';
+
+@Module({
+  imports: [
+    CynaConfigModule,
+    LoggerModule,
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: process.env.DATABASE_HOST || 'localhost',
+      port: parseInt(process.env.DATABASE_PORT || '5432', 10),
+      username: process.env.DATABASE_USER || 'cyna',
+      password: process.env.DATABASE_PASSWORD || 'cyna_dev',
+      database: process.env.DATABASE_NAME || 'cyna_db',
+      entities: [],
+      synchronize: process.env.NODE_ENV !== 'production',
+      logging: process.env.NODE_ENV === 'development',
+    }),
+  ],
+  controllers: [],
+  providers: [],
+})
+export class CatalogModule {}

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ScheduleModule } from '@nestjs/schedule';
 import { CynaConfigModule, LoggerModule } from '@cyna-api/common';
 import {
   Category,
@@ -9,11 +10,13 @@ import {
   StockReservation,
 } from './entities';
 import { CategoryService, ProductService, StockService } from './services';
+import { StockCleanupCron } from './cron';
 
 @Module({
   imports: [
     CynaConfigModule,
     LoggerModule,
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',
@@ -34,6 +37,6 @@ import { CategoryService, ProductService, StockService } from './services';
     ]),
   ],
   controllers: [],
-  providers: [CategoryService, ProductService, StockService],
+  providers: [CategoryService, ProductService, StockService, StockCleanupCron],
 })
 export class CatalogModule {}

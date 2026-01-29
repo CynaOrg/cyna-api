@@ -3,7 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
 import { CynaLoggerService } from '@cyna-api/common';
-import { Product, Category, ProductCharacteristic, ProductImage } from '../entities';
+import { Product, Category, ProductCharacteristic, ProductImage, ProductType } from '../entities';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -493,6 +493,169 @@ export class ProductService {
     this.logger.log(`Images reordered for product ${productId}`);
 
     return reorderedImages;
+  }
+
+  // ==================== Stock Management ====================
+
+  async updateStock(
+    productId: string,
+    stockQuantity: number,
+    stockAlertThreshold?: number,
+  ): Promise<Product> {
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      this.logger.warn(`Product not found: ${productId}`);
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Product not found',
+        code: 'PRODUCT_NOT_FOUND',
+      });
+    }
+
+    if (product.productType !== ProductType.PHYSICAL) {
+      this.logger.warn(`Stock management not available for non-physical product: ${productId}`);
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Stock management is only available for physical products',
+        code: 'STOCK_NOT_APPLICABLE',
+      });
+    }
+
+    product.stockQuantity = stockQuantity;
+    if (stockAlertThreshold !== undefined) {
+      product.stockAlertThreshold = stockAlertThreshold;
+    }
+
+    await this.productRepository.save(product);
+    this.logger.log(`Stock updated for product ${productId}: ${stockQuantity}`);
+
+    return this.findById(productId);
+  }
+
+  async checkStock(
+    productId: string,
+    requestedQuantity: number,
+  ): Promise<{ available: boolean; currentStock: number; requestedQuantity: number }> {
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      this.logger.warn(`Product not found: ${productId}`);
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Product not found',
+        code: 'PRODUCT_NOT_FOUND',
+      });
+    }
+
+    if (product.productType !== ProductType.PHYSICAL) {
+      return {
+        available: true,
+        currentStock: -1,
+        requestedQuantity,
+      };
+    }
+
+    const currentStock = product.stockQuantity ?? 0;
+    const available = currentStock >= requestedQuantity;
+
+    return {
+      available,
+      currentStock,
+      requestedQuantity,
+    };
+  }
+
+  async getStockAlerts(): Promise<Product[]> {
+    return this.productRepository
+      .createQueryBuilder('product')
+      .where('product.productType = :type', { type: ProductType.PHYSICAL })
+      .andWhere('product.stockQuantity <= product.stockAlertThreshold')
+      .orderBy('product.stockQuantity', 'ASC')
+      .getMany();
+  }
+
+  async decrementStock(productId: string, quantity: number): Promise<Product> {
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      this.logger.warn(`Product not found: ${productId}`);
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Product not found',
+        code: 'PRODUCT_NOT_FOUND',
+      });
+    }
+
+    if (product.productType !== ProductType.PHYSICAL) {
+      this.logger.warn(`Stock management not available for non-physical product: ${productId}`);
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Stock management is only available for physical products',
+        code: 'STOCK_NOT_APPLICABLE',
+      });
+    }
+
+    const currentStock = product.stockQuantity ?? 0;
+    if (currentStock < quantity) {
+      this.logger.warn(
+        `Insufficient stock for product ${productId}: ${currentStock} < ${quantity}`,
+      );
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Insufficient stock',
+        code: 'INSUFFICIENT_STOCK',
+      });
+    }
+
+    product.stockQuantity = currentStock - quantity;
+    await this.productRepository.save(product);
+
+    this.logger.log(
+      `Stock decremented for product ${productId}: ${currentStock} -> ${product.stockQuantity}`,
+    );
+
+    return this.findById(productId);
+  }
+
+  async incrementStock(productId: string, quantity: number): Promise<Product> {
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+    });
+
+    if (!product) {
+      this.logger.warn(`Product not found: ${productId}`);
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Product not found',
+        code: 'PRODUCT_NOT_FOUND',
+      });
+    }
+
+    if (product.productType !== ProductType.PHYSICAL) {
+      this.logger.warn(`Stock management not available for non-physical product: ${productId}`);
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Stock management is only available for physical products',
+        code: 'STOCK_NOT_APPLICABLE',
+      });
+    }
+
+    const currentStock = product.stockQuantity ?? 0;
+    product.stockQuantity = currentStock + quantity;
+    await this.productRepository.save(product);
+
+    this.logger.log(
+      `Stock incremented for product ${productId}: ${currentStock} -> ${product.stockQuantity}`,
+    );
+
+    return this.findById(productId);
   }
 
   // ==================== Private Helpers ====================

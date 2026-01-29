@@ -10,6 +10,7 @@ import { BaseEntity, ProductType } from '@cyna-api/common';
 import { Category } from './category.entity';
 import { ProductImage } from './product-image.entity';
 import { ProductCharacteristic } from './product-characteristic.entity';
+import { StockReservation } from './stock-reservation.entity';
 
 @Entity('products')
 export class Product extends BaseEntity {
@@ -103,7 +104,6 @@ export class Product extends BaseEntity {
   @OneToMany(() => ProductCharacteristic, (char) => char.product, { cascade: true })
   characteristics: ProductCharacteristic[];
 
-  // Relations to be added in Phase 4
-  // @OneToMany(() => StockReservation, (reservation) => reservation.product)
-  // stockReservations: StockReservation[];
+  @OneToMany(() => StockReservation, (reservation) => reservation.product)
+  stockReservations: StockReservation[];
 }

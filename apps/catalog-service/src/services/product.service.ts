@@ -11,6 +11,7 @@ import {
   ProductSortBy,
   SortOrder,
 } from '../dto';
+import { CatalogEventsPublisher } from '../events';
 
 export interface PaginationMeta {
   page: number;
@@ -36,6 +37,7 @@ export class ProductService {
     @InjectRepository(ProductImage)
     private readonly imageRepository: Repository<ProductImage>,
     private readonly logger: CynaLoggerService,
+    private readonly eventsPublisher: CatalogEventsPublisher,
   ) {}
 
   async create(dto: CreateProductDto): Promise<Product> {
@@ -121,7 +123,21 @@ export class ProductService {
 
     this.logger.log(`Product created: ${product.id} (${product.slug})`);
 
-    return this.findById(product.id);
+    const createdProduct = await this.findById(product.id);
+
+    await this.eventsPublisher.emitProductCreated({
+      productId: createdProduct.id,
+      sku: createdProduct.sku,
+      productName: createdProduct.nameEn || createdProduct.nameFr,
+      productType: createdProduct.productType,
+      categoryId: createdProduct.categoryId,
+      priceMonthly: createdProduct.priceMonthly ?? undefined,
+      priceYearly: createdProduct.priceYearly ?? undefined,
+      priceUnit: createdProduct.priceUnit ?? undefined,
+      createdAt: createdProduct.createdAt,
+    });
+
+    return createdProduct;
   }
 
   async findAll(query: ProductQueryDto): Promise<PaginatedResult<Product>> {
@@ -254,7 +270,17 @@ export class ProductService {
 
     this.logger.log(`Product updated: ${product.id} (${product.slug})`);
 
-    return this.findById(id);
+    const updatedProduct = await this.findById(id);
+
+    await this.eventsPublisher.emitProductUpdated({
+      productId: updatedProduct.id,
+      sku: updatedProduct.sku,
+      productName: updatedProduct.nameEn || updatedProduct.nameFr,
+      changedFields: Object.keys(dto),
+      updatedAt: updatedProduct.updatedAt,
+    });
+
+    return updatedProduct;
   }
 
   async delete(id: string): Promise<void> {
@@ -271,8 +297,19 @@ export class ProductService {
       });
     }
 
+    const deletedProductData = {
+      productId: product.id,
+      sku: product.sku,
+      productName: product.nameEn || product.nameFr,
+    };
+
     await this.productRepository.remove(product);
     this.logger.log(`Product deleted: ${id}`);
+
+    await this.eventsPublisher.emitProductDeleted({
+      ...deletedProductData,
+      deletedAt: new Date(),
+    });
   }
 
   async search(searchTerm: string, query: ProductQueryDto): Promise<PaginatedResult<Product>> {

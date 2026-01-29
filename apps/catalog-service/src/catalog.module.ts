@@ -1,7 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
-import { CynaConfigModule, LoggerModule } from '@cyna-api/common';
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { CynaConfigModule, LoggerModule, SERVICE_NAMES } from '@cyna-api/common';
 import {
   Category,
   Product,
@@ -12,6 +13,7 @@ import {
 import { CategoryService, ProductService, StockService } from './services';
 import { StockCleanupCron } from './cron';
 import { CatalogController } from './controllers';
+import { CatalogEventsPublisher } from './events';
 
 @Module({
   imports: [
@@ -36,8 +38,38 @@ import { CatalogController } from './controllers';
       ProductCharacteristic,
       StockReservation,
     ]),
+    ClientsModule.register([
+      {
+        name: SERVICE_NAMES.NOTIFICATION,
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
+          queue: 'notification_queue',
+          queueOptions: {
+            durable: true,
+          },
+        },
+      },
+      {
+        name: SERVICE_NAMES.ANALYTICS,
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
+          queue: 'analytics_queue',
+          queueOptions: {
+            durable: true,
+          },
+        },
+      },
+    ]),
   ],
   controllers: [CatalogController],
-  providers: [CategoryService, ProductService, StockService, StockCleanupCron],
+  providers: [
+    CategoryService,
+    ProductService,
+    StockService,
+    StockCleanupCron,
+    CatalogEventsPublisher,
+  ],
 })
 export class CatalogModule {}

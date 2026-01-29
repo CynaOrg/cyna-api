@@ -9,6 +9,7 @@ import {
   StockAvailabilityResponseDto,
   StockReservationResponseDto,
 } from '../dto';
+import { CatalogEventsPublisher, StockReleaseReason } from '../events';
 
 const RESERVATION_EXPIRY_MINUTES = 15;
 
@@ -20,6 +21,7 @@ export class StockService {
     @InjectRepository(StockReservation)
     private readonly reservationRepository: Repository<StockReservation>,
     private readonly logger: CynaLoggerService,
+    private readonly eventsPublisher: CatalogEventsPublisher,
   ) {}
 
   async updateStock(
@@ -56,6 +58,18 @@ export class StockService {
 
     await this.productRepository.save(product);
     this.logger.log(`Stock updated for product ${productId}: ${stockQuantity}`);
+
+    const threshold = product.stockAlertThreshold ?? 10;
+    if (stockQuantity <= threshold) {
+      await this.eventsPublisher.emitStockLow({
+        productId: product.id,
+        sku: product.sku,
+        productName: product.nameEn || product.nameFr,
+        currentStock: stockQuantity,
+        alertThreshold: threshold,
+        detectedAt: new Date(),
+      });
+    }
 
     return product;
   }
@@ -187,10 +201,23 @@ export class StockService {
     await this.reservationRepository.save(reservation);
     this.logger.log(`Stock reserved for product ${productId}, cart ${cartId}: ${quantity}`);
 
+    await this.eventsPublisher.emitStockReserved({
+      reservationId: reservation.id,
+      productId,
+      cartId,
+      userId,
+      quantity,
+      expiresAt: reservation.expiresAt,
+      reservedAt: reservation.createdAt,
+    });
+
     return StockReservationResponseDto.fromEntity(reservation);
   }
 
-  async releaseReservation(cartId: string): Promise<void> {
+  async releaseReservation(
+    cartId: string,
+    reason: StockReleaseReason = StockReleaseReason.CANCELLED,
+  ): Promise<void> {
     const reservations = await this.reservationRepository.find({
       where: {
         cartId,
@@ -212,10 +239,21 @@ export class StockService {
     await this.reservationRepository.save(reservations);
     await this.reservationRepository.remove(reservations);
 
+    for (const reservation of reservations) {
+      await this.eventsPublisher.emitStockReleased({
+        reservationId: reservation.id,
+        productId: reservation.productId,
+        cartId,
+        quantity: reservation.quantity,
+        reason,
+        releasedAt: now,
+      });
+    }
+
     this.logger.log(`Released ${reservations.length} reservations for cart ${cartId}`);
   }
 
-  async confirmReservation(cartId: string): Promise<void> {
+  async confirmReservation(cartId: string, orderId?: string): Promise<void> {
     const reservations = await this.reservationRepository.find({
       where: {
         cartId,
@@ -238,15 +276,36 @@ export class StockService {
 
     for (const reservation of reservations) {
       const product = reservation.product;
+      const previousStock = product.stockQuantity ?? 0;
 
       if (product.productType === ProductType.PHYSICAL) {
-        const currentStock = product.stockQuantity ?? 0;
-        product.stockQuantity = Math.max(0, currentStock - reservation.quantity);
+        product.stockQuantity = Math.max(0, previousStock - reservation.quantity);
         await this.productRepository.save(product);
 
         this.logger.log(
-          `Stock decremented for product ${product.id}: ${currentStock} -> ${product.stockQuantity}`,
+          `Stock decremented for product ${product.id}: ${previousStock} -> ${product.stockQuantity}`,
         );
+
+        await this.eventsPublisher.emitStockConfirmed({
+          reservationId: reservation.id,
+          productId: product.id,
+          orderId,
+          quantity: reservation.quantity,
+          previousStock,
+          newStock: product.stockQuantity,
+          confirmedAt: now,
+        });
+
+        if (product.stockQuantity <= (product.stockAlertThreshold ?? 10)) {
+          await this.eventsPublisher.emitStockLow({
+            productId: product.id,
+            sku: product.sku,
+            productName: product.nameEn || product.nameFr,
+            currentStock: product.stockQuantity,
+            alertThreshold: product.stockAlertThreshold ?? 10,
+            detectedAt: now,
+          });
+        }
       }
 
       reservation.confirmedAt = now;
@@ -274,6 +333,17 @@ export class StockService {
     }
 
     await this.reservationRepository.remove(expiredReservations);
+
+    for (const reservation of expiredReservations) {
+      await this.eventsPublisher.emitStockReleased({
+        reservationId: reservation.id,
+        productId: reservation.productId,
+        cartId: reservation.cartId,
+        quantity: reservation.quantity,
+        reason: StockReleaseReason.EXPIRED,
+        releasedAt: now,
+      });
+    }
 
     this.logger.log(`Cleaned up ${expiredReservations.length} expired reservations`);
 

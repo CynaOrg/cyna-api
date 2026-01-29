@@ -5,4 +5,7 @@ export default registerAs('catalog', () => ({
     reservationExpiryMinutes: parseInt(process.env.STOCK_RESERVATION_EXPIRY_MINUTES || '15', 10),
     alertDefaultThreshold: parseInt(process.env.STOCK_ALERT_DEFAULT_THRESHOLD || '10', 10),
   },
+  seed: {
+    enabled: process.env.CATALOG_SEED_ENABLED === 'true',
+  },
 }));

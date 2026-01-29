@@ -16,6 +16,7 @@ import { StockCleanupCron } from './cron';
 import { CatalogController } from './controllers';
 import { CatalogEventsPublisher } from './events';
 import { catalogConfig } from './config';
+import { InitialDataSeeder } from './seeds';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { catalogConfig } from './config';
     StockService,
     StockCleanupCron,
     CatalogEventsPublisher,
+    InitialDataSeeder,
   ],
 })
 export class CatalogModule {}

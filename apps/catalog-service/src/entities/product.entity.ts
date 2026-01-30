@@ -8,8 +8,6 @@ import {
 } from 'typeorm';
 import { BaseEntity, ProductType } from '@cyna-api/common';
 import { Category } from './category.entity';
-import { ProductImage } from './product-image.entity';
-import { ProductCharacteristic } from './product-characteristic.entity';
 
 @Entity('products')
 export class Product extends BaseEntity {
@@ -96,12 +94,12 @@ export class Product extends BaseEntity {
   @Column({ name: 'stripe_price_id_unit', type: 'varchar', length: 255, nullable: true })
   stripePriceIdUnit?: string;
 
-  // Relations
-  @OneToMany(() => ProductImage, (image) => image.product, { cascade: true })
-  images: ProductImage[];
+  // Relations to be added in Phase 3
+  // @OneToMany(() => ProductImage, (image) => image.product)
+  // images: ProductImage[];
 
-  @OneToMany(() => ProductCharacteristic, (char) => char.product, { cascade: true })
-  characteristics: ProductCharacteristic[];
+  // @OneToMany(() => ProductCharacteristic, (char) => char.product)
+  // characteristics: ProductCharacteristic[];
 
   // Relations to be added in Phase 4
   // @OneToMany(() => StockReservation, (reservation) => reservation.product)

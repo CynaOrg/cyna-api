@@ -5,19 +5,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { CynaConfigModule, LoggerModule, SERVICE_NAMES } from '@cyna-api/common';
 import { catalogConfig } from './config';
-import { Category, Product, ProductImage, ProductCharacteristic } from './entities';
-import {
-  CategoryService,
-  ProductService,
-  ProductImageService,
-  ProductCharacteristicService,
-} from './services';
-import {
-  CategoryController,
-  ProductController,
-  ProductImageController,
-  ProductCharacteristicController,
-} from './controllers';
+import { Category, Product } from './entities';
+import { CategoryService, ProductService } from './services';
+import { CategoryController, ProductController } from './controllers';
 
 @Module({
   imports: [
@@ -37,11 +27,11 @@ import {
       username: process.env.DATABASE_USER || 'cyna',
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
-      entities: [Category, Product, ProductImage, ProductCharacteristic],
+      entities: [Category, Product],
       synchronize: process.env.NODE_ENV !== 'production',
       logging: process.env.NODE_ENV === 'development',
     }),
-    TypeOrmModule.forFeature([Category, Product, ProductImage, ProductCharacteristic]),
+    TypeOrmModule.forFeature([Category, Product]),
 
     // RabbitMQ clients for communication with other services
     ClientsModule.register([
@@ -73,17 +63,7 @@ import {
       },
     ]),
   ],
-  controllers: [
-    CategoryController,
-    ProductController,
-    ProductImageController,
-    ProductCharacteristicController,
-  ],
-  providers: [
-    CategoryService,
-    ProductService,
-    ProductImageService,
-    ProductCharacteristicService,
-  ],
+  controllers: [CategoryController, ProductController],
+  providers: [CategoryService, ProductService],
 })
 export class CatalogModule {}

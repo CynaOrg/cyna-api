@@ -1,5 +1,6 @@
 import { Language, ProductType } from '@cyna-api/common';
-import { Product, Category, ProductImage, ProductCharacteristic } from '../entities';
+import { Product } from '../entities';
+import { Category } from '../entities';
 
 /**
  * Product List Response DTO (for catalog listings)
@@ -60,16 +61,8 @@ export class ProductListResponseDto {
       };
     }
 
-    // Primary image
-    if (entity.images && entity.images.length > 0) {
-      const primaryImage = entity.images.find((img) => img.isPrimary) || entity.images[0];
-      if (primaryImage) {
-        dto.primaryImage = {
-          url: primaryImage.imageUrl,
-          altText: lang === Language.EN ? primaryImage.altTextEn : primaryImage.altTextFr,
-        };
-      }
-    }
+    // Primary image will be added in Phase 3
+    // dto.primaryImage = ...
 
     return dto;
   }
@@ -114,32 +107,11 @@ export class ProductDetailResponseDto extends ProductListResponseDto {
       dto.stockStatus = getStockStatus(entity.stockQuantity, entity.stockAlertThreshold);
     }
 
-    // Characteristics from relation
-    if (entity.characteristics && entity.characteristics.length > 0) {
-      dto.characteristics = entity.characteristics
-        .sort((a, b) => a.displayOrder - b.displayOrder)
-        .map((char) => ({
-          key: lang === Language.EN ? char.keyEn : char.keyFr,
-          value: lang === Language.EN ? char.valueEn : char.valueFr,
-        }));
-    } else {
-      dto.characteristics = [];
-    }
+    // Characteristics will be populated from relation in Phase 3
+    dto.characteristics = [];
 
-    // Images from relation
-    if (entity.images && entity.images.length > 0) {
-      dto.images = entity.images
-        .sort((a, b) => a.displayOrder - b.displayOrder)
-        .map((img) => ({
-          id: img.id,
-          url: img.imageUrl,
-          altText: lang === Language.EN ? img.altTextEn : img.altTextFr,
-          isPrimary: img.isPrimary,
-          displayOrder: img.displayOrder,
-        }));
-    } else {
-      dto.images = [];
-    }
+    // Images will be populated from relation in Phase 3
+    dto.images = [];
 
     return dto;
   }

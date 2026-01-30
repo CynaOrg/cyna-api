@@ -1,0 +1,711 @@
+{
+  "info": {
+    "name": "CYNA - Full Test Collection",
+    "description": "Collection complète avec scripts automatiques pour tester CYNA API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "adminToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tempToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@cyna.io",
+      "type": "string"
+    },
+    {
+      "key": "adminPassword",
+      "value": "AdminPassword123!",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "imageId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "characteristicId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Auth Flow",
+      "item": [
+        {
+          "name": "1. Admin Login (Get tempToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    var data = jsonData.data || jsonData;",
+                  "    if (data.tempToken) {",
+                  "        pm.collectionVariables.set('tempToken', data.tempToken);",
+                  "        console.log('✅ tempToken saved:', data.tempToken.substring(0, 50) + '...');",
+                  "        console.log('📧 Check database for 2FA code');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/admin/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "admin", "login"]
+            }
+          }
+        },
+        {
+          "name": "2. Verify 2FA (Use code from DB)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    var data = jsonData.data || jsonData;",
+                  "    if (data.accessToken) {",
+                  "        pm.collectionVariables.set('adminToken', data.accessToken);",
+                  "        console.log('✅ adminToken saved!');",
+                  "        console.log('🎉 You can now use admin endpoints');",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Get tempToken from collection variables",
+                  "var tempToken = pm.collectionVariables.get('tempToken');",
+                  "if (!tempToken) {",
+                  "    console.warn('⚠️ No tempToken found. Run Admin Login first.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tempToken\": \"{{tempToken}}\",\n  \"code\": \"REPLACE_WITH_CODE_FROM_DB\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/admin/verify-2fa",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "admin", "verify-2fa"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Categories (Public)",
+      "item": [
+        {
+          "name": "Get All Categories",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/catalog/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Get Category by Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/catalog/categories/soc-solutions",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "categories", "soc-solutions"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📁 Categories (Admin)",
+      "item": [
+        {
+          "name": "Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.id) {",
+                  "        pm.collectionVariables.set('categoryId', jsonData.id);",
+                  "        console.log('✅ categoryId saved:', jsonData.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"soc-solutions\",\n  \"nameFr\": \"Solutions SOC\",\n  \"nameEn\": \"SOC Solutions\",\n  \"descriptionFr\": \"Solutions de Security Operations Center pour surveiller et protéger votre infrastructure.\",\n  \"descriptionEn\": \"Security Operations Center solutions to monitor and protect your infrastructure.\",\n  \"imageUrl\": \"https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=800\",\n  \"isActive\": true,\n  \"displayOrder\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Get All Categories (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Get Category by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "categories", "{{categoryId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nameFr\": \"Solutions SOC Avancées\",\n  \"displayOrder\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "categories", "{{categoryId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "categories", "{{categoryId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Products (Public)",
+      "item": [
+        {
+          "name": "Get All Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "products"]
+            }
+          }
+        },
+        {
+          "name": "Get Featured Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products/featured",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "products", "featured"]
+            }
+          }
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products/search?q=soc",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "products", "search"],
+              "query": [{ "key": "q", "value": "soc" }]
+            }
+          }
+        },
+        {
+          "name": "Get Product by Slug",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products/soc-premium",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "products", "soc-premium"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Products (Admin)",
+      "item": [
+        {
+          "name": "Create Product (SaaS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.id) {",
+                  "        pm.collectionVariables.set('productId', jsonData.id);",
+                  "        console.log('✅ productId saved:', jsonData.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"slug\": \"soc-premium\",\n  \"sku\": \"SOC-PREM-001\",\n  \"nameFr\": \"SOC Premium\",\n  \"nameEn\": \"Premium SOC\",\n  \"descriptionFr\": \"Solution SOC complète avec surveillance 24/7, détection des menaces avancée et réponse aux incidents en temps réel.\",\n  \"descriptionEn\": \"Complete SOC solution with 24/7 monitoring, advanced threat detection and real-time incident response.\",\n  \"shortDescriptionFr\": \"Surveillance SOC 24/7 avec réponse aux incidents\",\n  \"shortDescriptionEn\": \"24/7 SOC monitoring with incident response\",\n  \"productType\": \"saas\",\n  \"priceMonthly\": 299.99,\n  \"priceYearly\": 2999.99,\n  \"isAvailable\": true,\n  \"isFeatured\": true,\n  \"displayOrder\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products"]
+            }
+          }
+        },
+        {
+          "name": "Create Product (Physical)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.id) {",
+                  "        pm.collectionVariables.set('productId', jsonData.id);",
+                  "        console.log('✅ productId saved:', jsonData.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"slug\": \"firewall-hardware-pro\",\n  \"sku\": \"HW-FW-PRO-001\",\n  \"nameFr\": \"Firewall Hardware Pro\",\n  \"nameEn\": \"Pro Hardware Firewall\",\n  \"descriptionFr\": \"Firewall matériel haute performance pour PME. Throughput 10Gbps, VPN intégré, protection DDoS.\",\n  \"descriptionEn\": \"High-performance hardware firewall for SMBs. 10Gbps throughput, integrated VPN, DDoS protection.\",\n  \"shortDescriptionFr\": \"Firewall matériel 10Gbps avec VPN\",\n  \"shortDescriptionEn\": \"10Gbps hardware firewall with VPN\",\n  \"productType\": \"physical\",\n  \"priceUnit\": 1499.99,\n  \"stockQuantity\": 50,\n  \"stockAlertThreshold\": 10,\n  \"isAvailable\": true,\n  \"isFeatured\": false,\n  \"displayOrder\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products"]
+            }
+          }
+        },
+        {
+          "name": "Get All Products (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products"]
+            }
+          }
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nameFr\": \"SOC Premium Plus\",\n  \"priceMonthly\": 349.99,\n  \"isFeatured\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products", "{{productId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Stock (Physical only)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stockQuantity\": 100,\n  \"stockAlertThreshold\": 15\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products/{{productId}}/stock",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products", "{{productId}}", "stock"]
+            }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products", "{{productId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🖼️ Product Images (Admin)",
+      "item": [
+        {
+          "name": "Add Product Image",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.id) {",
+                  "        pm.collectionVariables.set('imageId', jsonData.id);",
+                  "        console.log('✅ imageId saved:', jsonData.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imageUrl\": \"https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800\",\n  \"altTextFr\": \"Interface du SOC Premium\",\n  \"altTextEn\": \"SOC Premium Interface\",\n  \"isPrimary\": true,\n  \"displayOrder\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products/{{productId}}/images",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products", "{{productId}}", "images"]
+            }
+          }
+        },
+        {
+          "name": "Get Product Images",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products/{{productId}}/images",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products", "{{productId}}", "images"]
+            }
+          }
+        },
+        {
+          "name": "Update Image",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"altTextFr\": \"Nouvelle interface SOC\",\n  \"displayOrder\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/images/{{imageId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "images", "{{imageId}}"]
+            }
+          }
+        },
+        {
+          "name": "Set Primary Image",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/images/{{imageId}}/primary",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "images", "{{imageId}}", "primary"]
+            }
+          }
+        },
+        {
+          "name": "Delete Image",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/images/{{imageId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "images", "{{imageId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📋 Product Characteristics (Admin)",
+      "item": [
+        {
+          "name": "Add Characteristic",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.id) {",
+                  "        pm.collectionVariables.set('characteristicId', jsonData.id);",
+                  "        console.log('✅ characteristicId saved:', jsonData.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"key\": \"users_included\",\n  \"valueFr\": \"10 utilisateurs inclus\",\n  \"valueEn\": \"10 users included\",\n  \"displayOrder\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products/{{productId}}/characteristics",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products", "{{productId}}", "characteristics"]
+            }
+          }
+        },
+        {
+          "name": "Get Characteristics",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products/{{productId}}/characteristics",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products", "{{productId}}", "characteristics"]
+            }
+          }
+        },
+        {
+          "name": "Bulk Upsert Characteristics",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"characteristics\": [\n    { \"key\": \"users\", \"valueFr\": \"10 utilisateurs\", \"valueEn\": \"10 users\", \"displayOrder\": 0 },\n    { \"key\": \"storage\", \"valueFr\": \"100 Go\", \"valueEn\": \"100 GB\", \"displayOrder\": 1 },\n    { \"key\": \"support\", \"valueFr\": \"Support 24/7\", \"valueEn\": \"24/7 Support\", \"displayOrder\": 2 },\n    { \"key\": \"sla\", \"valueFr\": \"SLA 99.9%\", \"valueEn\": \"99.9% SLA\", \"displayOrder\": 3 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/products/{{productId}}/characteristics/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "products", "{{productId}}", "characteristics", "bulk"]
+            }
+          }
+        },
+        {
+          "name": "Update Characteristic",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"valueFr\": \"15 utilisateurs\",\n  \"valueEn\": \"15 users\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/characteristics/{{characteristicId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "characteristics", "{{characteristicId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Characteristic",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/admin/characteristics/{{characteristicId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "admin", "characteristics", "{{characteristicId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔧 Utils",
+      "item": [
+        {
+          "name": "Get 2FA Code from DB (run in terminal)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Run this command in terminal to get 2FA code:\n\ndocker exec cyna-postgres psql -U cyna -d cyna_db -c \"SELECT code, expires_at FROM admin_2fa_codes WHERE admin_id = (SELECT id FROM admins WHERE email = 'admin@cyna.io') ORDER BY created_at DESC LIMIT 1;\""
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1032 @@
+{
+  "info": {
+    "_postman_id": "cyna-api-complete",
+    "name": "CYNA API",
+    "description": "Complete API collection for CYNA e-commerce B2B platform.\n\n## Authentication\nUser and Admin endpoints use Bearer JWT tokens. Tokens are automatically managed via collection-level scripts.\n\n## Quick Start\n1. Import this collection and the CYNA-Local environment\n2. Run **Auth - User > Login** to get an access token\n3. All authenticated endpoints will automatically use the token\n\n## Admin Flow\n1. Run **Auth - Admin > Admin Login** (sends 2FA code)\n2. Run **Auth - Admin > Verify 2FA** with the code from email\n3. Admin endpoints are now accessible",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-refresh token if expired (with 30s margin)",
+          "const tokenExpiresAt = pm.environment.get('tokenExpiresAt');",
+          "const accessToken = pm.environment.get('accessToken');",
+          "",
+          "if (accessToken && tokenExpiresAt && Date.now() > (parseInt(tokenExpiresAt) - 30000)) {",
+          "    pm.sendRequest({",
+          "        url: pm.environment.get('baseUrl') + '/' + pm.environment.get('apiPrefix') + '/auth/refresh-token',",
+          "        method: 'POST',",
+          "        header: { 'Content-Type': 'application/json' },",
+          "        body: { mode: 'raw', raw: JSON.stringify({}) }",
+          "    }, function (err, res) {",
+          "        if (!err && res.code === 200) {",
+          "            const json = res.json();",
+          "            pm.environment.set('accessToken', json.accessToken);",
+          "            pm.environment.set('tokenExpiresAt', String(Date.now() + (json.expiresIn * 1000)));",
+          "        }",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "apiPrefix",
+      "value": "api/v1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "health"]
+            },
+            "description": "Returns the overall health status of the API Gateway including RabbitMQ connectivity and uptime."
+          },
+          "response": []
+        },
+        {
+          "name": "Readiness Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/ready",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "ready"]
+            },
+            "description": "Returns whether the service is ready to accept requests (RabbitMQ connected)."
+          },
+          "response": []
+        },
+        {
+          "name": "Liveness Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/live",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "live"]
+            },
+            "description": "Returns whether the service process is alive."
+          },
+          "response": []
+        }
+      ],
+      "description": "Health check endpoints for monitoring and orchestration."
+    },
+    {
+      "name": "Auth - User",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.accessToken) {",
+                  "        pm.environment.set('accessToken', json.accessToken);",
+                  "        pm.environment.set('tokenExpiresAt', String(Date.now() + (json.expiresIn * 1000)));",
+                  "    }",
+                  "    if (json.user && json.user.id) {",
+                  "        pm.environment.set('userId', json.user.id);",
+                  "    }",
+                  "    pm.test('Registration successful', () => pm.response.to.have.status(201));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"preferredLanguage\": \"fr\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "register"]
+            },
+            "description": "Register a new user account. Rate limited to 3 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.accessToken) {",
+                  "        pm.environment.set('accessToken', json.accessToken);",
+                  "        pm.environment.set('tokenExpiresAt', String(Date.now() + (json.expiresIn * 1000)));",
+                  "    }",
+                  "    if (json.user && json.user.id) {",
+                  "        pm.environment.set('userId', json.user.id);",
+                  "    }",
+                  "    pm.test('Login successful', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "login"]
+            },
+            "description": "Login with email and password. Returns access token and sets refresh token as HTTP-only cookie. Rate limited to 5 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<verification-token-from-email>\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/verify-email",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "verify-email"]
+            },
+            "description": "Verify email address using the token sent via email. Single-use token, no rate limit."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend Verification",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/resend-verification",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "resend-verification"]
+            },
+            "description": "Resend verification email. Rate limited to 2 req/5min."
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/forgot-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "forgot-password"]
+            },
+            "description": "Request a password reset email. Rate limited to 3 req/5min."
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"<reset-token-from-email>\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/reset-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "reset-password"]
+            },
+            "description": "Reset password using the token from the reset email. Single-use token, no rate limit."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.accessToken) {",
+                  "        pm.environment.set('accessToken', json.accessToken);",
+                  "        pm.environment.set('tokenExpiresAt', String(Date.now() + (json.expiresIn * 1000)));",
+                  "    }",
+                  "    pm.test('Token refreshed', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "refresh-token"]
+            },
+            "description": "Refresh access token. Reads refresh token from HTTP-only cookie automatically. Rate limited to 10 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.environment.set('accessToken', '');",
+                  "    pm.environment.set('refreshToken', '');",
+                  "    pm.environment.set('tokenExpiresAt', '0');",
+                  "    pm.test('Logout successful', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "logout"]
+            },
+            "description": "Logout user. Requires Bearer token. Clears refresh token cookie. Rate limited to 5 req/min."
+          },
+          "response": []
+        }
+      ],
+      "description": "User authentication endpoints: registration, login, email verification, password reset, token refresh, and logout."
+    },
+    {
+      "name": "Auth - Admin",
+      "item": [
+        {
+          "name": "Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.tempToken) {",
+                  "        pm.environment.set('tempToken', json.tempToken);",
+                  "    }",
+                  "    pm.test('2FA code sent', () => {",
+                  "        pm.expect(json.requires2FA).to.be.true;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/admin/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "admin", "login"]
+            },
+            "description": "Admin login Step 1: Sends a 2FA code to the admin's email. Returns a tempToken for Step 2. Rate limited to 5 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify 2FA",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.accessToken) {",
+                  "        pm.environment.set('accessToken', json.accessToken);",
+                  "        pm.environment.set('tokenExpiresAt', String(Date.now() + (json.expiresIn * 1000)));",
+                  "    }",
+                  "    pm.environment.set('tempToken', '');",
+                  "    pm.test('Admin login successful', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tempToken\": \"{{tempToken}}\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/admin/verify-2fa",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "admin", "verify-2fa"]
+            },
+            "description": "Admin login Step 2: Verify the 6-digit 2FA code sent to email. Returns the admin access token. Rate limited to 5 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "Resend 2FA",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.tempToken) {",
+                  "        pm.environment.set('tempToken', json.tempToken);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tempToken\": \"{{tempToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/admin/resend-2fa",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "admin", "resend-2fa"]
+            },
+            "description": "Resend the 2FA verification code. Returns a new tempToken. Rate limited to 3 req/5min."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.accessToken) {",
+                  "        pm.environment.set('accessToken', json.accessToken);",
+                  "        pm.environment.set('tokenExpiresAt', String(Date.now() + (json.expiresIn * 1000)));",
+                  "    }",
+                  "    pm.test('Admin token refreshed', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/admin/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "admin", "refresh-token"]
+            },
+            "description": "Refresh admin access token. Reads refresh token from HTTP-only cookie. Rate limited to 10 req/min."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.environment.set('accessToken', '');",
+                  "    pm.environment.set('refreshToken', '');",
+                  "    pm.environment.set('tempToken', '');",
+                  "    pm.environment.set('tokenExpiresAt', '0');",
+                  "    pm.test('Admin logout successful', () => pm.response.to.have.status(200));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/auth/admin/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "auth", "admin", "logout"]
+            },
+            "description": "Admin logout. Requires Bearer token. Clears admin refresh token cookie. Rate limited to 5 req/min."
+          },
+          "response": []
+        }
+      ],
+      "description": "Admin authentication with 2-step login (credentials + 2FA code)."
+    },
+    {
+      "name": "Catalog - Public",
+      "item": [
+        {
+          "name": "List Categories",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/catalog/categories?lang=fr&isActive=true",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "catalog", "categories"],
+              "query": [
+                { "key": "lang", "value": "fr", "description": "Language (fr|en)" },
+                { "key": "isActive", "value": "true", "description": "Filter active categories" }
+              ]
+            },
+            "description": "Get all categories with optional language and active filters."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Category by Slug",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/catalog/categories/{{categorySlug}}?lang=fr",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "catalog", "categories", "{{categorySlug}}"],
+              "query": [
+                { "key": "lang", "value": "fr", "description": "Language (fr|en)" }
+              ]
+            },
+            "description": "Get a single category by its slug."
+          },
+          "response": []
+        },
+        {
+          "name": "List Products",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/catalog/products?page=1&limit=20&lang=fr&sortBy=DISPLAY_ORDER&sortOrder=ASC",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "catalog", "products"],
+              "query": [
+                { "key": "page", "value": "1", "description": "Page number (min: 1)" },
+                { "key": "limit", "value": "20", "description": "Items per page (1-100)" },
+                { "key": "lang", "value": "fr", "description": "Language (fr|en)" },
+                { "key": "sortBy", "value": "DISPLAY_ORDER", "description": "Sort field (DISPLAY_ORDER|PRICE_MONTHLY|PRICE_UNIT|CREATED_AT)" },
+                { "key": "sortOrder", "value": "ASC", "description": "Sort order (ASC|DESC)" },
+                { "key": "categorySlug", "value": "", "description": "Filter by category slug", "disabled": true },
+                { "key": "productType", "value": "", "description": "Filter by type (SAAS|DIGITAL|PHYSICAL)", "disabled": true },
+                { "key": "isAvailable", "value": "", "description": "Filter available products", "disabled": true },
+                { "key": "isFeatured", "value": "", "description": "Filter featured products", "disabled": true },
+                { "key": "minPrice", "value": "", "description": "Minimum price filter", "disabled": true },
+                { "key": "maxPrice", "value": "", "description": "Maximum price filter", "disabled": true }
+              ]
+            },
+            "description": "Get all products with filtering, sorting, and pagination."
+          },
+          "response": []
+        },
+        {
+          "name": "Featured Products",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/catalog/products/featured?limit=10&lang=fr",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "catalog", "products", "featured"],
+              "query": [
+                { "key": "limit", "value": "10", "description": "Number of products to return" },
+                { "key": "lang", "value": "fr", "description": "Language (fr|en)" }
+              ]
+            },
+            "description": "Get featured/highlighted products for the homepage."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product by Slug",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/catalog/products/{{productSlug}}?lang=fr",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "catalog", "products", "{{productSlug}}"],
+              "query": [
+                { "key": "lang", "value": "fr", "description": "Language (fr|en)" }
+              ]
+            },
+            "description": "Get a single product by its slug."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product Stock",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/catalog/products/{{productSlug}}/stock",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "catalog", "products", "{{productSlug}}", "stock"]
+            },
+            "description": "Get stock information for a product by its slug."
+          },
+          "response": []
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/{{apiPrefix}}/catalog/search?q=edr&page=1&limit=20&lang=fr",
+              "host": ["{{baseUrl}}"],
+              "path": ["{{apiPrefix}}", "catalog", "search"],
+              "query": [
+                { "key": "q", "value": "edr", "description": "Search query" },
+                { "key": "page", "value": "1", "description": "Page number" },
+                { "key": "limit", "value": "20", "description": "Items per page" },
+                { "key": "lang", "value": "fr", "description": "Language (fr|en)" }
+              ]
+            },
+            "description": "Search products by keyword with pagination."
+          },
+          "response": []
+        }
+      ],
+      "description": "Public catalog endpoints (no authentication required)."
+    },
+    {
+      "name": "Catalog - Admin",
+      "item": [
+        {
+          "name": "Categories",
+          "item": [
+            {
+              "name": "List Categories (Admin)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/categories?lang=fr",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "categories"],
+                  "query": [
+                    { "key": "lang", "value": "fr", "description": "Language (fr|en)" },
+                    { "key": "isActive", "value": "", "description": "Filter by active status", "disabled": true }
+                  ]
+                },
+                "description": "List all categories (admin view, includes inactive)."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Category",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const json = pm.response.json();",
+                      "    if (json.id) {",
+                      "        pm.environment.set('categoryId', json.id);",
+                      "    }",
+                      "    pm.test('Category created', () => pm.response.to.have.status(201));",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"slug\": \"soc-solutions\",\n  \"nameFr\": \"Solutions SOC\",\n  \"nameEn\": \"SOC Solutions\",\n  \"descriptionFr\": \"Solutions de Security Operations Center\",\n  \"descriptionEn\": \"Security Operations Center solutions\",\n  \"imageUrl\": \"https://example.com/soc.png\",\n  \"displayOrder\": 1,\n  \"isActive\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/categories",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "categories"]
+                },
+                "description": "Create a new category. Slug must be unique and lowercase with hyphens only."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Category",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nameFr\": \"Solutions SOC Updated\",\n  \"nameEn\": \"SOC Solutions Updated\",\n  \"displayOrder\": 2\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/categories/{{categoryId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "categories", "{{categoryId}}"]
+                },
+                "description": "Update an existing category. All fields are optional (partial update)."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Category",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/categories/{{categoryId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "categories", "{{categoryId}}"]
+                },
+                "description": "Delete a category. Will fail if the category has associated products (409)."
+              },
+              "response": []
+            }
+          ],
+          "description": "Admin category management (CRUD)."
+        },
+        {
+          "name": "Products",
+          "item": [
+            {
+              "name": "List Products (Admin)",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/products?page=1&limit=20&lang=fr",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "products"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "20" },
+                    { "key": "lang", "value": "fr" },
+                    { "key": "categorySlug", "value": "", "disabled": true },
+                    { "key": "productType", "value": "", "disabled": true },
+                    { "key": "isAvailable", "value": "", "disabled": true }
+                  ]
+                },
+                "description": "List all products with admin view (includes unavailable)."
+              },
+              "response": []
+            },
+            {
+              "name": "Create Product",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const json = pm.response.json();",
+                      "    if (json.id) {",
+                      "        pm.environment.set('productId', json.id);",
+                      "    }",
+                      "    pm.test('Product created', () => pm.response.to.have.status(201));",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"slug\": \"cyna-edr-pro\",\n  \"sku\": \"CYNA-EDR-PRO-001\",\n  \"nameFr\": \"CYNA EDR Pro\",\n  \"nameEn\": \"CYNA EDR Pro\",\n  \"descriptionFr\": \"Solution EDR professionnelle pour la detection et la reponse aux menaces\",\n  \"descriptionEn\": \"Professional EDR solution for threat detection and response\",\n  \"shortDescriptionFr\": \"EDR avance pour entreprises\",\n  \"shortDescriptionEn\": \"Advanced EDR for businesses\",\n  \"productType\": \"SAAS\",\n  \"priceMonthly\": 49.99,\n  \"priceYearly\": 499.99,\n  \"isAvailable\": true,\n  \"isFeatured\": true,\n  \"displayOrder\": 1,\n  \"characteristics\": [\n    {\n      \"keyFr\": \"Endpoints supportes\",\n      \"keyEn\": \"Supported Endpoints\",\n      \"valueFr\": \"Illimite\",\n      \"valueEn\": \"Unlimited\",\n      \"displayOrder\": 0\n    }\n  ]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/products",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "products"]
+                },
+                "description": "Create a new product. Requires a valid categoryId. Product types: SAAS, DIGITAL, PHYSICAL."
+              },
+              "response": []
+            },
+            {
+              "name": "Get Product by ID",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/products/{{productId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "products", "{{productId}}"]
+                },
+                "description": "Get product details by UUID (admin view)."
+              },
+              "response": []
+            },
+            {
+              "name": "Update Product",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"nameFr\": \"CYNA EDR Pro v2\",\n  \"priceMonthly\": 59.99,\n  \"isFeatured\": true\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/products/{{productId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "products", "{{productId}}"]
+                },
+                "description": "Update an existing product. All fields are optional (partial update)."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Product",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/products/{{productId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "products", "{{productId}}"]
+                },
+                "description": "Delete a product by ID."
+              },
+              "response": []
+            }
+          ],
+          "description": "Admin product management (CRUD)."
+        },
+        {
+          "name": "Images",
+          "item": [
+            {
+              "name": "Add Image",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "if (pm.response.code === 201) {",
+                      "    const json = pm.response.json();",
+                      "    if (json.id) {",
+                      "        pm.environment.set('imageId', json.id);",
+                      "    }",
+                      "    pm.test('Image added', () => pm.response.to.have.status(201));",
+                      "}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"imageUrl\": \"https://example.com/product-image.png\",\n  \"altTextFr\": \"Image du produit EDR\",\n  \"altTextEn\": \"EDR product image\",\n  \"isPrimary\": false\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/products/{{productId}}/images",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "products", "{{productId}}", "images"]
+                },
+                "description": "Add an image to a product. Set isPrimary to true to make it the main image."
+              },
+              "response": []
+            },
+            {
+              "name": "Delete Image",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/products/{{productId}}/images/{{imageId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "products", "{{productId}}", "images", "{{imageId}}"]
+                },
+                "description": "Delete a product image by ID."
+              },
+              "response": []
+            },
+            {
+              "name": "Reorder Images",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"imageIds\": [\"uuid-1\", \"uuid-2\", \"uuid-3\"]\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/products/{{productId}}/images/reorder",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "products", "{{productId}}", "images", "reorder"]
+                },
+                "description": "Reorder product images by providing an ordered array of image UUIDs."
+              },
+              "response": []
+            }
+          ],
+          "description": "Admin product image management."
+        },
+        {
+          "name": "Stock",
+          "item": [
+            {
+              "name": "Update Stock",
+              "request": {
+                "method": "PATCH",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"stockQuantity\": 100,\n  \"stockAlertThreshold\": 10\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/products/{{productId}}/stock",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "products", "{{productId}}", "stock"]
+                },
+                "description": "Update stock quantity and alert threshold for a product."
+              },
+              "response": []
+            },
+            {
+              "name": "Stock Alerts",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/{{apiPrefix}}/admin/catalog/stock/alerts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["{{apiPrefix}}", "admin", "catalog", "stock", "alerts"]
+                },
+                "description": "Get all products with stock below their alert threshold."
+              },
+              "response": []
+            }
+          ],
+          "description": "Admin stock management."
+        }
+      ],
+      "description": "Admin catalog endpoints (requires admin JWT token)."
+    }
+  ]
+}

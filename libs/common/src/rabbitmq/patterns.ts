@@ -53,32 +53,16 @@ export const MESSAGE_PATTERNS = {
 
   // Catalog Service
   CATALOG: {
-    // Categories - Public
     GET_CATEGORIES: { cmd: 'catalog.get_categories' },
-    GET_CATEGORY_BY_SLUG: { cmd: 'catalog.get_category_by_slug' },
-    // Categories - Admin
-    GET_CATEGORIES_ADMIN: { cmd: 'catalog.admin.get_categories' },
-    GET_CATEGORY_BY_ID: { cmd: 'catalog.admin.get_category_by_id' },
-    CREATE_CATEGORY: { cmd: 'catalog.admin.create_category' },
-    UPDATE_CATEGORY: { cmd: 'catalog.admin.update_category' },
-    DELETE_CATEGORY: { cmd: 'catalog.admin.delete_category' },
-    // Products - Public
+    GET_CATEGORY: { cmd: 'catalog.get_category' },
     GET_PRODUCTS: { cmd: 'catalog.get_products' },
     GET_PRODUCT: { cmd: 'catalog.get_product' },
     GET_FEATURED_PRODUCTS: { cmd: 'catalog.get_featured_products' },
     SEARCH_PRODUCTS: { cmd: 'catalog.search_products' },
-    // Products - Admin (will be added in Phase 2)
-    GET_PRODUCTS_ADMIN: { cmd: 'catalog.admin.get_products' },
-    GET_PRODUCT_BY_ID: { cmd: 'catalog.admin.get_product_by_id' },
-    CREATE_PRODUCT: { cmd: 'catalog.admin.create_product' },
-    UPDATE_PRODUCT: { cmd: 'catalog.admin.update_product' },
-    DELETE_PRODUCT: { cmd: 'catalog.admin.delete_product' },
-    // Stock
     GET_STOCK: { cmd: 'catalog.get_stock' },
     RESERVE_STOCK: { cmd: 'catalog.reserve_stock' },
     RELEASE_STOCK: { cmd: 'catalog.release_stock' },
     CONFIRM_STOCK: { cmd: 'catalog.confirm_stock' },
-    UPDATE_STOCK: { cmd: 'catalog.admin.update_stock' },
   },
 
   // Order Service
@@ -157,15 +141,9 @@ export const EVENT_PATTERNS = {
 
   // Catalog Events
   CATALOG: {
-    // Category Events
-    CATEGORY_CREATED: 'catalog.category.created',
-    CATEGORY_UPDATED: 'catalog.category.updated',
-    CATEGORY_DELETED: 'catalog.category.deleted',
-    // Product Events
     PRODUCT_CREATED: 'catalog.product.created',
     PRODUCT_UPDATED: 'catalog.product.updated',
     PRODUCT_DELETED: 'catalog.product.deleted',
-    // Stock Events
     STOCK_RESERVED: 'catalog.stock.reserved',
     STOCK_RELEASED: 'catalog.stock.released',
     STOCK_CONFIRMED: 'catalog.stock.confirmed',

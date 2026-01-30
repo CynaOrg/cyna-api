@@ -9,7 +9,6 @@ import {
 } from '@cyna-api/common';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
-import { CatalogModule } from './catalog/catalog.module';
 
 /**
  * Gateway Module
@@ -34,7 +33,6 @@ import { CatalogModule } from './catalog/catalog.module';
     // Feature modules
     HealthModule,
     AuthModule,
-    CatalogModule,
   ],
   providers: [
     {

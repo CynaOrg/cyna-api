@@ -5,28 +5,19 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { CynaConfigModule, LoggerModule, SERVICE_NAMES } from '@cyna-api/common';
 import { catalogConfig } from './config';
-import {
-  Category,
-  Product,
-  ProductImage,
-  ProductCharacteristic,
-  StockReservation,
-} from './entities';
+import { Category, Product, ProductImage, ProductCharacteristic } from './entities';
 import {
   CategoryService,
   ProductService,
   ProductImageService,
   ProductCharacteristicService,
-  StockReservationService,
 } from './services';
 import {
   CategoryController,
   ProductController,
   ProductImageController,
   ProductCharacteristicController,
-  StockReservationController,
 } from './controllers';
-import { ReservationCleanupService } from './cron';
 
 @Module({
   imports: [
@@ -46,17 +37,11 @@ import { ReservationCleanupService } from './cron';
       username: process.env.DATABASE_USER || 'cyna',
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
-      entities: [Category, Product, ProductImage, ProductCharacteristic, StockReservation],
+      entities: [Category, Product, ProductImage, ProductCharacteristic],
       synchronize: process.env.NODE_ENV !== 'production',
       logging: process.env.NODE_ENV === 'development',
     }),
-    TypeOrmModule.forFeature([
-      Category,
-      Product,
-      ProductImage,
-      ProductCharacteristic,
-      StockReservation,
-    ]),
+    TypeOrmModule.forFeature([Category, Product, ProductImage, ProductCharacteristic]),
 
     // RabbitMQ clients for communication with other services
     ClientsModule.register([
@@ -93,15 +78,12 @@ import { ReservationCleanupService } from './cron';
     ProductController,
     ProductImageController,
     ProductCharacteristicController,
-    StockReservationController,
   ],
   providers: [
     CategoryService,
     ProductService,
     ProductImageService,
     ProductCharacteristicService,
-    StockReservationService,
-    ReservationCleanupService,
   ],
 })
 export class CatalogModule {}

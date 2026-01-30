@@ -51,18 +51,49 @@ export const MESSAGE_PATTERNS = {
     GET_SUBSCRIPTIONS: { cmd: 'user.get_subscriptions' },
   },
 
-  // Catalog Service
+  // Catalog Service - Categories
   CATALOG: {
-    GET_CATEGORIES: { cmd: 'catalog.get_categories' },
-    GET_CATEGORY: { cmd: 'catalog.get_category' },
-    GET_PRODUCTS: { cmd: 'catalog.get_products' },
-    GET_PRODUCT: { cmd: 'catalog.get_product' },
-    GET_FEATURED_PRODUCTS: { cmd: 'catalog.get_featured_products' },
-    SEARCH_PRODUCTS: { cmd: 'catalog.search_products' },
-    GET_STOCK: { cmd: 'catalog.get_stock' },
-    RESERVE_STOCK: { cmd: 'catalog.reserve_stock' },
-    RELEASE_STOCK: { cmd: 'catalog.release_stock' },
-    CONFIRM_STOCK: { cmd: 'catalog.confirm_stock' },
+    // Categories
+    CATEGORY_CREATE: { cmd: 'catalog.category.create' },
+    CATEGORY_UPDATE: { cmd: 'catalog.category.update' },
+    CATEGORY_DELETE: { cmd: 'catalog.category.delete' },
+    CATEGORY_FIND_ALL: { cmd: 'catalog.category.findAll' },
+    CATEGORY_FIND_BY_SLUG: { cmd: 'catalog.category.findBySlug' },
+    CATEGORY_FIND_BY_ID: { cmd: 'catalog.category.findById' },
+    // Products
+    PRODUCT_CREATE: { cmd: 'catalog.product.create' },
+    PRODUCT_UPDATE: { cmd: 'catalog.product.update' },
+    PRODUCT_DELETE: { cmd: 'catalog.product.delete' },
+    PRODUCT_FIND_ALL: { cmd: 'catalog.product.findAll' },
+    PRODUCT_FIND_BY_SLUG: { cmd: 'catalog.product.findBySlug' },
+    PRODUCT_FIND_BY_ID: { cmd: 'catalog.product.findById' },
+    PRODUCT_SEARCH: { cmd: 'catalog.product.search' },
+    PRODUCT_FIND_FEATURED: { cmd: 'catalog.product.findFeatured' },
+    PRODUCT_FIND_BY_CATEGORY: { cmd: 'catalog.product.findByCategory' },
+    // Product Images
+    PRODUCT_ADD_IMAGE: { cmd: 'catalog.product.addImage' },
+    PRODUCT_DELETE_IMAGE: { cmd: 'catalog.product.deleteImage' },
+    PRODUCT_SET_PRIMARY_IMAGE: { cmd: 'catalog.product.setPrimaryImage' },
+    PRODUCT_REORDER_IMAGES: { cmd: 'catalog.product.reorderImages' },
+    // Stock
+    STOCK_UPDATE: { cmd: 'catalog.stock.update' },
+    STOCK_GET_INFO: { cmd: 'catalog.stock.getInfo' },
+    STOCK_GET_ALERTS: { cmd: 'catalog.stock.getAlerts' },
+    STOCK_CHECK_AVAILABILITY: { cmd: 'catalog.stock.checkAvailability' },
+    STOCK_RESERVE: { cmd: 'catalog.stock.reserve' },
+    STOCK_RELEASE: { cmd: 'catalog.stock.release' },
+    STOCK_CONFIRM: { cmd: 'catalog.stock.confirm' },
+    // Legacy aliases (backward compatibility)
+    GET_CATEGORIES: { cmd: 'catalog.category.findAll' },
+    GET_CATEGORY: { cmd: 'catalog.category.findBySlug' },
+    GET_PRODUCTS: { cmd: 'catalog.product.findAll' },
+    GET_PRODUCT: { cmd: 'catalog.product.findBySlug' },
+    GET_FEATURED_PRODUCTS: { cmd: 'catalog.product.findFeatured' },
+    SEARCH_PRODUCTS: { cmd: 'catalog.product.search' },
+    GET_STOCK: { cmd: 'catalog.stock.getInfo' },
+    RESERVE_STOCK: { cmd: 'catalog.stock.reserve' },
+    RELEASE_STOCK: { cmd: 'catalog.stock.release' },
+    CONFIRM_STOCK: { cmd: 'catalog.stock.confirm' },
   },
 
   // Order Service

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "CYNA API",
-    "description": "Collection Postman pour l'API CYNA - Auth & Notification Services",
+    "description": "Collection Postman pour l'API CYNA - Auth, Notification & Catalog Services",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -22,6 +22,26 @@
     },
     {
       "key": "tempToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "productId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "imageId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "cartId",
       "value": "",
       "type": "string"
     }
@@ -63,6 +83,25 @@
         },
         {
           "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.accessToken) {",
+                  "        pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    }",
+                  "    if (jsonData.refreshToken) {",
+                  "        pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -283,6 +322,22 @@
       "item": [
         {
           "name": "Admin Login (Step 1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.tempToken) {",
+                  "        pm.collectionVariables.set('tempToken', jsonData.tempToken);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -313,6 +368,25 @@
         },
         {
           "name": "Admin Verify 2FA (Step 2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.accessToken) {",
+                  "        pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "    }",
+                  "    if (jsonData.refreshToken) {",
+                  "        pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -432,6 +506,949 @@
               "status": "OK",
               "code": 200,
               "body": "{\n  \"success\": true\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog - Categories (Public)",
+      "description": "Endpoints publics pour les catégories",
+      "item": [
+        {
+          "name": "List All Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "fr"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/categories?lang=fr",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "categories"],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "fr",
+                  "description": "Langue (fr ou en)"
+                }
+              ]
+            },
+            "description": "Liste toutes les catégories actives."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"slug\": \"services\",\n      \"name\": \"Services\",\n      \"description\": \"Solutions SaaS de cybersécurité\",\n      \"imageUrl\": null,\n      \"displayOrder\": 1,\n      \"productCount\": 3\n    },\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440001\",\n      \"slug\": \"produits\",\n      \"name\": \"Produits\",\n      \"description\": \"Équipements et produits physiques\",\n      \"imageUrl\": null,\n      \"displayOrder\": 2,\n      \"productCount\": 0\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Category by Slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "fr"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/categories/services?lang=fr",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "categories", "services"],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "fr"
+                }
+              ]
+            },
+            "description": "Récupère une catégorie par son slug."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"slug\": \"services\",\n    \"name\": \"Services\",\n    \"description\": \"Solutions SaaS de cybersécurité pour protéger votre entreprise\",\n    \"imageUrl\": null,\n    \"displayOrder\": 1,\n    \"isActive\": true\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog - Categories (Admin)",
+      "description": "Endpoints admin pour la gestion des catégories",
+      "item": [
+        {
+          "name": "Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.collectionVariables.set('categoryId', jsonData.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slug\": \"accessoires\",\n  \"nameFr\": \"Accessoires\",\n  \"nameEn\": \"Accessories\",\n  \"descriptionFr\": \"Accessoires de sécurité informatique\",\n  \"descriptionEn\": \"IT security accessories\",\n  \"displayOrder\": 3,\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "categories"]
+            },
+            "description": "Crée une nouvelle catégorie. Nécessite une authentification admin."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440002\",\n    \"slug\": \"accessoires\",\n    \"nameFr\": \"Accessoires\",\n    \"nameEn\": \"Accessories\",\n    \"descriptionFr\": \"Accessoires de sécurité informatique\",\n    \"descriptionEn\": \"IT security accessories\",\n    \"imageUrl\": null,\n    \"displayOrder\": 3,\n    \"isActive\": true,\n    \"createdAt\": \"2026-01-29T10:00:00.000Z\",\n    \"updatedAt\": \"2026-01-29T10:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nameFr\": \"Accessoires Sécurité\",\n  \"displayOrder\": 4\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "categories", "{{categoryId}}"]
+            },
+            "description": "Met à jour une catégorie existante."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"id\": \"{{categoryId}}\",\n    \"nameFr\": \"Accessoires Sécurité\",\n    \"displayOrder\": 4,\n    \"updatedAt\": \"2026-01-29T10:05:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/categories/{{categoryId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "categories", "{{categoryId}}"]
+            },
+            "description": "Supprime une catégorie. La catégorie ne doit pas contenir de produits."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"success\": true\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog - Products (Public)",
+      "description": "Endpoints publics pour les produits",
+      "item": [
+        {
+          "name": "List All Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "fr"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products?page=1&limit=20&lang=fr",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "products"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "lang",
+                  "value": "fr"
+                },
+                {
+                  "key": "categorySlug",
+                  "value": "services",
+                  "disabled": true
+                },
+                {
+                  "key": "productType",
+                  "value": "saas",
+                  "disabled": true
+                },
+                {
+                  "key": "isFeatured",
+                  "value": "true",
+                  "disabled": true
+                },
+                {
+                  "key": "minPrice",
+                  "value": "100",
+                  "disabled": true
+                },
+                {
+                  "key": "maxPrice",
+                  "value": "500",
+                  "disabled": true
+                },
+                {
+                  "key": "sortBy",
+                  "value": "priceMonthly",
+                  "disabled": true
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "asc",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Liste tous les produits avec filtres et pagination."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440010\",\n      \"slug\": \"soc-premium\",\n      \"sku\": \"SOC-001\",\n      \"name\": \"SOC Premium\",\n      \"shortDescription\": \"Surveillance continue 24/7 de votre infrastructure\",\n      \"productType\": \"saas\",\n      \"priceMonthly\": 299.00,\n      \"priceYearly\": 2990.00,\n      \"isAvailable\": true,\n      \"isFeatured\": true,\n      \"primaryImage\": null,\n      \"category\": {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"slug\": \"services\",\n        \"name\": \"Services\"\n      }\n    }\n  ],\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 3,\n    \"totalPages\": 1,\n    \"hasNext\": false,\n    \"hasPrev\": false\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Product by Slug",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "fr"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products/soc-premium?lang=fr",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "products", "soc-premium"],
+              "query": [
+                {
+                  "key": "lang",
+                  "value": "fr"
+                }
+              ]
+            },
+            "description": "Récupère le détail complet d'un produit par son slug."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440010\",\n    \"slug\": \"soc-premium\",\n    \"sku\": \"SOC-001\",\n    \"name\": \"SOC Premium\",\n    \"description\": \"Notre solution SOC Premium offre une surveillance continue 24/7...\",\n    \"shortDescription\": \"Surveillance continue 24/7 de votre infrastructure\",\n    \"productType\": \"saas\",\n    \"priceMonthly\": 299.00,\n    \"priceYearly\": 2990.00,\n    \"isAvailable\": true,\n    \"isFeatured\": true,\n    \"images\": [],\n    \"characteristics\": [\n      {\n        \"key\": \"Surveillance\",\n        \"value\": \"24/7\",\n        \"displayOrder\": 1\n      },\n      {\n        \"key\": \"Temps de réponse\",\n        \"value\": \"< 15 minutes\",\n        \"displayOrder\": 2\n      }\n    ],\n    \"category\": {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440000\",\n      \"slug\": \"services\",\n      \"name\": \"Services\"\n    }\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Featured Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "fr"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products/featured?limit=6&lang=fr",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "products", "featured"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "6"
+                },
+                {
+                  "key": "lang",
+                  "value": "fr"
+                },
+                {
+                  "key": "productType",
+                  "value": "saas",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Récupère les produits mis en avant (Top produits)."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440010\",\n      \"slug\": \"soc-premium\",\n      \"name\": \"SOC Premium\",\n      \"shortDescription\": \"Surveillance continue 24/7\",\n      \"productType\": \"saas\",\n      \"priceMonthly\": 299.00,\n      \"priceYearly\": 2990.00,\n      \"isFeatured\": true,\n      \"primaryImage\": null\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Products by Category",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "fr"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/categories/services/products?page=1&limit=20&lang=fr",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "categories", "services", "products"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "lang",
+                  "value": "fr"
+                }
+              ]
+            },
+            "description": "Liste les produits d'une catégorie spécifique."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": [...],\n  \"pagination\": {...}\n}"
+            }
+          ]
+        },
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept-Language",
+                "value": "fr"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/search?q=SOC&page=1&limit=20&lang=fr",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "SOC",
+                  "description": "Terme de recherche (min 2 caractères)"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "lang",
+                  "value": "fr"
+                },
+                {
+                  "key": "categorySlug",
+                  "value": "services",
+                  "disabled": true
+                },
+                {
+                  "key": "productType",
+                  "value": "saas",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Recherche full-text dans les produits."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"query\": \"SOC\",\n    \"results\": [\n      {\n        \"id\": \"550e8400-e29b-41d4-a716-446655440010\",\n        \"slug\": \"soc-premium\",\n        \"name\": \"SOC Premium\",\n        \"shortDescription\": \"Surveillance continue 24/7\",\n        \"productType\": \"saas\",\n        \"priceMonthly\": 299.00\n      }\n    ],\n    \"totalResults\": 1,\n    \"searchTime\": 45\n  },\n  \"pagination\": {\n    \"page\": 1,\n    \"limit\": 20,\n    \"total\": 1,\n    \"totalPages\": 1\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog - Products (Admin)",
+      "description": "Endpoints admin pour la gestion des produits",
+      "item": [
+        {
+          "name": "Create Product (SaaS)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.collectionVariables.set('productId', jsonData.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"slug\": \"siem-pro\",\n  \"sku\": \"SIEM-001\",\n  \"nameFr\": \"SIEM Pro\",\n  \"nameEn\": \"SIEM Pro\",\n  \"descriptionFr\": \"Solution SIEM complète pour la gestion des événements de sécurité avec corrélation avancée et détection des menaces.\",\n  \"descriptionEn\": \"Complete SIEM solution for security event management with advanced correlation and threat detection.\",\n  \"shortDescriptionFr\": \"Gestion centralisée des logs et alertes\",\n  \"shortDescriptionEn\": \"Centralized log and alert management\",\n  \"productType\": \"saas\",\n  \"priceMonthly\": 399,\n  \"priceYearly\": 3990,\n  \"isAvailable\": true,\n  \"isFeatured\": true,\n  \"displayOrder\": 4,\n  \"characteristics\": [\n    {\n      \"keyFr\": \"Sources de logs\",\n      \"keyEn\": \"Log sources\",\n      \"valueFr\": \"Illimitées\",\n      \"valueEn\": \"Unlimited\"\n    },\n    {\n      \"keyFr\": \"Rétention\",\n      \"keyEn\": \"Retention\",\n      \"valueFr\": \"12 mois\",\n      \"valueEn\": \"12 months\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "products"]
+            },
+            "description": "Crée un nouveau produit SaaS avec caractéristiques."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440011\",\n    \"slug\": \"siem-pro\",\n    \"sku\": \"SIEM-001\",\n    ...\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Product (Physical)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categoryId\": \"{{categoryId}}\",\n  \"slug\": \"firewall-enterprise\",\n  \"sku\": \"FW-001\",\n  \"nameFr\": \"Firewall Enterprise\",\n  \"nameEn\": \"Enterprise Firewall\",\n  \"descriptionFr\": \"Solution firewall de nouvelle génération avec inspection approfondie des paquets et prévention des intrusions.\",\n  \"descriptionEn\": \"Next-generation firewall solution with deep packet inspection and intrusion prevention.\",\n  \"shortDescriptionFr\": \"Firewall nouvelle génération\",\n  \"shortDescriptionEn\": \"Next-gen firewall\",\n  \"productType\": \"physical\",\n  \"priceUnit\": 2500.00,\n  \"stockQuantity\": 50,\n  \"stockAlertThreshold\": 10,\n  \"isAvailable\": true,\n  \"isFeatured\": false,\n  \"displayOrder\": 5,\n  \"characteristics\": [\n    {\n      \"keyFr\": \"Débit\",\n      \"keyEn\": \"Throughput\",\n      \"valueFr\": \"10 Gbps\",\n      \"valueEn\": \"10 Gbps\"\n    },\n    {\n      \"keyFr\": \"Ports\",\n      \"keyEn\": \"Ports\",\n      \"valueFr\": \"8x 1GbE + 2x 10GbE\",\n      \"valueEn\": \"8x 1GbE + 2x 10GbE\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/products",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "products"]
+            },
+            "description": "Crée un nouveau produit physique avec stock."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"data\": {...}\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priceMonthly\": 349.00,\n  \"priceYearly\": 3490.00,\n  \"isFeatured\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "products", "{{productId}}"]
+            },
+            "description": "Met à jour un produit existant."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {...}\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/products/{{productId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "products", "{{productId}}"]
+            },
+            "description": "Supprime un produit (soft delete)."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"success\": true\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog - Images (Admin)",
+      "description": "Gestion des images produits",
+      "item": [
+        {
+          "name": "Add Product Image",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    if (jsonData.data && jsonData.data.id) {",
+                  "        pm.collectionVariables.set('imageId', jsonData.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imageUrl\": \"https://cdn.cyna.fr/products/soc-premium-dashboard.jpg\",\n  \"altTextFr\": \"SOC Premium - Tableau de bord\",\n  \"altTextEn\": \"SOC Premium - Dashboard\",\n  \"isPrimary\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/products/{{productId}}/images",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "products", "{{productId}}", "images"]
+            },
+            "description": "Ajoute une image à un produit."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440030\",\n    \"imageUrl\": \"https://cdn.cyna.fr/products/soc-premium-dashboard.jpg\",\n    \"altTextFr\": \"SOC Premium - Tableau de bord\",\n    \"altTextEn\": \"SOC Premium - Dashboard\",\n    \"isPrimary\": true,\n    \"displayOrder\": 1\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Set Primary Image",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/products/{{productId}}/images/{{imageId}}/primary",
+              "host": ["{{baseUrl}}"],
+              "path": [
+                "admin",
+                "catalog",
+                "products",
+                "{{productId}}",
+                "images",
+                "{{imageId}}",
+                "primary"
+              ]
+            },
+            "description": "Définit une image comme image principale du produit."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {...}\n}"
+            }
+          ]
+        },
+        {
+          "name": "Reorder Images",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"imageIds\": [\n    \"550e8400-e29b-41d4-a716-446655440032\",\n    \"550e8400-e29b-41d4-a716-446655440030\",\n    \"550e8400-e29b-41d4-a716-446655440031\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/products/{{productId}}/images/reorder",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "products", "{{productId}}", "images", "reorder"]
+            },
+            "description": "Réorganise l'ordre d'affichage des images."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {...}\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Image",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/products/{{productId}}/images/{{imageId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "products", "{{productId}}", "images", "{{imageId}}"]
+            },
+            "description": "Supprime une image du produit."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"success\": true\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Catalog - Stock",
+      "description": "Gestion des stocks (produits physiques)",
+      "item": [
+        {
+          "name": "Get Stock Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/catalog/products/{{productId}}/stock",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "products", "{{productId}}", "stock"]
+            },
+            "description": "Récupère les informations de stock d'un produit physique."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"productId\": \"550e8400-e29b-41d4-a716-446655440040\",\n    \"productType\": \"physical\",\n    \"stockQuantity\": 50,\n    \"reservedQuantity\": 3,\n    \"availableQuantity\": 47,\n    \"isAvailable\": true,\n    \"stockStatus\": \"in_stock\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Check Stock Availability",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"quantity\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/stock/check-availability",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "stock", "check-availability"]
+            },
+            "description": "Vérifie si une quantité spécifique est disponible."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"productId\": \"550e8400-e29b-41d4-a716-446655440040\",\n    \"requestedQuantity\": 5,\n    \"availableQuantity\": 47,\n    \"isAvailable\": true,\n    \"stockStatus\": \"in_stock\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Stock (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stockQuantity\": 100,\n  \"stockAlertThreshold\": 15\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/products/{{productId}}/stock",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "products", "{{productId}}", "stock"]
+            },
+            "description": "Met à jour le stock et le seuil d'alerte d'un produit physique."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"id\": \"550e8400-e29b-41d4-a716-446655440040\",\n    \"stockQuantity\": 100,\n    \"stockAlertThreshold\": 15,\n    \"updatedAt\": \"2026-01-29T10:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Stock Alerts (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/admin/catalog/stock/alerts",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "catalog", "stock", "alerts"]
+            },
+            "description": "Liste les produits avec un stock inférieur au seuil d'alerte."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": [\n    {\n      \"id\": \"550e8400-e29b-41d4-a716-446655440040\",\n      \"sku\": \"FW-001\",\n      \"nameFr\": \"Firewall Enterprise\",\n      \"nameEn\": \"Enterprise Firewall\",\n      \"stockQuantity\": 5,\n      \"stockAlertThreshold\": 10,\n      \"productType\": \"physical\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Reserve Stock",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"{{productId}}\",\n  \"cartId\": \"{{cartId}}\",\n  \"quantity\": 2,\n  \"userId\": \"550e8400-e29b-41d4-a716-446655440060\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/stock/reserve",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "stock", "reserve"]
+            },
+            "description": "Réserve du stock pour un panier (appelé par Order Service). Réservation valide 15 minutes."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"data\": {\n    \"reservationId\": \"550e8400-e29b-41d4-a716-446655440070\",\n    \"productId\": \"550e8400-e29b-41d4-a716-446655440040\",\n    \"cartId\": \"550e8400-e29b-41d4-a716-446655440050\",\n    \"quantity\": 2,\n    \"expiresAt\": \"2026-01-29T10:15:00.000Z\",\n    \"createdAt\": \"2026-01-29T10:00:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Release Stock Reservation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"{{cartId}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/stock/release",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "stock", "release"]
+            },
+            "description": "Libère les réservations de stock d'un panier (annulation)."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"success\": true\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Confirm Stock Reservation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cartId\": \"{{cartId}}\",\n  \"orderId\": \"550e8400-e29b-41d4-a716-446655440080\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/catalog/stock/confirm",
+              "host": ["{{baseUrl}}"],
+              "path": ["catalog", "stock", "confirm"]
+            },
+            "description": "Confirme les réservations après paiement réussi (décrémente le stock définitivement)."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"data\": {\n    \"success\": true\n  }\n}"
             }
           ]
         }

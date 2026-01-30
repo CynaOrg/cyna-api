@@ -1,14 +1,10 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-import {
-  CynaConfigModule,
-  LoggerModule,
-  CynaI18nModule,
-  RabbitMQModule,
-} from '@cyna-api/common';
+import { CynaConfigModule, LoggerModule, CynaI18nModule, RabbitMQModule } from '@cyna-api/common';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
+import { CatalogModule } from './catalog/catalog.module';
 
 /**
  * Gateway Module
@@ -33,6 +29,7 @@ import { AuthModule } from './auth/auth.module';
     // Feature modules
     HealthModule,
     AuthModule,
+    CatalogModule,
   ],
   providers: [
     {

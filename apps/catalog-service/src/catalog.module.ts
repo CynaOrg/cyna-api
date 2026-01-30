@@ -5,9 +5,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { CynaConfigModule, LoggerModule, SERVICE_NAMES } from '@cyna-api/common';
 import { catalogConfig } from './config';
-import { Category, Product } from './entities';
-import { CategoryService, ProductService } from './services';
-import { CategoryController, ProductController } from './controllers';
+import { Category } from './entities';
+import { CategoryService } from './services';
+import { CategoryController } from './controllers';
 
 @Module({
   imports: [
@@ -27,11 +27,11 @@ import { CategoryController, ProductController } from './controllers';
       username: process.env.DATABASE_USER || 'cyna',
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
-      entities: [Category, Product],
+      entities: [Category],
       synchronize: process.env.NODE_ENV !== 'production',
       logging: process.env.NODE_ENV === 'development',
     }),
-    TypeOrmModule.forFeature([Category, Product]),
+    TypeOrmModule.forFeature([Category]),
 
     // RabbitMQ clients for communication with other services
     ClientsModule.register([
@@ -63,7 +63,7 @@ import { CategoryController, ProductController } from './controllers';
       },
     ]),
   ],
-  controllers: [CategoryController, ProductController],
-  providers: [CategoryService, ProductService],
+  controllers: [CategoryController],
+  providers: [CategoryService],
 })
 export class CatalogModule {}

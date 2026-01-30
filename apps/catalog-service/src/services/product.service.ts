@@ -1,4 +1,4 @@
-import { Injectable, Inject, forwardRef } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
@@ -17,7 +17,6 @@ import {
   PaginatedProductResponseDto,
   StockResponseDto,
 } from '../dto';
-import { StockReservationService } from './stock-reservation.service';
 
 @Injectable()
 export class ProductService {
@@ -26,8 +25,6 @@ export class ProductService {
     private readonly productRepository: Repository<Product>,
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
-    @Inject(forwardRef(() => StockReservationService))
-    private readonly stockReservationService: StockReservationService,
     private readonly logger: CynaLoggerService,
   ) {
     this.logger.setContext('ProductService');
@@ -555,8 +552,8 @@ export class ProductService {
       });
     }
 
-    // Get reserved quantity from active reservations
-    const reservedQuantity = await this.stockReservationService.getReservedQuantityForProduct(productId);
+    // TODO: In Phase 4, calculate reserved quantity from stock_reservations table
+    const reservedQuantity = 0;
 
     return this.getStockResponse(product, reservedQuantity);
   }

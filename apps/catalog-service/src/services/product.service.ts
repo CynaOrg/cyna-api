@@ -51,7 +51,6 @@ export class ProductService {
     const queryBuilder = this.productRepository
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.category', 'category')
-      .leftJoinAndSelect('product.images', 'images')
       .where('product.is_available = :available', { available: true })
       .andWhere('category.is_active = :active', { active: true });
 
@@ -175,7 +174,6 @@ export class ProductService {
     const queryBuilder = this.productRepository
       .createQueryBuilder('product')
       .leftJoinAndSelect('product.category', 'category')
-      .leftJoinAndSelect('product.images', 'images')
       .where('product.is_available = :available', { available: true })
       .andWhere('category.is_active = :active', { active: true })
       .andWhere(
@@ -231,7 +229,7 @@ export class ProductService {
         isFeatured: true,
         isAvailable: true,
       },
-      relations: ['category', 'images'],
+      relations: ['category'],
       order: { displayOrder: 'ASC' },
       take: limit,
     });
@@ -252,7 +250,7 @@ export class ProductService {
   ): Promise<ProductDetailResponseDto> {
     const product = await this.productRepository.findOne({
       where: { slug, isAvailable: true },
-      relations: ['category', 'images', 'characteristics'],
+      relations: ['category'],
     });
 
     if (!product) {

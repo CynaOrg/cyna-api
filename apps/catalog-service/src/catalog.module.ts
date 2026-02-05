@@ -3,7 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { CynaConfigModule, LoggerModule, SERVICE_NAMES } from '@cyna-api/common';
+import { CynaConfigModule, LoggerModule, SERVICE_NAMES, CynaCacheModule } from '@cyna-api/common';
 import {
   Category,
   Product,
@@ -24,6 +24,7 @@ import { InitialDataSeeder } from './seeds';
     ConfigModule.forFeature(catalogConfig),
     LoggerModule,
     ScheduleModule.forRoot(),
+    CynaCacheModule.forRoot({ useMemoryFallback: true }),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',

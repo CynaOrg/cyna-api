@@ -5,7 +5,7 @@ import { RpcException } from '@nestjs/microservices';
 import { CategoryService } from '../category.service';
 import { Category } from '../../entities';
 import { CreateCategoryDto, UpdateCategoryDto, CategoryQueryDto } from '../../dto';
-import { CynaLoggerService } from '@cyna-api/common';
+import { CynaLoggerService, CynaCacheService } from '@cyna-api/common';
 
 // Mock du logger
 const mockLogger = {
@@ -13,6 +13,17 @@ const mockLogger = {
   warn: jest.fn(),
   error: jest.fn(),
   debug: jest.fn(),
+};
+
+// Mock du cache service
+const mockCacheService = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
+  delByPattern: jest.fn(),
+  getOrSet: jest.fn(),
+  invalidateDomain: jest.fn(),
+  reset: jest.fn(),
 };
 
 // Fixture: categorie de base pour les tests
@@ -70,6 +81,10 @@ describe('CategoryService', () => {
           provide: CynaLoggerService,
           useValue: mockLogger,
         },
+        {
+          provide: CynaCacheService,
+          useValue: mockCacheService,
+        },
       ],
     }).compile();
 
@@ -79,6 +94,15 @@ describe('CategoryService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  beforeEach(() => {
+    // Mock getOrSet to execute the factory function
+    mockCacheService.getOrSet.mockImplementation(
+      async (_key: string, factory: () => Promise<unknown>) => factory(),
+    );
+    // Mock get to return undefined (cache miss) by default
+    mockCacheService.get.mockResolvedValue(undefined);
   });
 
   // Tests de creation d'une categorie

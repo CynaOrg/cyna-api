@@ -18,7 +18,7 @@ import {
   SortOrder,
 } from '../../dto';
 import { CatalogEventsPublisher } from '../../events';
-import { CynaLoggerService } from '@cyna-api/common';
+import { CynaLoggerService, CynaCacheService } from '@cyna-api/common';
 
 // Mock du logger
 const mockLogger = {
@@ -33,6 +33,17 @@ const mockEventsPublisher = {
   emitProductCreated: jest.fn(),
   emitProductUpdated: jest.fn(),
   emitProductDeleted: jest.fn(),
+};
+
+// Mock du cache service
+const mockCacheService = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
+  delByPattern: jest.fn(),
+  getOrSet: jest.fn(),
+  invalidateDomain: jest.fn(),
+  reset: jest.fn(),
 };
 
 // Fixture: categorie pour les tests
@@ -160,6 +171,10 @@ describe('ProductService', () => {
           provide: CatalogEventsPublisher,
           useValue: mockEventsPublisher,
         },
+        {
+          provide: CynaCacheService,
+          useValue: mockCacheService,
+        },
       ],
     }).compile();
 
@@ -172,6 +187,15 @@ describe('ProductService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  beforeEach(() => {
+    // Mock getOrSet to execute the factory function
+    mockCacheService.getOrSet.mockImplementation(
+      async (_key: string, factory: () => Promise<unknown>) => factory(),
+    );
+    // Mock get to return undefined (cache miss) by default
+    mockCacheService.get.mockResolvedValue(undefined);
   });
 
   // ==================== Tests CRUD ====================

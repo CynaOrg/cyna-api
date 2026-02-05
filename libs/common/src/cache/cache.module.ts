@@ -2,6 +2,8 @@ import { DynamicModule, Global, Module } from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { redisStore } from 'cache-manager-redis-store';
+import { CynaCacheService } from './cache.service';
+import { LoggerModule } from '../logger';
 
 /**
  * Cache Module Options
@@ -33,11 +35,12 @@ export class CynaCacheModule {
     return {
       module: CynaCacheModule,
       imports: [
+        LoggerModule,
         CacheModule.registerAsync({
           imports: [ConfigModule],
           useFactory: async (configService: ConfigService) => {
-            const redisHost = configService.get<string>('redis.host');
-            const redisPort = configService.get<number>('redis.port');
+            const redisHost = configService.get<string>('redis.host') || 'localhost';
+            const redisPort = configService.get<number>('redis.port') || 6379;
             const defaultTtl = options?.ttl || configService.get<number>('redis.ttl') || 3600;
 
             try {
@@ -49,6 +52,8 @@ export class CynaCacheModule {
                 ttl: defaultTtl,
               });
 
+              console.log(`[CynaCacheModule] Connected to Redis at ${redisHost}:${redisPort}`);
+
               return {
                 store: store as unknown as any,
                 ttl: defaultTtl,
@@ -56,7 +61,9 @@ export class CynaCacheModule {
             } catch (error) {
               // Fallback to in-memory cache if Redis connection fails
               if (options?.useMemoryFallback) {
-                console.warn('Redis connection failed, using in-memory cache');
+                console.warn(
+                  `[CynaCacheModule] Redis connection failed, using in-memory cache: ${error}`,
+                );
                 return {
                   ttl: defaultTtl,
                 };
@@ -67,7 +74,8 @@ export class CynaCacheModule {
           inject: [ConfigService],
         }),
       ],
-      exports: [CacheModule],
+      providers: [CynaCacheService],
+      exports: [CacheModule, CynaCacheService],
     };
   }
 
@@ -79,11 +87,12 @@ export class CynaCacheModule {
     return {
       module: CynaCacheModule,
       imports: [
+        LoggerModule,
         CacheModule.registerAsync({
           imports: [ConfigModule],
           useFactory: async (configService: ConfigService) => {
-            const redisHost = configService.get<string>('redis.host');
-            const redisPort = configService.get<number>('redis.port');
+            const redisHost = configService.get<string>('redis.host') || 'localhost';
+            const redisPort = configService.get<number>('redis.port') || 6379;
             const defaultTtl = options?.ttl || configService.get<number>('redis.ttl') || 3600;
 
             try {
@@ -111,7 +120,8 @@ export class CynaCacheModule {
           inject: [ConfigService],
         }),
       ],
-      exports: [CacheModule],
+      providers: [CynaCacheService],
+      exports: [CacheModule, CynaCacheService],
     };
   }
 }

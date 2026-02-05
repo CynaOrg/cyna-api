@@ -2,7 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
-import { CynaLoggerService } from '@cyna-api/common';
+import {
+  CynaLoggerService,
+  CynaCacheService,
+  CACHE_TTL,
+  CACHE_KEYS,
+  generateCacheKey,
+  CACHE_PREFIXES,
+} from '@cyna-api/common';
 import { Product, Category, ProductCharacteristic, ProductImage, ProductType } from '../entities';
 import {
   CreateProductDto,
@@ -12,6 +19,7 @@ import {
   SortOrder,
 } from '../dto';
 import { CatalogEventsPublisher } from '../events';
+import * as crypto from 'crypto';
 
 export interface PaginationMeta {
   page: number;
@@ -38,6 +46,7 @@ export class ProductService {
     private readonly imageRepository: Repository<ProductImage>,
     private readonly logger: CynaLoggerService,
     private readonly eventsPublisher: CatalogEventsPublisher,
+    private readonly cacheService: CynaCacheService,
   ) {}
 
   async create(dto: CreateProductDto): Promise<Product> {
@@ -123,6 +132,9 @@ export class ProductService {
 
     this.logger.log(`Product created: ${product.id} (${product.slug})`);
 
+    // Invalidate product caches
+    await this.invalidateProductCache();
+
     const createdProduct = await this.findById(product.id);
 
     await this.eventsPublisher.emitProductCreated({
@@ -147,13 +159,22 @@ export class ProductService {
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
 
+    // Generate cache key based on query parameters
+    const queryHash = this.hashQuery(query);
+    const cacheKey = generateCacheKey.productList(queryHash);
+
+    const cached = await this.cacheService.get<PaginatedResult<Product>>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const queryBuilder = this.createBaseQueryBuilder();
     this.applyFilters(queryBuilder, query);
     this.applySorting(queryBuilder, query.sortBy, query.sortOrder);
 
     const [products, total] = await queryBuilder.skip(skip).take(limit).getManyAndCount();
 
-    return {
+    const result = {
       data: products,
       meta: {
         page,
@@ -162,9 +183,21 @@ export class ProductService {
         totalPages: Math.ceil(total / limit),
       },
     };
+
+    // Cache for shorter duration as lists can change frequently
+    await this.cacheService.set(cacheKey, result, CACHE_TTL.SHORT);
+
+    return result;
   }
 
   async findBySlug(slug: string): Promise<Product> {
+    const cacheKey = generateCacheKey.product(slug);
+
+    const cached = await this.cacheService.get<Product>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const product = await this.productRepository.findOne({
       where: { slug },
       relations: ['category', 'images', 'characteristics'],
@@ -179,10 +212,20 @@ export class ProductService {
       });
     }
 
+    // Cache individual product for longer duration
+    await this.cacheService.set(cacheKey, product, CACHE_TTL.MEDIUM);
+
     return product;
   }
 
   async findById(id: string): Promise<Product> {
+    const cacheKey = generateCacheKey.productById(id);
+
+    const cached = await this.cacheService.get<Product>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const product = await this.productRepository.findOne({
       where: { id },
       relations: ['category', 'images', 'characteristics'],
@@ -196,6 +239,9 @@ export class ProductService {
         code: 'PRODUCT_NOT_FOUND',
       });
     }
+
+    // Cache individual product
+    await this.cacheService.set(cacheKey, product, CACHE_TTL.MEDIUM);
 
     return product;
   }
@@ -272,6 +318,12 @@ export class ProductService {
 
     this.logger.log(`Product updated: ${product.id} (${product.slug})`);
 
+    // Invalidate caches for this product
+    await this.invalidateProductCache(id, product.slug);
+
+    // Clear the specific product cache before fetching
+    await this.cacheService.del(generateCacheKey.productById(id));
+
     const updatedProduct = await this.findById(id);
 
     await this.eventsPublisher.emitProductUpdated({
@@ -304,8 +356,12 @@ export class ProductService {
       productName: product.nameEn || product.nameFr,
     };
 
+    const slug = product.slug;
     await this.productRepository.remove(product);
     this.logger.log(`Product deleted: ${id}`);
+
+    // Invalidate caches
+    await this.invalidateProductCache(id, slug);
 
     await this.eventsPublisher.emitProductDeleted({
       ...deletedProductData,
@@ -342,12 +398,20 @@ export class ProductService {
   }
 
   async findFeatured(limit: number = 10): Promise<Product[]> {
-    return this.productRepository.find({
-      where: { isFeatured: true, isAvailable: true },
-      relations: ['category', 'images'],
-      order: { displayOrder: 'ASC' },
-      take: limit,
-    });
+    const cacheKey = `${CACHE_KEYS.PRODUCTS_FEATURED}:${limit}`;
+
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return this.productRepository.find({
+          where: { isFeatured: true, isAvailable: true },
+          relations: ['category', 'images'],
+          order: { displayOrder: 'ASC' },
+          take: limit,
+        });
+      },
+      CACHE_TTL.MEDIUM,
+    );
   }
 
   async findByCategory(
@@ -357,6 +421,15 @@ export class ProductService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
+
+    // Generate cache key based on category and query
+    const queryHash = this.hashQuery({ ...query, categoryId });
+    const cacheKey = `${generateCacheKey.productsByCategory(categoryId)}:${queryHash}`;
+
+    const cached = await this.cacheService.get<PaginatedResult<Product>>(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
     const queryBuilder = this.createBaseQueryBuilder();
     queryBuilder.andWhere('product.categoryId = :categoryId', { categoryId });
@@ -371,7 +444,7 @@ export class ProductService {
 
     const [products, total] = await queryBuilder.skip(skip).take(limit).getManyAndCount();
 
-    return {
+    const result = {
       data: products,
       meta: {
         page,
@@ -380,6 +453,11 @@ export class ProductService {
         totalPages: Math.ceil(total / limit),
       },
     };
+
+    // Cache for shorter duration
+    await this.cacheService.set(cacheKey, result, CACHE_TTL.SHORT);
+
+    return result;
   }
 
   // ==================== Image Management ====================
@@ -771,6 +849,34 @@ export class ProductService {
       default:
         queryBuilder.orderBy('product.displayOrder', order);
         break;
+    }
+  }
+
+  /**
+   * Generate a hash from query parameters for cache key
+   */
+  private hashQuery(query: object): string {
+    const normalized = JSON.stringify(query, Object.keys(query).sort());
+    return crypto.createHash('md5').update(normalized).digest('hex').slice(0, 12);
+  }
+
+  /**
+   * Invalidate product caches
+   * @param id Product ID (optional)
+   * @param slug Product slug (optional)
+   */
+  private async invalidateProductCache(id?: string, slug?: string): Promise<void> {
+    // Invalidate list and featured caches
+    await this.cacheService.delByPattern(`${CACHE_PREFIXES.PRODUCT}list:*`);
+    await this.cacheService.delByPattern(`${CACHE_KEYS.PRODUCTS_FEATURED}*`);
+    await this.cacheService.delByPattern(`${CACHE_KEYS.PRODUCTS_BY_CATEGORY}*`);
+
+    // Invalidate specific product caches if provided
+    if (id) {
+      await this.cacheService.del(generateCacheKey.productById(id));
+    }
+    if (slug) {
+      await this.cacheService.del(generateCacheKey.product(slug));
     }
   }
 }

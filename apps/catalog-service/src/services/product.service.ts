@@ -855,7 +855,7 @@ export class ProductService {
   /**
    * Generate a hash from query parameters for cache key
    */
-  private hashQuery(query: Record<string, unknown>): string {
+  private hashQuery(query: object): string {
     const normalized = JSON.stringify(query, Object.keys(query).sort());
     return crypto.createHash('md5').update(normalized).digest('hex').slice(0, 12);
   }

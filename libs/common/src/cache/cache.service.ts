@@ -64,17 +64,22 @@ export class CynaCacheService {
 
   /**
    * Delete multiple values from cache by pattern
+   * Note: Pattern-based deletion requires Redis store with keys() support
    * @param pattern Pattern to match keys (e.g., "product:*")
    */
   async delByPattern(pattern: string): Promise<void> {
     try {
-      const store = this.cacheManager.store as any;
-      if (store.keys && store.del) {
+      // Access the underlying store for pattern-based operations
+      const store = (this.cacheManager as any).store;
+      if (store && typeof store.keys === 'function') {
         const keys = await store.keys(pattern);
         if (keys && keys.length > 0) {
           await Promise.all(keys.map((key: string) => this.cacheManager.del(key)));
           this.logger.debug(`Cache DEL by pattern: ${pattern} (${keys.length} keys)`);
         }
+      } else {
+        // Fallback: log warning if pattern deletion is not supported
+        this.logger.debug(`Cache DEL by pattern not supported for current store: ${pattern}`);
       }
     } catch (error) {
       this.logger.warn(`Cache DEL by pattern error for ${pattern}: ${error}`);
@@ -110,11 +115,21 @@ export class CynaCacheService {
 
   /**
    * Reset all cache
+   * Note: Uses clear() method which is available in cache-manager v7+
    */
   async reset(): Promise<void> {
     try {
-      await this.cacheManager.reset();
-      this.logger.log('Cache reset completed');
+      // Try to access clear method or underlying store reset
+      const store = (this.cacheManager as any).store;
+      if (store && typeof store.reset === 'function') {
+        await store.reset();
+        this.logger.log('Cache reset completed');
+      } else if (typeof (this.cacheManager as any).clear === 'function') {
+        await (this.cacheManager as any).clear();
+        this.logger.log('Cache cleared completed');
+      } else {
+        this.logger.debug('Cache reset not supported for current store');
+      }
     } catch (error) {
       this.logger.warn(`Cache reset error: ${error}`);
     }

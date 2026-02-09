@@ -3,14 +3,23 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import {
-  CynaConfigModule,
-  LoggerModule,
-  SERVICE_NAMES,
-} from '@cyna-api/common';
+import { CynaConfigModule, LoggerModule, SERVICE_NAMES } from '@cyna-api/common';
 import authConfig from './config/auth.config';
-import { User, Admin, Admin2FACode, PasswordResetToken, EmailVerificationToken, RefreshToken } from './entities';
-import { PasswordService, TokenService, TwoFactorService, AuthService, AdminAuthService } from './services';
+import {
+  User,
+  Admin,
+  Admin2FACode,
+  PasswordResetToken,
+  EmailVerificationToken,
+  RefreshToken,
+} from './entities';
+import {
+  PasswordService,
+  TokenService,
+  TwoFactorService,
+  AuthService,
+  AdminAuthService,
+} from './services';
 import { AuthController, AdminAuthController } from './controllers';
 import { AuthEventsPublisher } from './events/auth-events.publisher';
 import { CleanupService } from './cron/cleanup.service';
@@ -28,11 +37,25 @@ import { CleanupService } from './cron/cleanup.service';
       username: process.env.DATABASE_USER || 'cyna',
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
-      entities: [User, Admin, Admin2FACode, PasswordResetToken, EmailVerificationToken, RefreshToken],
-      synchronize: process.env.NODE_ENV !== 'production',
-      logging: process.env.NODE_ENV === 'development',
+      entities: [
+        User,
+        Admin,
+        Admin2FACode,
+        PasswordResetToken,
+        EmailVerificationToken,
+        RefreshToken,
+      ],
+      synchronize: process.env.DATABASE_SYNC === 'true',
+      logging: process.env.DATABASE_LOGGING === 'true',
     }),
-    TypeOrmModule.forFeature([User, Admin, Admin2FACode, PasswordResetToken, EmailVerificationToken, RefreshToken]),
+    TypeOrmModule.forFeature([
+      User,
+      Admin,
+      Admin2FACode,
+      PasswordResetToken,
+      EmailVerificationToken,
+      RefreshToken,
+    ]),
     ClientsModule.register([
       {
         name: SERVICE_NAMES.NOTIFICATION,

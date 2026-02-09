@@ -33,8 +33,8 @@ import { InitialDataSeeder } from './seeds';
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
       entities: [Category, Product, ProductImage, ProductCharacteristic, StockReservation],
-      synchronize: process.env.NODE_ENV !== 'production',
-      logging: process.env.NODE_ENV === 'development',
+      synchronize: process.env.DATABASE_SYNC === 'true',
+      logging: process.env.DATABASE_LOGGING === 'true',
     }),
     TypeOrmModule.forFeature([
       Category,

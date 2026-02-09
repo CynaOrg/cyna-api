@@ -13,15 +13,26 @@ import * as path from 'path';
  * In production, use the dist path
  */
 function getLocalesPath(): string {
-  const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
+  const sourcePath = path.join(process.cwd(), 'libs', 'common', 'src', 'i18n', 'locales');
 
-  if (isDev) {
-    // In development, use the source locales
-    return path.join(process.cwd(), 'libs', 'common', 'src', 'i18n', 'locales');
+  // Always prefer source locales if available (works in dev and monorepo deploys)
+  if (require('fs').existsSync(sourcePath)) {
+    return sourcePath;
   }
 
-  // In production, use locales copied to dist
-  return path.join(process.cwd(), 'dist', 'locales');
+  // Fallback to dist paths for production builds
+  const distPaths = [
+    path.join(process.cwd(), 'dist', 'locales'),
+    path.join(process.cwd(), 'dist', 'apps', 'api-gateway', 'locales'),
+  ];
+
+  for (const p of distPaths) {
+    if (require('fs').existsSync(p)) {
+      return p;
+    }
+  }
+
+  return sourcePath;
 }
 
 /**

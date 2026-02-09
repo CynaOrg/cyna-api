@@ -48,7 +48,6 @@
       "sourceRoot": "apps/notification-service/src",
       "compilerOptions": {
         "tsConfigPath": "apps/notification-service/tsconfig.app.json",
-        "webpack": false,
         "assets": [
           {
             "include": "templates/**/*",

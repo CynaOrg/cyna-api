@@ -22,8 +22,12 @@ export class EmailTemplateService implements OnModuleInit {
   }
 
   private async loadTemplates(): Promise<void> {
-    // Use process.cwd() to get the project root and navigate to templates
-    const templatesDir = path.join(process.cwd(), 'dist', 'apps', 'notification-service', 'templates');
+    // Auto-detect templates directory (source or dist)
+    const candidates = [
+      path.join(process.cwd(), 'apps', 'notification-service', 'src', 'templates'),
+      path.join(process.cwd(), 'dist', 'apps', 'notification-service', 'templates'),
+    ];
+    const templatesDir = candidates.find((p) => fs.existsSync(p)) || candidates[0];
 
     // Load base layout
     const layoutPath = path.join(templatesDir, 'layouts', 'base.hbs');
@@ -32,7 +36,10 @@ export class EmailTemplateService implements OnModuleInit {
       this.baseLayout = Handlebars.compile(layoutContent);
       this.logger.log('Base layout loaded successfully', 'EmailTemplateService');
     } else {
-      this.logger.warn('Base layout not found, templates will render without layout', 'EmailTemplateService');
+      this.logger.warn(
+        'Base layout not found, templates will render without layout',
+        'EmailTemplateService',
+      );
     }
 
     // Load language-specific templates
@@ -42,11 +49,14 @@ export class EmailTemplateService implements OnModuleInit {
       const langDir = path.join(templatesDir, lang);
 
       if (!fs.existsSync(langDir)) {
-        this.logger.warn(`Template directory for language ${lang} not found`, 'EmailTemplateService');
+        this.logger.warn(
+          `Template directory for language ${lang} not found`,
+          'EmailTemplateService',
+        );
         continue;
       }
 
-      const templateFiles = fs.readdirSync(langDir).filter(f => f.endsWith('.hbs'));
+      const templateFiles = fs.readdirSync(langDir).filter((f) => f.endsWith('.hbs'));
 
       for (const file of templateFiles) {
         const templateName = file.replace('.hbs', '');

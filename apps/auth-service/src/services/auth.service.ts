@@ -105,6 +105,7 @@ export class AuthService {
 
     return {
       accessToken,
+      refreshToken,
       expiresIn: this.tokenService.getAccessTokenExpirySeconds(),
       user: UserResponseDto.fromEntity(user),
     };
@@ -162,6 +163,7 @@ export class AuthService {
 
     return {
       accessToken,
+      refreshToken,
       expiresIn: this.tokenService.getAccessTokenExpirySeconds(),
       user: UserResponseDto.fromEntity(user),
     };
@@ -318,7 +320,10 @@ export class AuthService {
     };
   }
 
-  async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+  async resetPassword(
+    token: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
     const hashedToken = this.tokenService.hashToken(token);
 
     const passwordResetToken = await this.passwordResetTokenRepository.findOne({
@@ -431,12 +436,13 @@ export class AuthService {
       type: 'user',
     });
 
-    await this.createRefreshToken(user.id, 'user');
+    const newRefreshToken = await this.createRefreshToken(user.id, 'user');
 
     this.logger.log(`Token refreshed for user: ${user.email}`, 'AuthService');
 
     return {
       accessToken,
+      refreshToken: newRefreshToken,
       expiresIn: this.tokenService.getAccessTokenExpirySeconds(),
       user: UserResponseDto.fromEntity(user),
     };
@@ -477,7 +483,11 @@ export class AuthService {
     return rawToken;
   }
 
-  async cleanupExpiredTokens(): Promise<{ verificationTokens: number; resetTokens: number; refreshTokens: number }> {
+  async cleanupExpiredTokens(): Promise<{
+    verificationTokens: number;
+    resetTokens: number;
+    refreshTokens: number;
+  }> {
     const now = new Date();
 
     const verificationResult = await this.emailVerificationTokenRepository.delete({

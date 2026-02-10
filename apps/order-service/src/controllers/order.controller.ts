@@ -1,12 +1,28 @@
-import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload, Ctx, RmqContext } from '@nestjs/microservices';
+import { Controller, Logger } from '@nestjs/common';
+import { MessagePattern, Payload, Ctx, RmqContext, RpcException } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS } from '@cyna-api/common';
 import { CartService } from '../services';
 import { AddCartItemDto, UpdateCartItemDto } from '../dto';
 
 @Controller()
 export class OrderController {
+  private readonly logger = new Logger(OrderController.name);
+
   constructor(private readonly cartService: CartService) {}
+
+  private wrapError(error: unknown): RpcException {
+    if (error instanceof RpcException) return error;
+    const message = error instanceof Error ? error.message : 'Unknown order service error';
+    this.logger.error(
+      `Unhandled error: ${message}`,
+      error instanceof Error ? error.stack : undefined,
+    );
+    return new RpcException({
+      statusCode: 500,
+      message,
+      code: 'ORDER_SERVICE_ERROR',
+    });
+  }
 
   @MessagePattern(MESSAGE_PATTERNS.ORDER.GET_CART)
   async getCart(
@@ -25,7 +41,7 @@ export class OrderController {
       return result;
     } catch (error) {
       channel.ack(originalMsg);
-      throw error;
+      throw this.wrapError(error);
     }
   }
 
@@ -46,7 +62,7 @@ export class OrderController {
       return result;
     } catch (error) {
       channel.ack(originalMsg);
-      throw error;
+      throw this.wrapError(error);
     }
   }
 
@@ -76,7 +92,7 @@ export class OrderController {
       return result;
     } catch (error) {
       channel.ack(originalMsg);
-      throw error;
+      throw this.wrapError(error);
     }
   }
 
@@ -99,7 +115,7 @@ export class OrderController {
       return result;
     } catch (error) {
       channel.ack(originalMsg);
-      throw error;
+      throw this.wrapError(error);
     }
   }
 
@@ -120,7 +136,7 @@ export class OrderController {
       return result;
     } catch (error) {
       channel.ack(originalMsg);
-      throw error;
+      throw this.wrapError(error);
     }
   }
 
@@ -138,7 +154,7 @@ export class OrderController {
       return result;
     } catch (error) {
       channel.ack(originalMsg);
-      throw error;
+      throw this.wrapError(error);
     }
   }
 }

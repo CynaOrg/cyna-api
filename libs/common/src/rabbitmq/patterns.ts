@@ -104,6 +104,7 @@ export const MESSAGE_PATTERNS = {
     REMOVE_CART_ITEM: { cmd: 'order.remove_cart_item' },
     CLEAR_CART: { cmd: 'order.clear_cart' },
     MERGE_CART: { cmd: 'order.merge_cart' },
+    MERGE_GUEST_CART: { cmd: 'order.merge_guest_cart' },
     VALIDATE_CHECKOUT: { cmd: 'order.validate_checkout' },
     START_CHECKOUT: { cmd: 'order.start_checkout' },
     SET_BILLING_ADDRESS: { cmd: 'order.set_billing_address' },

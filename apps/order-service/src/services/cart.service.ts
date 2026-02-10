@@ -14,11 +14,14 @@ import {
 } from '@cyna-api/common';
 import { Cart } from '../entities/cart.entity';
 import { CartItem } from '../entities/cart-item.entity';
-import { AddCartItemDto, UpdateCartItemDto, MergeCartDto } from '../dto';
+import { AddCartItemDto, UpdateCartItemDto } from '../dto';
+
+export type CartOwner = { userId?: string; sessionId?: string };
 
 @Injectable()
 export class CartService {
   private readonly CATALOG_TIMEOUT = 5000;
+  private readonly GUEST_CART_TTL_DAYS = 7;
 
   constructor(
     @InjectRepository(Cart)
@@ -31,12 +34,15 @@ export class CartService {
     private readonly cacheService: CynaCacheService,
   ) {}
 
-  private cartCacheKey(userId: string): string {
-    return `${CACHE_PREFIXES.CART}${userId}`;
+  private cartCacheKey(owner: CartOwner): string {
+    if (owner.userId) {
+      return `${CACHE_PREFIXES.CART}user:${owner.userId}`;
+    }
+    return `${CACHE_PREFIXES.CART}session:${owner.sessionId}`;
   }
 
-  private async invalidateCartCache(userId: string): Promise<void> {
-    await this.cacheService.del(this.cartCacheKey(userId));
+  private async invalidateCartCache(owner: CartOwner): Promise<void> {
+    await this.cacheService.del(this.cartCacheKey(owner));
   }
 
   private async getProductFromCatalog(productId: string): Promise<any | null> {
@@ -59,25 +65,57 @@ export class CartService {
     }
   }
 
-  async getOrCreateCart(userId: string): Promise<Cart> {
-    let cart = await this.cartRepository.findOne({
-      where: { userId },
-      relations: ['items'],
-    });
-
-    if (!cart) {
-      cart = this.cartRepository.create({ userId, items: [] });
-      cart = await this.cartRepository.save(cart);
+  async findCart(owner: CartOwner): Promise<Cart | null> {
+    if (owner.userId) {
+      return this.cartRepository.findOne({
+        where: { userId: owner.userId },
+        relations: ['items'],
+      });
     }
-
-    return cart;
+    if (owner.sessionId) {
+      return this.cartRepository.findOne({
+        where: { sessionId: owner.sessionId },
+        relations: ['items'],
+      });
+    }
+    return null;
   }
 
-  async getCart(userId: string): Promise<any> {
+  async getOrCreateCart(owner: CartOwner): Promise<Cart> {
+    const cart = await this.findCart(owner);
+    if (cart) return cart;
+
+    const expiresAt = owner.userId
+      ? null
+      : new Date(Date.now() + this.GUEST_CART_TTL_DAYS * 24 * 60 * 60 * 1000);
+
+    const newCart = this.cartRepository.create({
+      userId: owner.userId ?? null,
+      sessionId: owner.sessionId ?? null,
+      expiresAt,
+      items: [],
+    });
+    return this.cartRepository.save(newCart);
+  }
+
+  private emptyCartResponse(owner: CartOwner) {
+    return {
+      id: null,
+      userId: owner.userId ?? null,
+      sessionId: owner.sessionId ?? null,
+      items: [],
+      itemCount: 0,
+      createdAt: null,
+      updatedAt: null,
+    };
+  }
+
+  async getCart(owner: CartOwner): Promise<any> {
     return this.cacheService.getOrSet(
-      this.cartCacheKey(userId),
+      this.cartCacheKey(owner),
       async () => {
-        const cart = await this.getOrCreateCart(userId);
+        const cart = await this.findCart(owner);
+        if (!cart) return this.emptyCartResponse(owner);
 
         const enrichedItems = await Promise.all(
           cart.items.map(async (item) => {
@@ -108,6 +146,7 @@ export class CartService {
         return {
           id: cart.id,
           userId: cart.userId,
+          sessionId: cart.sessionId,
           items: enrichedItems,
           itemCount: enrichedItems.length,
           createdAt: cart.createdAt,
@@ -118,7 +157,7 @@ export class CartService {
     );
   }
 
-  async addItem(userId: string, dto: AddCartItemDto): Promise<any> {
+  async addItem(owner: CartOwner, dto: AddCartItemDto): Promise<any> {
     const product = await this.getProductFromCatalog(dto.productId);
     if (!product) {
       throw new RpcException({
@@ -137,7 +176,7 @@ export class CartService {
     }
 
     const billingPeriod = dto.billingPeriod || BillingPeriod.ONE_TIME;
-    const cart = await this.getOrCreateCart(userId);
+    const cart = await this.getOrCreateCart(owner);
 
     let existingItem = await this.cartItemRepository.findOne({
       where: {
@@ -178,17 +217,24 @@ export class CartService {
       await this.cartItemRepository.save(existingItem);
     }
 
-    await this.invalidateCartCache(userId);
-    return this.getCart(userId);
+    await this.invalidateCartCache(owner);
+    return this.getCart(owner);
   }
 
   async updateItem(
-    userId: string,
+    owner: CartOwner,
     productId: string,
     dto: UpdateCartItemDto,
     billingPeriod?: BillingPeriod,
   ): Promise<any> {
-    const cart = await this.getOrCreateCart(userId);
+    const cart = await this.findCart(owner);
+    if (!cart) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Cart not found',
+        code: 'CART_NOT_FOUND',
+      });
+    }
 
     const whereCondition: any = {
       cartId: cart.id,
@@ -219,12 +265,23 @@ export class CartService {
     item.quantity = quantity;
     await this.cartItemRepository.save(item);
 
-    await this.invalidateCartCache(userId);
-    return this.getCart(userId);
+    await this.invalidateCartCache(owner);
+    return this.getCart(owner);
   }
 
-  async removeItem(userId: string, productId: string, billingPeriod?: BillingPeriod): Promise<any> {
-    const cart = await this.getOrCreateCart(userId);
+  async removeItem(
+    owner: CartOwner,
+    productId: string,
+    billingPeriod?: BillingPeriod,
+  ): Promise<any> {
+    const cart = await this.findCart(owner);
+    if (!cart) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Cart not found',
+        code: 'CART_NOT_FOUND',
+      });
+    }
 
     const whereCondition: any = {
       cartId: cart.id,
@@ -244,52 +301,65 @@ export class CartService {
       });
     }
 
-    await this.invalidateCartCache(userId);
-    return this.getCart(userId);
+    await this.invalidateCartCache(owner);
+    return this.getCart(owner);
   }
 
-  async clearCart(userId: string): Promise<{ success: boolean }> {
-    const cart = await this.cartRepository.findOne({ where: { userId } });
+  async clearCart(owner: CartOwner): Promise<{ success: boolean }> {
+    let cart: Cart | null = null;
+
+    if (owner.userId) {
+      cart = await this.cartRepository.findOne({ where: { userId: owner.userId } });
+    } else if (owner.sessionId) {
+      cart = await this.cartRepository.findOne({ where: { sessionId: owner.sessionId } });
+    }
 
     if (cart) {
       await this.cartItemRepository.delete({ cartId: cart.id });
     }
 
-    await this.invalidateCartCache(userId);
+    await this.invalidateCartCache(owner);
     return { success: true };
   }
 
-  async mergeCart(userId: string, dto: MergeCartDto): Promise<any> {
-    const cart = await this.getOrCreateCart(userId);
+  async mergeGuestCart(userId: string, sessionId: string): Promise<any> {
+    const guestCart = await this.cartRepository.findOne({
+      where: { sessionId },
+      relations: ['items'],
+    });
 
-    for (const anonymousItem of dto.items) {
-      const billingPeriod = anonymousItem.billingPeriod || BillingPeriod.ONE_TIME;
+    if (!guestCart || guestCart.items.length === 0) {
+      // No guest cart to merge, return current user cart (without creating one)
+      return this.getCart({ userId });
+    }
 
+    // Guest cart has items to merge — now we need the user cart (create if needed)
+
+    const userCart = await this.getOrCreateCart({ userId });
+
+    for (const guestItem of guestCart.items) {
       const existingItem = await this.cartItemRepository.findOne({
         where: {
-          cartId: cart.id,
-          productId: anonymousItem.productId,
-          billingPeriod,
+          cartId: userCart.id,
+          productId: guestItem.productId,
+          billingPeriod: guestItem.billingPeriod,
         },
       });
 
-      let quantity = anonymousItem.quantity;
+      let quantity = guestItem.quantity;
 
       if (existingItem) {
-        // Take the max of both quantities
-        quantity = Math.max(existingItem.quantity, anonymousItem.quantity);
+        quantity = Math.max(existingItem.quantity, guestItem.quantity);
       }
 
       // Clamp stock for physical products
-      const product = await this.getProductFromCatalog(anonymousItem.productId);
-      if (product?.productType === 'physical' && product.stockQuantity != null) {
-        quantity = Math.min(quantity, product.stockQuantity);
-      }
-
-      // Skip if product not found
+      const product = await this.getProductFromCatalog(guestItem.productId);
       if (!product) {
-        this.logger.warn(`Skipping merge for unavailable product ${anonymousItem.productId}`);
+        this.logger.warn(`Skipping merge for unavailable product ${guestItem.productId}`);
         continue;
+      }
+      if (product.productType === 'physical' && product.stockQuantity != null) {
+        quantity = Math.min(quantity, product.stockQuantity);
       }
 
       if (existingItem) {
@@ -297,16 +367,23 @@ export class CartService {
         await this.cartItemRepository.save(existingItem);
       } else {
         const newItem = this.cartItemRepository.create({
-          cartId: cart.id,
-          productId: anonymousItem.productId,
+          cartId: userCart.id,
+          productId: guestItem.productId,
           quantity,
-          billingPeriod,
+          billingPeriod: guestItem.billingPeriod,
         });
         await this.cartItemRepository.save(newItem);
       }
     }
 
-    await this.invalidateCartCache(userId);
-    return this.getCart(userId);
+    // Delete guest cart entirely
+    await this.cartItemRepository.delete({ cartId: guestCart.id });
+    await this.cartRepository.remove(guestCart);
+
+    // Invalidate both caches
+    await this.invalidateCartCache({ userId });
+    await this.invalidateCartCache({ sessionId });
+
+    return this.getCart({ userId });
   }
 }

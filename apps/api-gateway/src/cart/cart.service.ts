@@ -2,7 +2,7 @@ import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS, BillingPeriod } from '@cyna-api/common';
-import { AddCartItemDto, UpdateCartItemDto, MergeCartDto } from './dto';
+import { AddCartItemDto, UpdateCartItemDto } from './dto';
 
 @Injectable()
 export class CartService {
@@ -13,42 +13,50 @@ export class CartService {
     private readonly orderClient: ClientProxy,
   ) {}
 
-  async getCart(userId: string) {
-    return this.sendMessage(MESSAGE_PATTERNS.ORDER.GET_CART, { userId });
+  async getCart(userId?: string, sessionId?: string) {
+    return this.sendMessage(MESSAGE_PATTERNS.ORDER.GET_CART, { userId, sessionId });
   }
 
-  async addItem(userId: string, dto: AddCartItemDto) {
-    return this.sendMessage(MESSAGE_PATTERNS.ORDER.ADD_CART_ITEM, { userId, dto });
+  async addItem(userId?: string, sessionId?: string, dto?: AddCartItemDto) {
+    return this.sendMessage(MESSAGE_PATTERNS.ORDER.ADD_CART_ITEM, { userId, sessionId, dto });
   }
 
   async updateItem(
-    userId: string,
-    productId: string,
-    dto: UpdateCartItemDto,
+    userId?: string,
+    sessionId?: string,
+    productId?: string,
+    dto?: UpdateCartItemDto,
     billingPeriod?: BillingPeriod,
   ) {
     return this.sendMessage(MESSAGE_PATTERNS.ORDER.UPDATE_CART_ITEM, {
       userId,
+      sessionId,
       productId,
       dto,
       billingPeriod,
     });
   }
 
-  async removeItem(userId: string, productId: string, billingPeriod?: BillingPeriod) {
+  async removeItem(
+    userId?: string,
+    sessionId?: string,
+    productId?: string,
+    billingPeriod?: BillingPeriod,
+  ) {
     return this.sendMessage(MESSAGE_PATTERNS.ORDER.REMOVE_CART_ITEM, {
       userId,
+      sessionId,
       productId,
       billingPeriod,
     });
   }
 
-  async clearCart(userId: string) {
-    return this.sendMessage(MESSAGE_PATTERNS.ORDER.CLEAR_CART, { userId });
+  async clearCart(userId?: string, sessionId?: string) {
+    return this.sendMessage(MESSAGE_PATTERNS.ORDER.CLEAR_CART, { userId, sessionId });
   }
 
-  async mergeCart(userId: string, dto: MergeCartDto) {
-    return this.sendMessage(MESSAGE_PATTERNS.ORDER.MERGE_CART, { userId, dto });
+  async mergeGuestCart(userId: string, sessionId: string) {
+    return this.sendMessage(MESSAGE_PATTERNS.ORDER.MERGE_GUEST_CART, { userId, sessionId });
   }
 
   private async sendMessage<T>(pattern: { cmd: string }, data: T) {

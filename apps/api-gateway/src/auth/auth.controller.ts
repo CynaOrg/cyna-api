@@ -33,9 +33,10 @@ const isProduction =
 const REFRESH_TOKEN_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? ('none' as const) : ('lax' as const),
+  sameSite: 'lax' as const,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: '/',
+  ...(isProduction && { domain: '.cyna.it' }),
 };
 
 @ApiTags('Auth')
@@ -190,8 +191,9 @@ export class AuthController {
     res.clearCookie('refresh_token', {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? ('none' as const) : ('lax' as const),
+      sameSite: 'lax' as const,
       path: '/',
+      ...(isProduction && { domain: '.cyna.it' }),
     });
 
     return { message: 'Logged out successfully' };

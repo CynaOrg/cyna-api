@@ -490,12 +490,10 @@ export class AuthService {
         { token: hashedToken, revokedAt: IsNull() },
         { revokedAt: new Date() },
       );
-    } else {
-      await this.refreshTokenRepository.update(
-        { userId, revokedAt: IsNull() },
-        { revokedAt: new Date() },
-      );
     }
+    // If no refresh token provided (cookie lost), just acknowledge.
+    // The current session is already dead without a valid token.
+    // Do NOT revoke all sessions — other devices should stay logged in.
 
     this.logger.log(`User logged out: ${userId}`, 'AuthService');
 

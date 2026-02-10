@@ -9,30 +9,19 @@ import {
   Req,
   UnauthorizedException,
 } from '@nestjs/common';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { Public } from '@cyna-api/common';
 import { AuthService } from './auth.service';
-import {
-  AdminLoginDto,
-  Verify2FADto,
-  Resend2FADto,
-  RefreshTokenDto,
-  LogoutDto,
-} from './dto';
+import { AdminLoginDto, Verify2FADto, Resend2FADto, RefreshTokenDto, LogoutDto } from './dto';
 import { JwtAdminAuthGuard } from './guards';
 import { CurrentUser } from './decorators';
 
 const ADMIN_REFRESH_TOKEN_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
+  sameSite: 'none' as const,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: '/api/v1/auth/admin',
 };
@@ -92,10 +81,7 @@ export class AdminAuthController {
   @ApiResponse({ status: 400, description: 'Invalid or expired code' })
   @ApiResponse({ status: 401, description: 'Invalid temp token' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
-  async verify2FA(
-    @Body() dto: Verify2FADto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
+  async verify2FA(@Body() dto: Verify2FADto, @Res({ passthrough: true }) res: Response) {
     const result = await this.authService.adminVerify2FA(dto);
 
     // Set refresh token as HTTP-only cookie
@@ -189,7 +175,7 @@ export class AdminAuthController {
     res.clearCookie('admin_refresh_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'none' as const,
       path: '/api/v1/auth/admin',
     });
 

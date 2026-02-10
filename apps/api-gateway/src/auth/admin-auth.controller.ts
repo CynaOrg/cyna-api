@@ -18,12 +18,15 @@ import { AdminLoginDto, Verify2FADto, Resend2FADto, RefreshTokenDto, LogoutDto }
 import { JwtAdminAuthGuard } from './guards';
 import { CurrentUser } from './decorators';
 
+const isProduction =
+  process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT_NAME;
+
 const ADMIN_REFRESH_TOKEN_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'none' as const,
+  secure: isProduction,
+  sameSite: isProduction ? ('none' as const) : ('lax' as const),
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  path: '/api/v1/auth/admin',
+  path: '/',
 };
 
 @ApiTags('Auth')
@@ -174,9 +177,9 @@ export class AdminAuthController {
     // Clear refresh token cookie
     res.clearCookie('admin_refresh_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none' as const,
-      path: '/api/v1/auth/admin',
+      secure: isProduction,
+      sameSite: isProduction ? ('none' as const) : ('lax' as const),
+      path: '/',
     });
 
     return { message: 'Logged out successfully' };

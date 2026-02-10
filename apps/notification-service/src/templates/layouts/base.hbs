@@ -2,8 +2,13 @@
   <head>
     <meta charset='UTF-8' />
     <meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <meta name='color-scheme' content='light only' />
+    <meta name='supported-color-schemes' content='light only' />
     <title>CYNA</title>
     <style>
+      :root {
+        color-scheme: light only;
+      }
       body {
         font-family:
           -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -65,7 +70,7 @@
       }
       .button {
         display: inline-block;
-        background-color: #4f39f6;
+        background-color: #4f39f6 !important;
         color: #ffffff !important;
         padding: 14px 36px;
         text-decoration: none;
@@ -73,7 +78,6 @@
         font-weight: 600;
         font-size: 15px;
         margin: 8px 0;
-        transition: background-color 0.2s;
       }
       .code-box {
         background-color: #f9f9f9;
@@ -129,22 +133,13 @@
       <div class='card'>
         <div class='header'>
           <a href='{{frontendUrl}}' style='text-decoration: none;'>
-            <!--[if mso]><img src="{{frontendUrl}}/assets/icon/favicon-96x96.png" width="40" height="40" alt="CYNA" style="vertical-align: middle; margin-right: 10px;" /><![endif]-->
-            <!--[if !mso]><!-->
-            <svg
-              class='logo-mark'
+            <img
+              src='{{frontendUrl}}/assets/icon/favicon-96x96.png'
               width='40'
               height='40'
-              viewBox='0 0 512 512'
-              fill='none'
-              xmlns='http://www.w3.org/2000/svg'
-            >
-              <path
-                d='M256 384C185.308 384 128 441.308 128 512H0C0 370.616 114.616 256 256 256V384ZM512 256C512 397.384 397.384 512 256 512V384C326.692 384 384 326.692 384 256H512ZM256 128C185.308 128 128 185.308 128 256H0C0 114.616 114.616 0 256 0V128ZM512 0C512 141.384 397.384 256 256 256V128C326.692 128 384 70.692 384 0H512Z'
-                fill='#4F39F6'
-              />
-            </svg>
-            <!--<![endif]-->
+              alt='CYNA'
+              class='logo-mark'
+            />
             <span class='logo-text'>CYNA</span>
           </a>
         </div>

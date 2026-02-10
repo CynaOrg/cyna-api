@@ -22,10 +22,9 @@ export class CreateUserDto {
   @IsString()
   @MinLength(8, { message: 'validation.password.minLength' })
   @MaxLength(72, { message: 'validation.password.maxLength' })
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
-    { message: 'validation.password.weak' },
-  )
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {
+    message: 'validation.password.weak',
+  })
   password: string;
 
   @IsNotEmpty({ message: 'validation.string.required' })
@@ -45,6 +44,12 @@ export class CreateUserDto {
   @MaxLength(255, { message: 'validation.string.maxLength' })
   @Transform(({ value }) => value?.trim())
   companyName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50, { message: 'validation.string.maxLength' })
+  @Transform(({ value }) => value?.trim())
+  vatNumber?: string;
 
   @IsOptional()
   @IsEnum(Language, { message: 'validation.enum.invalid' })

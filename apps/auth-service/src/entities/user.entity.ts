@@ -1,9 +1,4 @@
-import {
-  Entity,
-  Column,
-  Index,
-  OneToMany,
-} from 'typeorm';
+import { Entity, Column, Index, OneToMany } from 'typeorm';
 import { BaseEntity, Language } from '@cyna-api/common';
 import { RefreshToken } from './refresh-token.entity';
 import { EmailVerificationToken } from './email-verification-token.entity';
@@ -27,6 +22,9 @@ export class User extends BaseEntity {
   @Column({ name: 'company_name', type: 'varchar', length: 255, nullable: true })
   companyName?: string;
 
+  @Column({ name: 'vat_number', type: 'varchar', length: 50, nullable: true })
+  vatNumber?: string;
+
   @Column({ name: 'is_active', type: 'boolean', default: true })
   isActive: boolean;
 
@@ -41,7 +39,13 @@ export class User extends BaseEntity {
   })
   preferredLanguage: Language;
 
-  @Column({ name: 'stripe_customer_id', type: 'varchar', length: 255, nullable: true, unique: true })
+  @Column({
+    name: 'stripe_customer_id',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    unique: true,
+  })
   @Index('idx_user_stripe')
   stripeCustomerId?: string;
 

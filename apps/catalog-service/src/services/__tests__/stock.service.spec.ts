@@ -395,7 +395,7 @@ describe('StockService', () => {
 
       // Verifie qu'une erreur est levee si le produit n'est pas physical
       it('should throw error if product is not physical', async () => {
-        const product = createMockProduct({ productType: ProductType.DIGITAL });
+        const product = createMockProduct({ productType: ProductType.LICENSE });
 
         productRepository.findOne.mockResolvedValue(product);
 

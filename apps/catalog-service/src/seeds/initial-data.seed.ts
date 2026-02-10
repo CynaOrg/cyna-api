@@ -66,6 +66,14 @@ const SEED_CATEGORIES: SeedCategory[] = [
     descriptionEn: 'Cybersecurity hardware and physical products',
     displayOrder: 2,
   },
+  {
+    slug: 'licences',
+    nameFr: 'Licences',
+    nameEn: 'Licenses',
+    descriptionFr: 'Licences logicielles professionnelles avec activation',
+    descriptionEn: 'Professional software licenses with activation',
+    displayOrder: 3,
+  },
 ];
 
 const SEED_PRODUCTS: SeedProduct[] = [
@@ -557,6 +565,264 @@ const SEED_PRODUCTS: SeedProduct[] = [
         imageUrl: 'https://images.unsplash.com/photo-1618044619888-009e412ff12a?w=800&q=80',
         altTextFr: 'Chiffrement USB',
         altTextEn: 'USB encryption',
+        displayOrder: 1,
+        isPrimary: false,
+      },
+    ],
+  },
+
+  // ── Licences ────────────────────────────────────────────────────
+  {
+    slug: 'microsoft-365-business',
+    sku: 'LIC-001',
+    nameFr: 'Microsoft 365 Business Premium',
+    nameEn: 'Microsoft 365 Business Premium',
+    descriptionFr:
+      'Licence Microsoft 365 Business Premium avec protection avancée contre les menaces, ' +
+      'gestion des appareils et conformité. Inclut les applications Office, Teams, SharePoint ' +
+      'et une sécurité renforcée pour votre entreprise.',
+    descriptionEn:
+      'Microsoft 365 Business Premium license with advanced threat protection, ' +
+      'device management and compliance. Includes Office apps, Teams, SharePoint ' +
+      'and enhanced security for your business.',
+    shortDescriptionFr: 'Suite bureautique et collaboration sécurisée',
+    shortDescriptionEn: 'Secure office suite and collaboration',
+    productType: ProductType.LICENSE,
+    priceUnit: 22,
+    isFeatured: true,
+    isAvailable: true,
+    displayOrder: 1,
+    categorySlug: 'licences',
+    characteristics: [
+      {
+        keyFr: 'Utilisateurs',
+        keyEn: 'Users',
+        valueFr: '1 licence par utilisateur',
+        valueEn: '1 license per user',
+      },
+      {
+        keyFr: 'Applications',
+        keyEn: 'Applications',
+        valueFr: 'Word, Excel, PowerPoint, Outlook, Teams',
+        valueEn: 'Word, Excel, PowerPoint, Outlook, Teams',
+      },
+      {
+        keyFr: 'Stockage cloud',
+        keyEn: 'Cloud storage',
+        valueFr: '1 To OneDrive',
+        valueEn: '1 TB OneDrive',
+      },
+      {
+        keyFr: 'Sécurité',
+        keyEn: 'Security',
+        valueFr: 'Defender for Office 365',
+        valueEn: 'Defender for Office 365',
+      },
+    ],
+    images: [
+      {
+        imageUrl: 'https://images.unsplash.com/photo-1633419461186-7d40a38105ec?w=800&q=80',
+        altTextFr: 'Microsoft 365 Business',
+        altTextEn: 'Microsoft 365 Business',
+        displayOrder: 0,
+        isPrimary: true,
+      },
+      {
+        imageUrl: 'https://images.unsplash.com/photo-1531403009284-440f080d1e12?w=800&q=80',
+        altTextFr: 'Collaboration Office 365',
+        altTextEn: 'Office 365 collaboration',
+        displayOrder: 1,
+        isPrimary: false,
+      },
+    ],
+  },
+  {
+    slug: 'adobe-creative-cloud',
+    sku: 'LIC-002',
+    nameFr: 'Adobe Creative Cloud Entreprise',
+    nameEn: 'Adobe Creative Cloud Enterprise',
+    descriptionFr:
+      'Licence Adobe Creative Cloud complète avec Photoshop, Illustrator, Premiere Pro ' +
+      'et plus de 20 applications. Idéal pour les équipes créatives avec stockage cloud ' +
+      'et collaboration en temps réel.',
+    descriptionEn:
+      'Complete Adobe Creative Cloud license with Photoshop, Illustrator, Premiere Pro ' +
+      'and over 20 applications. Perfect for creative teams with cloud storage ' +
+      'and real-time collaboration.',
+    shortDescriptionFr: 'Suite créative professionnelle complète',
+    shortDescriptionEn: 'Complete professional creative suite',
+    productType: ProductType.LICENSE,
+    priceUnit: 54,
+    isFeatured: true,
+    isAvailable: true,
+    displayOrder: 2,
+    categorySlug: 'licences',
+    characteristics: [
+      {
+        keyFr: 'Applications',
+        keyEn: 'Applications',
+        valueFr: '20+ apps (Photoshop, Illustrator, Premiere...)',
+        valueEn: '20+ apps (Photoshop, Illustrator, Premiere...)',
+      },
+      {
+        keyFr: 'Stockage cloud',
+        keyEn: 'Cloud storage',
+        valueFr: '100 Go',
+        valueEn: '100 GB',
+      },
+      {
+        keyFr: 'Licences',
+        keyEn: 'Licenses',
+        valueFr: '1 licence par poste',
+        valueEn: '1 license per seat',
+      },
+      {
+        keyFr: 'Mises à jour',
+        keyEn: 'Updates',
+        valueFr: 'Incluses',
+        valueEn: 'Included',
+      },
+    ],
+    images: [
+      {
+        imageUrl: 'https://images.unsplash.com/photo-1611532736597-de2d4265fba3?w=800&q=80',
+        altTextFr: 'Adobe Creative Cloud',
+        altTextEn: 'Adobe Creative Cloud',
+        displayOrder: 0,
+        isPrimary: true,
+      },
+      {
+        imageUrl: 'https://images.unsplash.com/photo-1572044162444-ad60f128bdea?w=800&q=80',
+        altTextFr: 'Création graphique',
+        altTextEn: 'Graphic design',
+        displayOrder: 1,
+        isPrimary: false,
+      },
+    ],
+  },
+  {
+    slug: 'vmware-vsphere-standard',
+    sku: 'LIC-003',
+    nameFr: 'VMware vSphere Standard',
+    nameEn: 'VMware vSphere Standard',
+    descriptionFr:
+      'Licence VMware vSphere pour la virtualisation de votre infrastructure. ' +
+      'Consolidez vos serveurs, optimisez vos ressources et assurez la continuité ' +
+      'de service avec des fonctionnalités avancées de haute disponibilité.',
+    descriptionEn:
+      'VMware vSphere license for your infrastructure virtualization. ' +
+      'Consolidate your servers, optimize your resources and ensure service continuity ' +
+      'with advanced high availability features.',
+    shortDescriptionFr: 'Virtualisation enterprise haute disponibilité',
+    shortDescriptionEn: 'Enterprise high-availability virtualization',
+    productType: ProductType.LICENSE,
+    priceUnit: 399,
+    isFeatured: true,
+    isAvailable: true,
+    displayOrder: 3,
+    categorySlug: 'licences',
+    characteristics: [
+      {
+        keyFr: 'Processeurs',
+        keyEn: 'Processors',
+        valueFr: "Jusqu'à 2 CPU par licence",
+        valueEn: 'Up to 2 CPUs per license',
+      },
+      {
+        keyFr: 'Haute disponibilité',
+        keyEn: 'High availability',
+        valueFr: 'vMotion + HA inclus',
+        valueEn: 'vMotion + HA included',
+      },
+      {
+        keyFr: 'Support',
+        keyEn: 'Support',
+        valueFr: '1 an inclus',
+        valueEn: '1 year included',
+      },
+      {
+        keyFr: 'Mises à jour',
+        keyEn: 'Updates',
+        valueFr: 'Majeures + mineures',
+        valueEn: 'Major + minor',
+      },
+    ],
+    images: [
+      {
+        imageUrl: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&q=80',
+        altTextFr: 'Infrastructure VMware',
+        altTextEn: 'VMware infrastructure',
+        displayOrder: 0,
+        isPrimary: true,
+      },
+      {
+        imageUrl: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&q=80',
+        altTextFr: 'Serveurs virtualisés',
+        altTextEn: 'Virtualized servers',
+        displayOrder: 1,
+        isPrimary: false,
+      },
+    ],
+  },
+  {
+    slug: 'windows-server-2025',
+    sku: 'LIC-004',
+    nameFr: 'Windows Server 2025 Standard',
+    nameEn: 'Windows Server 2025 Standard',
+    descriptionFr:
+      "Licence Windows Server 2025 Standard pour vos serveurs d'entreprise. " +
+      'Bénéficiez des dernières fonctionnalités de sécurité, de conteneurisation ' +
+      'et de gestion cloud hybride avec Azure Arc intégré.',
+    descriptionEn:
+      'Windows Server 2025 Standard license for your enterprise servers. ' +
+      'Benefit from the latest security features, containerization ' +
+      'and hybrid cloud management with integrated Azure Arc.',
+    shortDescriptionFr: "Système d'exploitation serveur avec sécurité renforcée",
+    shortDescriptionEn: 'Server operating system with enhanced security',
+    productType: ProductType.LICENSE,
+    priceUnit: 899,
+    isFeatured: false,
+    isAvailable: true,
+    displayOrder: 4,
+    categorySlug: 'licences',
+    characteristics: [
+      {
+        keyFr: 'Cœurs',
+        keyEn: 'Cores',
+        valueFr: '16 cœurs minimum',
+        valueEn: '16 cores minimum',
+      },
+      {
+        keyFr: 'Conteneurs',
+        keyEn: 'Containers',
+        valueFr: 'Hyper-V illimités',
+        valueEn: 'Unlimited Hyper-V',
+      },
+      {
+        keyFr: 'Cloud hybride',
+        keyEn: 'Hybrid cloud',
+        valueFr: 'Azure Arc intégré',
+        valueEn: 'Azure Arc integrated',
+      },
+      {
+        keyFr: 'Support',
+        keyEn: 'Support',
+        valueFr: '5 ans mainstream',
+        valueEn: '5 years mainstream',
+      },
+    ],
+    images: [
+      {
+        imageUrl: 'https://images.unsplash.com/photo-1551808525-51a94da548ce?w=800&q=80',
+        altTextFr: 'Windows Server',
+        altTextEn: 'Windows Server',
+        displayOrder: 0,
+        isPrimary: true,
+      },
+      {
+        imageUrl: 'https://images.unsplash.com/photo-1562813733-b31f71025d54?w=800&q=80',
+        altTextFr: 'Infrastructure serveur',
+        altTextEn: 'Server infrastructure',
         displayOrder: 1,
         isPrimary: false,
       },

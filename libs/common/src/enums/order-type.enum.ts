@@ -5,10 +5,10 @@
 export enum OrderType {
   /** SaaS subscription order */
   SAAS = 'saas',
-  /** Digital product order */
-  DIGITAL = 'digital',
   /** Physical product order */
   PHYSICAL = 'physical',
+  /** License product order */
+  LICENSE = 'license',
   /** Mixed order (multiple product types) */
   MIXED = 'mixed',
 }

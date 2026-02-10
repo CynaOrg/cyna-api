@@ -53,18 +53,8 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid input' })
   @ApiResponse({ status: 409, description: 'Email already exists' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
-  async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
-    const result = await this.authService.register(dto);
-
-    // Set refresh token as HTTP-only cookie if present
-    if (result.refreshToken) {
-      res.cookie('refresh_token', result.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
-      // Remove refreshToken from response body
-      const { refreshToken, ...responseWithoutToken } = result;
-      return responseWithoutToken;
-    }
-
-    return result;
+  async register(@Body() dto: RegisterDto) {
+    return this.authService.register(dto);
   }
 
   @Public()

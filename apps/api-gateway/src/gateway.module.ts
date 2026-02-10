@@ -5,6 +5,7 @@ import { CynaConfigModule, LoggerModule, CynaI18nModule, RabbitMQModule } from '
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { CartModule } from './cart/cart.module';
 
 /**
  * Gateway Module
@@ -30,6 +31,7 @@ import { CatalogModule } from './catalog/catalog.module';
     HealthModule,
     AuthModule,
     CatalogModule,
+    CartModule,
   ],
   providers: [
     {

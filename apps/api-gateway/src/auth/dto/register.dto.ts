@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmail, IsString, MinLength, MaxLength, Matches, IsOptional, IsEnum } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  MinLength,
+  MaxLength,
+  Matches,
+  IsOptional,
+  IsEnum,
+} from 'class-validator';
 import { Language } from '@cyna-api/common';
 
 export class RegisterDto {
@@ -7,12 +15,16 @@ export class RegisterDto {
   @IsEmail()
   email: string;
 
-  @ApiProperty({ example: 'Password123!', description: 'User password (min 8 chars, 1 uppercase, 1 number, 1 special)' })
+  @ApiProperty({
+    example: 'Password123!',
+    description: 'User password (min 8 chars, 1 uppercase, 1 number, 1 special)',
+  })
   @IsString()
   @MinLength(8)
   @MaxLength(128)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, {
-    message: 'Password must contain at least 1 uppercase, 1 lowercase, 1 number and 1 special character',
+    message:
+      'Password must contain at least 1 uppercase, 1 lowercase, 1 number and 1 special character',
   })
   password: string;
 
@@ -27,6 +39,18 @@ export class RegisterDto {
   @MinLength(2)
   @MaxLength(50)
   lastName: string;
+
+  @ApiPropertyOptional({ example: 'Acme Corp', description: 'Company name (optional)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  companyName?: string;
+
+  @ApiPropertyOptional({ example: 'FR12345678901', description: 'VAT number (optional)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  vatNumber?: string;
 
   @ApiPropertyOptional({ enum: Language, default: Language.FR, description: 'Preferred language' })
   @IsOptional()

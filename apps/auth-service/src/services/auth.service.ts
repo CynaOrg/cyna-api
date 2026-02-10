@@ -66,6 +66,7 @@ export class AuthService {
       firstName: dto.firstName,
       lastName: dto.lastName,
       companyName: dto.companyName,
+      vatNumber: dto.vatNumber,
       preferredLanguage: dto.preferredLanguage || Language.FR,
       isVerified: false,
       isActive: true,

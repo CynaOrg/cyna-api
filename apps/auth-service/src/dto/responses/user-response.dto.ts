@@ -6,6 +6,7 @@ export class UserResponseDto {
   firstName: string;
   lastName: string;
   companyName?: string;
+  vatNumber?: string;
   preferredLanguage: Language;
   isVerified: boolean;
   createdAt: Date;
@@ -16,6 +17,7 @@ export class UserResponseDto {
     firstName: string;
     lastName: string;
     companyName?: string;
+    vatNumber?: string;
     preferredLanguage: Language;
     isVerified: boolean;
     createdAt: Date;
@@ -26,6 +28,7 @@ export class UserResponseDto {
     dto.firstName = user.firstName;
     dto.lastName = user.lastName;
     dto.companyName = user.companyName;
+    dto.vatNumber = user.vatNumber;
     dto.preferredLanguage = user.preferredLanguage;
     dto.isVerified = user.isVerified;
     dto.createdAt = user.createdAt;

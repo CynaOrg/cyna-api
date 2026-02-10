@@ -45,7 +45,7 @@ export class AuthService {
     );
   }
 
-  async register(dto: CreateUserDto): Promise<AuthResponseDto> {
+  async register(dto: CreateUserDto): Promise<{ message: string; user: UserResponseDto }> {
     const existingUser = await this.userRepository.findOne({
       where: { email: dto.email },
     });
@@ -94,20 +94,10 @@ export class AuthService {
       language: user.preferredLanguage,
     });
 
-    const accessToken = this.tokenService.generateAccessToken({
-      sub: user.id,
-      email: user.email,
-      type: 'user',
-    });
-
-    const refreshToken = await this.createRefreshToken(user.id, 'user');
-
     this.logger.log(`User registered: ${user.email}`, 'AuthService');
 
     return {
-      accessToken,
-      refreshToken,
-      expiresIn: this.tokenService.getAccessTokenExpirySeconds(),
+      message: 'Registration successful. Please check your email to verify your account.',
       user: UserResponseDto.fromEntity(user),
     };
   }

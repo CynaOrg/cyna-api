@@ -121,7 +121,7 @@ export class CreateProductDto {
   @Min(0)
   priceYearly?: number;
 
-  @ApiPropertyOptional({ description: 'Unit price (digital/physical)' })
+  @ApiPropertyOptional({ description: 'Unit price (physical/license)' })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)

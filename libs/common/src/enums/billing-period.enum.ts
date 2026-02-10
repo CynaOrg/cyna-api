@@ -7,6 +7,6 @@ export enum BillingPeriod {
   MONTHLY = 'monthly',
   /** Yearly subscription */
   YEARLY = 'yearly',
-  /** One-time purchase (digital, physical) */
+  /** One-time purchase (physical, license) */
   ONE_TIME = 'one_time',
 }

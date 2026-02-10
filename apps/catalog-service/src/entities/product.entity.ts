@@ -7,8 +7,8 @@ import { StockReservation } from './stock-reservation.entity';
 
 export enum ProductType {
   SAAS = 'saas',
-  DIGITAL = 'digital',
   PHYSICAL = 'physical',
+  LICENSE = 'license',
 }
 
 @Entity('products')

@@ -282,21 +282,21 @@ describe('ProductService', () => {
         );
       });
 
-      // Verifie la creation d'un produit digital avec priceUnit sans stock
-      it('should create a digital product with priceUnit without stock', async () => {
+      // Verifie la creation d'un produit license avec priceUnit sans stock
+      it('should create a license product with priceUnit without stock', async () => {
         const dto: CreateProductDto = {
           categoryId: 'cat-uuid-001',
-          slug: 'ebook-001',
-          sku: 'EB-001',
-          nameFr: 'E-Book',
-          nameEn: 'E-Book',
+          slug: 'microsoft-365',
+          sku: 'LIC-001',
+          nameFr: 'Microsoft 365',
+          nameEn: 'Microsoft 365',
           descriptionFr: 'Description',
           descriptionEn: 'Description',
-          productType: ProductType.DIGITAL,
+          productType: ProductType.LICENSE,
           priceUnit: 49,
         };
         const mockProduct = createMockProduct({
-          productType: ProductType.DIGITAL,
+          productType: ProductType.LICENSE,
           priceUnit: 49,
         });
 
@@ -310,7 +310,7 @@ describe('ProductService', () => {
 
         const result = await service.create(dto);
 
-        expect(result.productType).toBe(ProductType.DIGITAL);
+        expect(result.productType).toBe(ProductType.LICENSE);
         expect(productRepository.create).toHaveBeenCalledWith(
           expect.objectContaining({
             priceUnit: 49,

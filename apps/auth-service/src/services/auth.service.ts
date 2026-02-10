@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, LessThan } from 'typeorm';
+import { Repository, IsNull, LessThan, MoreThan, Not } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { RpcException } from '@nestjs/microservices';
 import { CynaLoggerService, Language } from '@cyna-api/common';
@@ -383,10 +383,13 @@ export class AuthService {
     };
   }
 
+  private static readonly REFRESH_TOKEN_GRACE_PERIOD_MS = 30_000; // 30 seconds
+
   async refreshToken(refreshTokenValue: string): Promise<AuthResponseDto> {
     const hashedToken = this.tokenService.hashToken(refreshTokenValue);
 
-    const refreshToken = await this.refreshTokenRepository.findOne({
+    // First try to find an active (non-revoked) token
+    let refreshToken = await this.refreshTokenRepository.findOne({
       where: {
         token: hashedToken,
         revokedAt: IsNull(),
@@ -394,7 +397,48 @@ export class AuthService {
       relations: ['user'],
     });
 
+    // If not found, check if it was recently revoked (grace period for rapid refreshes)
     if (!refreshToken) {
+      const graceCutoff = new Date(Date.now() - AuthService.REFRESH_TOKEN_GRACE_PERIOD_MS);
+      refreshToken = await this.refreshTokenRepository.findOne({
+        where: {
+          token: hashedToken,
+          revokedAt: MoreThan(graceCutoff),
+        },
+        relations: ['user'],
+      });
+
+      if (refreshToken) {
+        // Token was recently revoked (e.g. page refresh race condition).
+        // Issue a fresh token pair so the session is not lost.
+        const user = refreshToken.user;
+
+        if (!user || !user.isActive) {
+          throw new RpcException({
+            statusCode: 401,
+            message: 'Invalid refresh token',
+            code: 'INVALID_REFRESH_TOKEN',
+          });
+        }
+
+        const accessToken = this.tokenService.generateAccessToken({
+          sub: user.id,
+          email: user.email,
+          type: 'user',
+        });
+
+        const newRefreshToken = await this.createRefreshToken(user.id, 'user');
+
+        this.logger.log(`Token refresh (grace period) for user: ${user.email}`, 'AuthService');
+
+        return {
+          accessToken,
+          refreshToken: newRefreshToken,
+          expiresIn: this.tokenService.getAccessTokenExpirySeconds(),
+          user: UserResponseDto.fromEntity(user),
+        };
+      }
+
       throw new RpcException({
         statusCode: 401,
         message: 'Invalid refresh token',

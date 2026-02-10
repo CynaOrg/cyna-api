@@ -502,13 +502,34 @@ export class AuthService {
     return { success: true };
   }
 
+  private static readonly MAX_ACTIVE_SESSIONS = 5;
+
   private async createRefreshToken(entityId: string, type: 'user' | 'admin'): Promise<string> {
     const rawToken = this.tokenService.generateSecureToken();
     const hashedToken = this.tokenService.hashToken(rawToken);
     const expiresAt = new Date(Date.now() + this.tokenService.getRefreshTokenExpiryMs());
 
+    const entityField = type === 'user' ? 'userId' : 'adminId';
+
+    // Enforce max active sessions: revoke oldest tokens beyond the limit
+    const activeTokens = await this.refreshTokenRepository.find({
+      where: { [entityField]: entityId, revokedAt: IsNull() },
+      order: { createdAt: 'ASC' },
+    });
+
+    if (activeTokens.length >= AuthService.MAX_ACTIVE_SESSIONS) {
+      const tokensToRevoke = activeTokens.slice(
+        0,
+        activeTokens.length - AuthService.MAX_ACTIVE_SESSIONS + 1,
+      );
+      await this.refreshTokenRepository.update(
+        tokensToRevoke.map((t) => t.id),
+        { revokedAt: new Date() },
+      );
+    }
+
     const refreshToken = this.refreshTokenRepository.create({
-      [type === 'user' ? 'userId' : 'adminId']: entityId,
+      [entityField]: entityId,
       token: hashedToken,
       expiresAt,
     });

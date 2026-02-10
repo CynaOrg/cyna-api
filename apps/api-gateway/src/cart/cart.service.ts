@@ -1,4 +1,4 @@
-import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
+import { Injectable, Inject, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS, BillingPeriod } from '@cyna-api/common';
@@ -7,6 +7,7 @@ import { AddCartItemDto, UpdateCartItemDto } from './dto';
 @Injectable()
 export class CartService {
   private readonly TIMEOUT = 10000;
+  private readonly logger = new Logger(CartService.name);
 
   constructor(
     @Inject(SERVICE_NAMES.ORDER)
@@ -64,6 +65,8 @@ export class CartService {
       this.orderClient.send(pattern, data).pipe(
         timeout(this.TIMEOUT),
         catchError((err) => {
+          this.logger.error(`Order service error [${pattern.cmd}]: ${JSON.stringify(err)}`);
+
           if (err && typeof err === 'object' && 'statusCode' in err) {
             const statusCode = err.statusCode || HttpStatus.INTERNAL_SERVER_ERROR;
             const message = err.message || 'An error occurred';
@@ -74,7 +77,7 @@ export class CartService {
             );
           }
 
-          if (err.name === 'TimeoutError') {
+          if (err?.name === 'TimeoutError') {
             return throwError(
               () =>
                 new HttpException(
@@ -84,7 +87,15 @@ export class CartService {
             );
           }
 
-          return throwError(() => err);
+          // Handle generic RPC errors (NestJS wraps non-RpcException as { message, status: 'error' })
+          const message = err?.message || (typeof err === 'string' ? err : 'Order service error');
+          return throwError(
+            () =>
+              new HttpException(
+                { message, error: 'ORDER_SERVICE_ERROR' },
+                HttpStatus.INTERNAL_SERVER_ERROR,
+              ),
+          );
         }),
       ),
     );

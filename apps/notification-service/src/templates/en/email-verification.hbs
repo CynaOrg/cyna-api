@@ -1,14 +1,20 @@
 <h1>Welcome to CYNA, {{firstName}}!</h1>
 
-<p>Thank you for signing up on our platform. To activate your account and access our cybersecurity solutions, please confirm your email address.</p>
+<p>Thank you for signing up on our platform. To activate your account and access our cybersecurity
+  solutions, please confirm your email address.</p>
 
-<p style="text-align: center;">
-  <a href="{{verificationLink}}" class="button">Verify my email</a>
+<p style='text-align: center;'>
+  <a
+    href='{{verificationLink}}'
+    class='button'
+    style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px;'
+  >Verify my email</a>
 </p>
 
-<div class="warning">
-  <p>This link will expire in 24 hours. If you did not create an account on CYNA, you can ignore this email.</p>
+<div class='note'>
+  <p>This link will expire in 24 hours. If you did not create an account on CYNA, you can ignore
+    this email.</p>
 </div>
 
 <p>If the button doesn't work, copy and paste the following link into your browser:</p>
-<p style="word-break: break-all; font-size: 14px; color: #6366f1;">{{verificationLink}}</p>
+<p class='link-fallback'>{{verificationLink}}</p>

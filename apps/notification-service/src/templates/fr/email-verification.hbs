@@ -1,14 +1,20 @@
 <h1>Bienvenue sur CYNA, {{firstName}} !</h1>
 
-<p>Merci de vous être inscrit sur notre plateforme. Pour activer votre compte et accéder à nos solutions de cybersécurité, veuillez confirmer votre adresse email.</p>
+<p>Merci de vous être inscrit sur notre plateforme. Pour activer votre compte et accéder à nos
+  solutions de cybersécurité, veuillez confirmer votre adresse email.</p>
 
-<p style="text-align: center;">
-  <a href="{{verificationLink}}" class="button">Vérifier mon email</a>
+<p style='text-align: center;'>
+  <a
+    href='{{verificationLink}}'
+    class='button'
+    style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px;'
+  >Vérifier mon email</a>
 </p>
 
-<div class="warning">
-  <p>Ce lien expirera dans 24 heures. Si vous n'avez pas créé de compte sur CYNA, vous pouvez ignorer cet email.</p>
+<div class='note'>
+  <p>Ce lien expirera dans 24 heures. Si vous n'avez pas créé de compte sur CYNA, vous pouvez
+    ignorer cet email.</p>
 </div>
 
 <p>Si le bouton ne fonctionne pas, copiez et collez le lien suivant dans votre navigateur :</p>
-<p style="word-break: break-all; font-size: 14px; color: #6366f1;">{{verificationLink}}</p>
+<p class='link-fallback'>{{verificationLink}}</p>

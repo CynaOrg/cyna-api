@@ -15,8 +15,8 @@ import { Language } from '@cyna-api/common';
 
 export enum ProductType {
   SAAS = 'saas',
-  DIGITAL = 'digital',
   PHYSICAL = 'physical',
+  LICENSE = 'license',
 }
 
 export enum ProductSortBy {

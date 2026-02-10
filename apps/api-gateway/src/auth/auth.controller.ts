@@ -27,12 +27,15 @@ import {
 import { JwtAuthGuard } from './guards';
 import { CurrentUser } from './decorators';
 
+const isProduction =
+  process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT_NAME;
+
 const REFRESH_TOKEN_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production',
-  sameSite: 'none' as const,
+  secure: isProduction,
+  sameSite: isProduction ? ('none' as const) : ('lax' as const),
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  path: '/api/v1/auth',
+  path: '/',
 };
 
 @ApiTags('Auth')
@@ -186,9 +189,9 @@ export class AuthController {
     // Clear refresh token cookie
     res.clearCookie('refresh_token', {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'none' as const,
-      path: '/api/v1/auth',
+      secure: isProduction,
+      sameSite: isProduction ? ('none' as const) : ('lax' as const),
+      path: '/',
     });
 
     return { message: 'Logged out successfully' };

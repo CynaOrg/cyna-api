@@ -85,6 +85,13 @@ export class ProductQueryDto {
   @Min(0)
   maxPrice?: number;
 
+  @ApiPropertyOptional({ description: 'Search products by name or description', maxLength: 255 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  @Transform(({ value }) => value?.trim())
+  search?: string;
+
   @ApiPropertyOptional({
     description: 'Sort field',
     enum: ProductSortBy,

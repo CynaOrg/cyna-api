@@ -49,6 +49,7 @@ async function bootstrap() {
       'Accept-Language',
       'x-correlation-id',
       'X-Session-Id',
+      'x-lang',
     ],
   });
 

@@ -49,6 +49,7 @@ export class Product extends BaseEntity {
     name: 'product_type',
     type: 'enum',
     enum: ProductType,
+    default: ProductType.SAAS,
   })
   productType: ProductType;
 

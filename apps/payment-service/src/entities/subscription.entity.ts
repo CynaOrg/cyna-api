@@ -13,6 +13,9 @@ export class Subscription extends BaseEntity {
   @Column({ name: 'product_id', type: 'uuid' })
   productId: string;
 
+  @Column({ name: 'product_name', type: 'varchar', length: 255, nullable: true })
+  productName: string | null;
+
   @Column({
     type: 'enum',
     enum: SubscriptionStatus,

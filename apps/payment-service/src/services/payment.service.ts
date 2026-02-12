@@ -4,6 +4,7 @@ import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } 
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import { StripeService } from './stripe.service';
 import { SubscriptionService } from './subscription.service';
+import { Subscription } from '../entities/subscription.entity';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
 import { SubscriptionStatus } from '@cyna-api/common';
@@ -56,6 +57,45 @@ export class PaymentService {
       amount: amountInCents,
       currency,
     };
+  }
+
+  async getSubscriptionsForUser(userId: string): Promise<Subscription[]> {
+    const subscriptions = await this.subscriptionService.findByUserId(userId);
+
+    // Enrich subscriptions missing productName
+    const toEnrich = subscriptions.filter((s) => !s.productName);
+    if (toEnrich.length > 0) {
+      const productIds = [...new Set(toEnrich.map((s) => s.productId))];
+      const products = new Map<string, any>();
+
+      for (const productId of productIds) {
+        try {
+          const product = await firstValueFrom(
+            this.catalogClient
+              .send(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID, { id: productId })
+              .pipe(
+                timeout(3000),
+                catchError(() => throwError(() => null)),
+              ),
+          );
+          if (product) products.set(productId, product);
+        } catch {
+          // Skip if catalog is unavailable
+        }
+      }
+
+      for (const sub of toEnrich) {
+        const product = products.get(sub.productId);
+        const name = product?.nameFr || product?.nameEn;
+        if (name) {
+          sub.productName = name;
+          // Fire-and-forget DB update
+          this.subscriptionService.update(sub.id, { productName: name });
+        }
+      }
+    }
+
+    return subscriptions;
   }
 
   async createSubscription(dto: CreateSubscriptionDto): Promise<{
@@ -158,6 +198,7 @@ export class PaymentService {
     const subscription = await this.subscriptionService.create({
       userId: dto.userId,
       productId: dto.productId,
+      productName: product.nameFr || product.nameEn || null,
       status: SubscriptionStatus.ACTIVE,
       billingPeriod: dto.billingPeriod,
       price:

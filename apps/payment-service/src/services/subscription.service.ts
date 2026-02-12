@@ -22,6 +22,10 @@ export class SubscriptionService {
     return this.subscriptionRepository.save(subscription);
   }
 
+  async update(id: string, data: Partial<Subscription>): Promise<void> {
+    await this.subscriptionRepository.update(id, data);
+  }
+
   async findByUserId(userId: string): Promise<Subscription[]> {
     return this.subscriptionRepository.find({
       where: { userId },

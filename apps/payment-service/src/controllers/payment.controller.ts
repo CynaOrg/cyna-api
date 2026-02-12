@@ -66,7 +66,7 @@ export class PaymentController {
     const originalMsg = context.getMessage();
 
     try {
-      const result = await this.subscriptionService.findByUserId(data.userId);
+      const result = await this.paymentService.getSubscriptionsForUser(data.userId);
       channel.ack(originalMsg);
       return result;
     } catch (error) {

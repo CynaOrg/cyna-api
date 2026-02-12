@@ -1,17 +1,21 @@
-import { IsOptional, IsEnum, IsString } from 'class-validator';
+import { IsOptional, IsBoolean, IsString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 export class UpdateContactMessageDto {
-  @ApiPropertyOptional({
-    description: 'Message status',
-    enum: ['new', 'read', 'replied', 'archived'],
-  })
+  @ApiPropertyOptional({ description: 'Mark as read' })
   @IsOptional()
-  @IsEnum(['new', 'read', 'replied', 'archived'])
-  status?: string;
+  @IsBoolean()
+  isRead?: boolean;
+
+  @ApiPropertyOptional({ description: 'Mark as processed' })
+  @IsOptional()
+  @IsBoolean()
+  isProcessed?: boolean;
 
   @ApiPropertyOptional({ description: 'Admin notes' })
   @IsOptional()
   @IsString()
-  adminNotes?: string;
+  @Transform(({ value }) => value?.trim())
+  notes?: string;
 }

@@ -1,32 +1,31 @@
-import { IsOptional, IsString, IsEnum, IsNumber, Min } from 'class-validator';
+import { IsOptional, IsBoolean, IsInt, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 
 export class ContactMessageQueryDto {
   @ApiPropertyOptional({ description: 'Page number', default: 1 })
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : 1))
   page?: number;
 
-  @ApiPropertyOptional({ description: 'Items per page', default: 20 })
+  @ApiPropertyOptional({ description: 'Items per page', default: 10 })
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
+  @IsInt()
   @Min(1)
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : 10))
   limit?: number;
 
-  @ApiPropertyOptional({
-    description: 'Filter by status',
-    enum: ['new', 'read', 'replied', 'archived'],
-  })
+  @ApiPropertyOptional({ description: 'Filter by read status' })
   @IsOptional()
-  @IsEnum(['new', 'read', 'replied', 'archived'])
-  status?: string;
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  isRead?: boolean;
 
-  @ApiPropertyOptional({ description: 'Search by name or email' })
+  @ApiPropertyOptional({ description: 'Filter by processed status' })
   @IsOptional()
-  @IsString()
-  search?: string;
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  isProcessed?: boolean;
 }

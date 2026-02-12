@@ -46,6 +46,15 @@ export class ContentAdminController {
     return this.contentService.adminCreateSlide(dto);
   }
 
+  // IMPORTANT: Static routes must come before parameterized routes
+  @Patch('carousel/reorder')
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: 'Reorder carousel slides' })
+  @ApiResponse({ status: 200, description: 'Slides reordered' })
+  async reorderCarousel(@Body() dto: ReorderCarouselDto) {
+    return this.contentService.adminReorderCarousel(dto.slideIds);
+  }
+
   @Patch('carousel/:slideId')
   @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Update a carousel slide' })
@@ -64,14 +73,6 @@ export class ContentAdminController {
   @ApiResponse({ status: 404, description: 'Slide not found' })
   async deleteSlide(@Param('slideId') slideId: string) {
     return this.contentService.adminDeleteSlide(slideId);
-  }
-
-  @Patch('carousel/reorder')
-  @UseGuards(SuperAdminGuard)
-  @ApiOperation({ summary: 'Reorder carousel slides' })
-  @ApiResponse({ status: 200, description: 'Slides reordered' })
-  async reorderCarousel(@Body() dto: ReorderCarouselDto) {
-    return this.contentService.adminReorderCarousel(dto.slideIds);
   }
 
   // ==================== Hero & Top Products ====================

@@ -39,6 +39,11 @@ export const MESSAGE_PATTERNS = {
     ADMIN_GET_USERS: { cmd: 'auth.admin_get_users' },
     ADMIN_GET_USER: { cmd: 'auth.admin_get_user' },
     ADMIN_UPDATE_USER_STATUS: { cmd: 'auth.admin_update_user_status' },
+    ADMIN_GET_ADMINS: { cmd: 'auth.admin_get_admins' },
+    ADMIN_GET_ADMIN: { cmd: 'auth.admin_get_admin' },
+    ADMIN_CREATE_ADMIN: { cmd: 'auth.admin_create_admin' },
+    ADMIN_UPDATE_ADMIN: { cmd: 'auth.admin_update_admin' },
+    ADMIN_DELETE_ADMIN: { cmd: 'auth.admin_delete_admin' },
   },
 
   // User Service

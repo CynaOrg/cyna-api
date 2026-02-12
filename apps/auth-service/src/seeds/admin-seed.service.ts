@@ -36,18 +36,18 @@ export class AdminSeedService implements OnModuleInit {
       return;
     }
 
-    const passwordHash = await this.passwordService.hash('CynaAdmin2024!');
+    const passwordHash = await this.passwordService.hash('Test1234!');
 
     const admin = this.adminRepository.create({
-      email: 'admin@cyna.fr',
+      email: 'tom.lefevrebonzon@gmail.com',
       passwordHash,
-      firstName: 'Admin',
-      lastName: 'CYNA',
+      firstName: 'Tom',
+      lastName: 'Lefèvre-Bonzon',
       role: AdminRole.SUPER_ADMIN,
       isActive: true,
     });
 
     await this.adminRepository.save(admin);
-    this.logger.log('Super admin seeded successfully (admin@cyna.fr)');
+    this.logger.log('Super admin seeded successfully (tom.lefevrebonzon@gmail.com)');
   }
 }

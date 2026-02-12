@@ -16,6 +16,7 @@ import { LoginUserDto } from '../dto/login-user.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { UpdatePasswordDto } from '../dto/update-password.dto';
 import { UpdateLanguageDto } from '../dto/update-language.dto';
+import { DeleteAccountDto } from '../dto/delete-account.dto';
 import { AuthResponseDto, UserResponseDto } from '../dto/responses';
 
 @Injectable()
@@ -727,6 +728,53 @@ export class AuthService {
     return {
       message: 'Language preference updated successfully',
       user: UserResponseDto.fromEntity(user),
+    };
+  }
+
+  async deleteAccount(userId: string, dto: DeleteAccountDto): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    if (!user.isActive) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Account is already disabled',
+        code: 'ACCOUNT_DISABLED',
+      });
+    }
+
+    // Verify password
+    const isPasswordValid = await this.passwordService.compare(dto.password, user.passwordHash);
+
+    if (!isPasswordValid) {
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Password is incorrect',
+        code: 'INVALID_PASSWORD',
+      });
+    }
+
+    // Soft delete: deactivate the account
+    user.isActive = false;
+    await this.userRepository.save(user);
+
+    // Revoke all refresh tokens
+    await this.refreshTokenRepository.update(
+      { userId: user.id, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
+
+    this.logger.log(`Account deleted (soft) for user: ${user.email}`, 'AuthService');
+
+    return {
+      message: 'Account deleted successfully',
     };
   }
 }

@@ -2,7 +2,7 @@ import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
-import { UpdateProfileDto, UpdatePasswordDto, UpdateLanguageDto } from './dto';
+import { UpdateProfileDto, UpdatePasswordDto, UpdateLanguageDto, DeleteAccountDto } from './dto';
 
 @Injectable()
 export class ProfileService {
@@ -33,6 +33,13 @@ export class ProfileService {
 
   async updateLanguage(userId: string, dto: UpdateLanguageDto) {
     return this.sendMessage(MESSAGE_PATTERNS.USER.UPDATE_LANGUAGE, {
+      userId,
+      ...dto,
+    });
+  }
+
+  async deleteAccount(userId: string, dto: DeleteAccountDto) {
+    return this.sendMessage(MESSAGE_PATTERNS.USER.DELETE_ACCOUNT, {
       userId,
       ...dto,
     });

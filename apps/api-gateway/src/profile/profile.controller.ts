@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Post,
+  Delete,
   Body,
   HttpCode,
   HttpStatus,
@@ -11,7 +12,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ProfileService } from './profile.service';
-import { UpdateProfileDto, UpdatePasswordDto, UpdateLanguageDto } from './dto';
+import { UpdateProfileDto, UpdatePasswordDto, UpdateLanguageDto, DeleteAccountDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards';
 import { CurrentUser } from '../auth/decorators';
 
@@ -66,5 +67,17 @@ export class ProfileController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async updateLanguage(@CurrentUser('id') userId: string, @Body() dto: UpdateLanguageDto) {
     return this.profileService.updateLanguage(userId, dto);
+  }
+
+  @Delete()
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 req/min
+  @ApiOperation({ summary: 'Delete account (soft delete)' })
+  @ApiResponse({ status: 200, description: 'Account deleted successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 401, description: 'Password is incorrect' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async deleteAccount(@CurrentUser('id') userId: string, @Body() dto: DeleteAccountDto) {
+    return this.profileService.deleteAccount(userId, dto);
   }
 }

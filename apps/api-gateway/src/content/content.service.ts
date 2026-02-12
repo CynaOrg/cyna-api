@@ -45,11 +45,11 @@ export class ContentService {
   }
 
   async adminUpdateSlide(slideId: string, dto: any) {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_SLIDE, { slideId, dto });
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_SLIDE, { id: slideId, dto });
   }
 
   async adminDeleteSlide(slideId: string) {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_DELETE_SLIDE, { slideId });
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_DELETE_SLIDE, { id: slideId });
   }
 
   async adminReorderCarousel(slideIds: string[]) {
@@ -78,13 +78,15 @@ export class ContentService {
 
   async adminUpdateContactMessage(messageId: string, dto: any) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_CONTACT_MESSAGE, {
-      messageId,
+      id: messageId,
       dto,
     });
   }
 
   async adminDeleteContactMessage(messageId: string) {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_DELETE_CONTACT_MESSAGE, { messageId });
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_DELETE_CONTACT_MESSAGE, {
+      id: messageId,
+    });
   }
 
   // ==================== Private Helper ====================

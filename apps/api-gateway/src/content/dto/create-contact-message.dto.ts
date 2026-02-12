@@ -1,31 +1,34 @@
-import { IsString, IsEmail, IsOptional } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsEmail, IsNotEmpty, MaxLength, MinLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 export class CreateContactMessageDto {
-  @ApiProperty({ description: 'Sender full name' })
+  @ApiProperty({ description: 'Sender name' })
+  @IsNotEmpty()
   @IsString()
-  fullName: string;
+  @MaxLength(200)
+  @Transform(({ value }) => value?.trim())
+  name: string;
 
   @ApiProperty({ description: 'Sender email' })
+  @IsNotEmpty()
   @IsEmail()
+  @MaxLength(255)
+  @Transform(({ value }) => value?.toLowerCase().trim())
   email: string;
 
-  @ApiPropertyOptional({ description: 'Subject' })
-  @IsOptional()
+  @ApiProperty({ description: 'Message subject' })
+  @IsNotEmpty()
   @IsString()
-  subject?: string;
+  @MaxLength(300)
+  @Transform(({ value }) => value?.trim())
+  subject: string;
 
   @ApiProperty({ description: 'Message body' })
+  @IsNotEmpty()
   @IsString()
+  @MinLength(10)
+  @MaxLength(5000)
+  @Transform(({ value }) => value?.trim())
   message: string;
-
-  @ApiPropertyOptional({ description: 'Company name' })
-  @IsOptional()
-  @IsString()
-  company?: string;
-
-  @ApiPropertyOptional({ description: 'Phone number' })
-  @IsOptional()
-  @IsString()
-  phone?: string;
 }

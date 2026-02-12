@@ -1,52 +1,55 @@
-import { IsString, IsOptional, IsBoolean, IsNumber, IsUrl } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsInt, IsUrl, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 
 export class CreateSlideDto {
   @ApiProperty({ description: 'Title in French' })
   @IsString()
   titleFr: string;
 
-  @ApiPropertyOptional({ description: 'Title in English' })
+  @ApiProperty({ description: 'Title in English' })
+  @IsString()
+  titleEn: string;
+
+  @ApiPropertyOptional({ description: 'Subtitle in French' })
   @IsOptional()
   @IsString()
-  titleEn?: string;
+  subtitleFr?: string;
 
-  @ApiPropertyOptional({ description: 'Description in French' })
+  @ApiPropertyOptional({ description: 'Subtitle in English' })
   @IsOptional()
   @IsString()
-  descriptionFr?: string;
+  subtitleEn?: string;
 
-  @ApiPropertyOptional({ description: 'Description in English' })
+  @ApiPropertyOptional({ description: 'Image URL' })
   @IsOptional()
-  @IsString()
-  descriptionEn?: string;
-
-  @ApiProperty({ description: 'Image URL' })
   @IsUrl()
-  imageUrl: string;
+  imageUrl?: string;
 
   @ApiPropertyOptional({ description: 'Link URL' })
   @IsOptional()
   @IsUrl()
   linkUrl?: string;
 
-  @ApiPropertyOptional({ description: 'Button text in French' })
+  @ApiPropertyOptional({ description: 'Link text in French' })
   @IsOptional()
   @IsString()
-  buttonTextFr?: string;
+  linkTextFr?: string;
 
-  @ApiPropertyOptional({ description: 'Button text in English' })
+  @ApiPropertyOptional({ description: 'Link text in English' })
   @IsOptional()
   @IsString()
-  buttonTextEn?: string;
+  linkTextEn?: string;
 
   @ApiPropertyOptional({ description: 'Whether the slide is active', default: true })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiPropertyOptional({ description: 'Display order' })
+  @ApiPropertyOptional({ description: 'Display order', default: 0 })
   @IsOptional()
-  @IsNumber()
+  @IsInt()
+  @Min(0)
+  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : 0))
   displayOrder?: number;
 }

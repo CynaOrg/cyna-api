@@ -142,11 +142,26 @@ export const MESSAGE_PATTERNS = {
 
   // Content Service
   CONTENT: {
+    // Public
     GET_HOMEPAGE: { cmd: 'content.get_homepage' },
     GET_CAROUSEL: { cmd: 'content.get_carousel' },
     GET_TOP_SERVICES: { cmd: 'content.get_top_services' },
     GET_TOP_PRODUCTS: { cmd: 'content.get_top_products' },
     CREATE_CONTACT_MESSAGE: { cmd: 'content.create_contact_message' },
+    // Admin - Carousel
+    ADMIN_GET_CAROUSEL: { cmd: 'content.admin_get_carousel' },
+    ADMIN_CREATE_SLIDE: { cmd: 'content.admin_create_slide' },
+    ADMIN_UPDATE_SLIDE: { cmd: 'content.admin_update_slide' },
+    ADMIN_DELETE_SLIDE: { cmd: 'content.admin_delete_slide' },
+    ADMIN_REORDER_CAROUSEL: { cmd: 'content.admin_reorder_carousel' },
+    // Admin - Hero & Top Products
+    ADMIN_UPDATE_HERO_TEXT: { cmd: 'content.admin_update_hero_text' },
+    ADMIN_UPDATE_TOP_SERVICES: { cmd: 'content.admin_update_top_services' },
+    ADMIN_UPDATE_TOP_PRODUCTS: { cmd: 'content.admin_update_top_products' },
+    // Admin - Contact Messages
+    ADMIN_GET_CONTACT_MESSAGES: { cmd: 'content.admin_get_contact_messages' },
+    ADMIN_UPDATE_CONTACT_MESSAGE: { cmd: 'content.admin_update_contact_message' },
+    ADMIN_DELETE_CONTACT_MESSAGE: { cmd: 'content.admin_delete_contact_message' },
   },
 
   // Analytics Service
@@ -155,8 +170,12 @@ export const MESSAGE_PATTERNS = {
     GET_SALES: { cmd: 'analytics.get_sales' },
     GET_SALES_BY_CATEGORY: { cmd: 'analytics.get_sales_by_category' },
     GET_SALES_BY_PRODUCT_TYPE: { cmd: 'analytics.get_sales_by_product_type' },
+    GET_AVERAGE_CART: { cmd: 'analytics.get_average_cart' },
     GET_MRR: { cmd: 'analytics.get_mrr' },
     GET_STOCK_STATUS: { cmd: 'analytics.get_stock_status' },
+    EXPORT_SALES: { cmd: 'analytics.export_sales' },
+    EXPORT_ORDERS: { cmd: 'analytics.export_orders' },
+    EXPORT_SUBSCRIPTIONS: { cmd: 'analytics.export_subscriptions' },
   },
 } as const;
 

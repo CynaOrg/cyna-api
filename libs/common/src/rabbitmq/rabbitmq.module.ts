@@ -53,7 +53,7 @@ export class RabbitMQModule {
           createClientOptions(SERVICE_NAMES.USER, QUEUES.USER.name),
           createClientOptions(SERVICE_NAMES.CONTENT, QUEUES.CONTENT.name),
           createClientOptions(SERVICE_NAMES.NOTIFICATION, 'notification.queue'),
-          createClientOptions(SERVICE_NAMES.ANALYTICS, 'analytics.queue'),
+          createClientOptions(SERVICE_NAMES.ANALYTICS, QUEUES.ANALYTICS.name),
         ]),
       );
     }
@@ -62,10 +62,7 @@ export class RabbitMQModule {
       module: RabbitMQModule,
       imports,
       providers: [RabbitMQService],
-      exports: [
-        RabbitMQService,
-        ...(registerClients ? [ClientsModule] : []),
-      ],
+      exports: [RabbitMQService, ...(registerClients ? [ClientsModule] : [])],
     };
   }
 

@@ -69,6 +69,15 @@ export const QUEUES: Record<string, QueueDefinition> = {
     },
   },
 
+  ANALYTICS: {
+    name: 'analytics.queue',
+    options: {
+      durable: true,
+      deadLetterExchange: 'cyna.dlx',
+      deadLetterRoutingKey: 'analytics.dlq',
+    },
+  },
+
   // Event Queues (for Event patterns)
   AUTH_EVENTS: {
     name: 'auth.events',
@@ -112,6 +121,15 @@ export const QUEUES: Record<string, QueueDefinition> = {
       durable: true,
       deadLetterExchange: 'cyna.dlx',
       deadLetterRoutingKey: 'user.dlq',
+    },
+  },
+
+  CONTENT_EVENTS: {
+    name: 'content.events',
+    options: {
+      durable: true,
+      deadLetterExchange: 'cyna.dlx',
+      deadLetterRoutingKey: 'content.dlq',
     },
   },
 
@@ -165,6 +183,11 @@ export const QUEUES: Record<string, QueueDefinition> = {
     options: { durable: true },
   },
 
+  DLQ_CONTENT: {
+    name: 'content.dlq',
+    options: { durable: true },
+  },
+
   DLQ_ANALYTICS: {
     name: 'analytics.dlq',
     options: { durable: true },
@@ -178,4 +201,5 @@ export const QUEUE_NAMES = {
   PAYMENT: QUEUES.PAYMENT.name,
   USER: QUEUES.USER.name,
   CONTENT: QUEUES.CONTENT.name,
+  ANALYTICS: QUEUES.ANALYTICS.name,
 } as const;

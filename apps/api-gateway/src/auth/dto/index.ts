@@ -9,3 +9,4 @@ export * from './logout.dto';
 export * from './admin-login.dto';
 export * from './verify-2fa.dto';
 export * from './resend-2fa.dto';
+export * from './admin-management.dto';

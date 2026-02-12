@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
-import { CynaLoggerService, Language } from '@cyna-api/common';
+import { CynaLoggerService, Language, AdminRole } from '@cyna-api/common';
 import { Admin } from '../entities/admin.entity';
 import { User } from '../entities/user.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
@@ -394,6 +394,169 @@ export class AdminAuthService {
     );
 
     return { id: user.id, email: user.email, isActive: user.isActive };
+  }
+
+  async getAdmins() {
+    const admins = await this.adminRepository.find({
+      select: [
+        'id',
+        'email',
+        'firstName',
+        'lastName',
+        'role',
+        'isActive',
+        'lastLoginAt',
+        'createdAt',
+      ],
+      order: { createdAt: 'DESC' },
+    });
+
+    return { data: admins };
+  }
+
+  async getAdmin(adminId: string) {
+    const admin = await this.adminRepository.findOne({
+      where: { id: adminId },
+      select: [
+        'id',
+        'email',
+        'firstName',
+        'lastName',
+        'role',
+        'isActive',
+        'lastLoginAt',
+        'createdAt',
+        'updatedAt',
+      ],
+    });
+
+    if (!admin) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Admin not found',
+        code: 'ADMIN_NOT_FOUND',
+      });
+    }
+
+    return admin;
+  }
+
+  async createAdmin(dto: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    role: AdminRole;
+  }) {
+    const existing = await this.adminRepository.findOne({
+      where: { email: dto.email },
+    });
+
+    if (existing) {
+      throw new RpcException({
+        statusCode: 409,
+        message: 'Email already taken',
+        code: 'EMAIL_ALREADY_EXISTS',
+      });
+    }
+
+    const passwordHash = await this.passwordService.hash(dto.password);
+
+    const admin = this.adminRepository.create({
+      email: dto.email,
+      passwordHash,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      role: dto.role,
+      isActive: true,
+    });
+
+    const savedAdmin = await this.adminRepository.save(admin);
+
+    this.logger.log(`Admin created: ${savedAdmin.email} (${savedAdmin.role})`, 'AdminAuthService');
+
+    return {
+      id: savedAdmin.id,
+      email: savedAdmin.email,
+      firstName: savedAdmin.firstName,
+      lastName: savedAdmin.lastName,
+      role: savedAdmin.role,
+      isActive: savedAdmin.isActive,
+      createdAt: savedAdmin.createdAt,
+    };
+  }
+
+  async updateAdmin(
+    adminId: string,
+    dto: {
+      firstName?: string;
+      lastName?: string;
+      role?: AdminRole;
+      isActive?: boolean;
+    },
+  ) {
+    const admin = await this.adminRepository.findOne({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Admin not found',
+        code: 'ADMIN_NOT_FOUND',
+      });
+    }
+
+    if (dto.firstName !== undefined) admin.firstName = dto.firstName;
+    if (dto.lastName !== undefined) admin.lastName = dto.lastName;
+    if (dto.role !== undefined) admin.role = dto.role;
+    if (dto.isActive !== undefined) admin.isActive = dto.isActive;
+
+    const updatedAdmin = await this.adminRepository.save(admin);
+
+    this.logger.log(`Admin updated: ${updatedAdmin.email}`, 'AdminAuthService');
+
+    return {
+      id: updatedAdmin.id,
+      email: updatedAdmin.email,
+      firstName: updatedAdmin.firstName,
+      lastName: updatedAdmin.lastName,
+      role: updatedAdmin.role,
+      isActive: updatedAdmin.isActive,
+      createdAt: updatedAdmin.createdAt,
+      updatedAt: updatedAdmin.updatedAt,
+    };
+  }
+
+  async deleteAdmin(adminId: string, requestAdminId: string) {
+    if (adminId === requestAdminId) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Cannot delete your own account',
+        code: 'CANNOT_DELETE_SELF',
+      });
+    }
+
+    const admin = await this.adminRepository.findOne({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Admin not found',
+        code: 'ADMIN_NOT_FOUND',
+      });
+    }
+
+    await this.adminRepository.softRemove(admin);
+
+    this.logger.log(
+      `Admin deleted (soft): ${admin.email} by admin ${requestAdminId}`,
+      'AdminAuthService',
+    );
+
+    return { success: true, message: 'Admin account deleted' };
   }
 
   private async createRefreshToken(adminId: string): Promise<string> {

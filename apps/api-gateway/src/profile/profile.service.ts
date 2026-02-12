@@ -1,0 +1,57 @@
+import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
+import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
+import { UpdateProfileDto } from './dto';
+
+@Injectable()
+export class ProfileService {
+  private readonly TIMEOUT = 10000; // 10 seconds
+
+  constructor(
+    @Inject(SERVICE_NAMES.AUTH)
+    private readonly authClient: ClientProxy,
+  ) {}
+
+  async getProfile(userId: string) {
+    return this.sendMessage(MESSAGE_PATTERNS.USER.GET_PROFILE, { userId });
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    return this.sendMessage(MESSAGE_PATTERNS.USER.UPDATE_PROFILE, {
+      userId,
+      ...dto,
+    });
+  }
+
+  private async sendMessage<T>(pattern: { cmd: string }, data: T) {
+    return firstValueFrom(
+      this.authClient.send(pattern, data).pipe(
+        timeout(this.TIMEOUT),
+        catchError((err) => {
+          if (err && typeof err === 'object' && 'statusCode' in err) {
+            const statusCode = err.statusCode || HttpStatus.INTERNAL_SERVER_ERROR;
+            const message = err.message || 'An error occurred';
+            const code = err.code || 'UNKNOWN_ERROR';
+
+            return throwError(
+              () => new HttpException({ message, error: code, statusCode }, statusCode),
+            );
+          }
+
+          if (err.name === 'TimeoutError') {
+            return throwError(
+              () =>
+                new HttpException(
+                  { message: 'Service unavailable', error: 'SERVICE_TIMEOUT' },
+                  HttpStatus.SERVICE_UNAVAILABLE,
+                ),
+            );
+          }
+
+          return throwError(() => err);
+        }),
+      ),
+    );
+  }
+}

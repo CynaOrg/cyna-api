@@ -13,6 +13,7 @@ import { TokenService } from './token.service';
 import { AuthEventsPublisher } from '../events/auth-events.publisher';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
+import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { AuthResponseDto, UserResponseDto } from '../dto/responses';
 
 @Injectable()
@@ -571,5 +572,73 @@ export class AuthService {
 
   async findUserById(userId: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { id: userId } });
+  }
+
+  async getProfile(userId: string): Promise<UserResponseDto> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    if (!user.isActive) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Account is disabled',
+        code: 'ACCOUNT_DISABLED',
+      });
+    }
+
+    return UserResponseDto.fromEntity(user);
+  }
+
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<{ message: string; user: UserResponseDto }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    if (!user.isActive) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Account is disabled',
+        code: 'ACCOUNT_DISABLED',
+      });
+    }
+
+    // Update only provided fields
+    if (dto.firstName !== undefined) {
+      user.firstName = dto.firstName;
+    }
+    if (dto.lastName !== undefined) {
+      user.lastName = dto.lastName;
+    }
+    if (dto.companyName !== undefined) {
+      user.companyName = dto.companyName;
+    }
+    if (dto.vatNumber !== undefined) {
+      user.vatNumber = dto.vatNumber;
+    }
+
+    await this.userRepository.save(user);
+
+    this.logger.log(`Profile updated for user: ${user.email}`, 'AuthService');
+
+    return {
+      message: 'Profile updated successfully',
+      user: UserResponseDto.fromEntity(user),
+    };
   }
 }

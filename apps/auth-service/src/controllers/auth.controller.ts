@@ -17,6 +17,7 @@ import { ForgotPasswordDto } from '../dto';
 import { ResetPasswordDto } from '../dto';
 import { RefreshTokenDto } from '../dto';
 import { LogoutDto } from '../dto';
+import { UpdateProfileDto } from '../dto';
 
 @Controller()
 export class AuthController {
@@ -160,6 +161,40 @@ export class AuthController {
         });
       }
       return user;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.USER.GET_PROFILE)
+  async getProfile(@Payload() data: { userId: string }, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const result = await this.authService.getProfile(data.userId);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_PROFILE)
+  async updateProfile(
+    @Payload() data: { userId: string } & UpdateProfileDto,
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const { userId, ...profileData } = data;
+      const result = await this.authService.updateProfile(userId, profileData);
+      channel.ack(originalMsg);
+      return result;
     } catch (error) {
       channel.ack(originalMsg);
       throw error;

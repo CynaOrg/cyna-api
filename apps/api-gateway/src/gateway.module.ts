@@ -4,6 +4,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { CynaConfigModule, LoggerModule, CynaI18nModule, RabbitMQModule } from '@cyna-api/common';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
+import { ProfileModule } from './profile/profile.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { CartModule } from './cart/cart.module';
 import { WebhookModule } from './webhooks/webhook.module';
@@ -34,6 +35,7 @@ import { SubscriptionModule } from './subscriptions/subscription.module';
     // Feature modules
     HealthModule,
     AuthModule,
+    ProfileModule,
     CatalogModule,
     CartModule,
     WebhookModule,

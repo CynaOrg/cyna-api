@@ -9,4 +9,5 @@ export * from './verify-2fa.dto';
 export * from './resend-2fa.dto';
 export * from './refresh-token.dto';
 export * from './logout.dto';
+export * from './update-profile.dto';
 export * from './responses';

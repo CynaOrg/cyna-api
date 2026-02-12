@@ -36,6 +36,9 @@ export const MESSAGE_PATTERNS = {
     ADMIN_VERIFY_2FA: { cmd: 'auth.admin_verify_2fa' },
     ADMIN_RESEND_2FA: { cmd: 'auth.admin_resend_2fa' },
     GET_USER_BY_ID: { cmd: 'auth.get_user_by_id' },
+    ADMIN_GET_USERS: { cmd: 'auth.admin_get_users' },
+    ADMIN_GET_USER: { cmd: 'auth.admin_get_user' },
+    ADMIN_UPDATE_USER_STATUS: { cmd: 'auth.admin_update_user_status' },
   },
 
   // User Service
@@ -117,6 +120,8 @@ export const MESSAGE_PATTERNS = {
     UPDATE_ORDER_STATUS: { cmd: 'order.update_order_status' },
     GET_ORDER_BY_PAYMENT_INTENT: { cmd: 'order.get_order_by_payment_intent' },
     SUBSCRIBE: { cmd: 'order.subscribe' },
+    ADMIN_GET_ORDERS: { cmd: 'order.admin_get_orders' },
+    ADMIN_UPDATE_STATUS: { cmd: 'order.admin_update_status' },
   },
 
   // Payment Service

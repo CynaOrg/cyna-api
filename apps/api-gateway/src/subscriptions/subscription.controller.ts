@@ -22,8 +22,12 @@ function rpcToHttpError(err: any): never {
   if (err instanceof TimeoutError) {
     throw new HttpException('Payment service timeout', 503);
   }
-  const statusCode = err?.statusCode || err?.status || 500;
-  const message = err?.message || 'Internal server error';
+  // RpcException wraps the payload in err.message when it's an object
+  const payload = typeof err?.message === 'object' ? err.message : err;
+  const statusCode = typeof payload?.statusCode === 'number' ? payload.statusCode : 500;
+  const message =
+    (typeof payload?.message === 'string' ? payload.message : err?.message) ||
+    'Internal server error';
   throw new HttpException(message, statusCode);
 }
 

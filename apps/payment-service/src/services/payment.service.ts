@@ -133,9 +133,7 @@ export class PaymentService {
 
     // 4. Determine the stripePriceId based on billingPeriod
     const stripePriceId =
-      dto.billingPeriod === 'monthly'
-        ? product.stripePriceIdMonthly || product.stripePriceId
-        : product.stripePriceIdYearly || product.stripePriceId;
+      dto.billingPeriod === 'monthly' ? product.stripePriceIdMonthly : product.stripePriceIdYearly;
 
     if (!stripePriceId) {
       throw new RpcException({
@@ -176,17 +174,22 @@ export class PaymentService {
         : new Date(),
     });
 
-    // 7. Get clientSecret from latest_invoice.payment_intent
-    const invoice = stripeSubscription.latest_invoice as any;
-    const paymentIntent = invoice?.payment_intent as any;
-    const clientSecret = paymentIntent?.client_secret;
+    // 7. Get clientSecret via latest_invoice.confirmation_secret (Stripe API 2026-01-28.clover)
+    // See: https://docs.stripe.com/payments/advanced/build-subscriptions
+    const invoice =
+      typeof stripeSubscription.latest_invoice === 'string'
+        ? await this.stripeService.getInvoice(stripeSubscription.latest_invoice)
+        : stripeSubscription.latest_invoice;
 
-    this.logger.log(
-      `Stripe subscription debug: id=${stripeSubscription.id}, ` +
-        `invoiceType=${typeof invoice}, invoiceId=${invoice?.id || invoice}, ` +
-        `piType=${typeof paymentIntent}, piId=${paymentIntent?.id || paymentIntent}, ` +
-        `hasClientSecret=${!!clientSecret}`,
-    );
+    if (!invoice) {
+      throw new RpcException({
+        statusCode: 500,
+        message: 'No invoice on subscription',
+        code: 'SUBSCRIPTION_NO_INVOICE',
+      });
+    }
+
+    const clientSecret = invoice.confirmation_secret?.client_secret;
 
     if (!clientSecret) {
       throw new RpcException({

@@ -10,25 +10,32 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } from 'rxjs';
+import {
+  Observable,
+  firstValueFrom,
+  timeout,
+  retry,
+  catchError,
+  throwError,
+  TimeoutError,
+} from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import { JwtAuthGuard } from '../auth/guards';
 
 /**
- * Convert an RPC error to an HttpException so the GlobalExceptionFilter
- * can return the proper status code and message to the client.
+ * Convert an RPC error to an HttpException Observable so the
+ * GlobalExceptionFilter can return the proper status code and message.
  */
-function rpcToHttpError(err: any): never {
+function rpcToHttpError(err: any): Observable<never> {
   if (err instanceof TimeoutError) {
-    throw new HttpException('Payment service timeout', 503);
+    return throwError(() => new HttpException('Payment service timeout', 503));
   }
-  // RpcException wraps the payload in err.message when it's an object
   const payload = typeof err?.message === 'object' ? err.message : err;
   const statusCode = typeof payload?.statusCode === 'number' ? payload.statusCode : 500;
   const message =
     (typeof payload?.message === 'string' ? payload.message : err?.message) ||
     'Internal server error';
-  throw new HttpException(message, statusCode);
+  return throwError(() => new HttpException(message, statusCode));
 }
 
 @UseGuards(JwtAuthGuard)
@@ -49,9 +56,7 @@ export class SubscriptionController {
         .pipe(
           timeout(10000),
           retry(1),
-          catchError((err) => {
-            rpcToHttpError(err);
-          }),
+          catchError((err) => rpcToHttpError(err)),
         ),
     );
   }
@@ -66,9 +71,7 @@ export class SubscriptionController {
         .pipe(
           timeout(5000),
           retry(2),
-          catchError((err) => {
-            rpcToHttpError(err);
-          }),
+          catchError((err) => rpcToHttpError(err)),
         ),
     );
   }
@@ -83,9 +86,7 @@ export class SubscriptionController {
         .pipe(
           timeout(5000),
           retry(2),
-          catchError((err) => {
-            rpcToHttpError(err);
-          }),
+          catchError((err) => rpcToHttpError(err)),
         ),
     );
   }
@@ -106,9 +107,7 @@ export class SubscriptionController {
         .pipe(
           timeout(10000),
           retry(1),
-          catchError((err) => {
-            rpcToHttpError(err);
-          }),
+          catchError((err) => rpcToHttpError(err)),
         ),
     );
   }

@@ -295,6 +295,47 @@ export class OrderController {
     }
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.ORDER.ADMIN_GET_ORDERS)
+  async adminGetOrders(
+    @Payload()
+    data: { search?: string; status?: string; page?: number; limit?: number },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const result = await this.orderService.adminGetOrders(data);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw this.wrapError(error);
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.ORDER.ADMIN_UPDATE_STATUS)
+  async adminUpdateStatus(
+    @Payload() data: { orderId: string; status: string; notes?: string },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const result = await this.orderService.adminUpdateOrderStatus(
+        data.orderId,
+        data.status,
+        data.notes,
+      );
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw this.wrapError(error);
+    }
+  }
+
   @EventPattern(MESSAGE_PATTERNS.ORDER.UPDATE_ORDER_STATUS.cmd)
   async onUpdateOrderStatus(
     @Payload() data: { orderId: string; stripePaymentIntentId: string },

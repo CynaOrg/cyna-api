@@ -4,6 +4,7 @@ import { Repository, IsNull } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
 import { CynaLoggerService, Language } from '@cyna-api/common';
 import { Admin } from '../entities/admin.entity';
+import { User } from '../entities/user.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { PasswordService } from './password.service';
 import { TokenService } from './token.service';
@@ -18,6 +19,8 @@ export class AdminAuthService {
   constructor(
     @InjectRepository(Admin)
     private readonly adminRepository: Repository<Admin>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
     private readonly passwordService: PasswordService,
@@ -298,6 +301,99 @@ export class AdminAuthService {
     this.logger.log(`Admin logged out: ${adminId}`, 'AdminAuthService');
 
     return { success: true };
+  }
+
+  async adminGetUsers(params: { search?: string; page?: number; limit?: number }) {
+    const { search, page = 1, limit = 20 } = params;
+    const qb = this.userRepository
+      .createQueryBuilder('user')
+      .select([
+        'user.id',
+        'user.email',
+        'user.firstName',
+        'user.lastName',
+        'user.companyName',
+        'user.isActive',
+        'user.isVerified',
+        'user.preferredLanguage',
+        'user.createdAt',
+      ])
+      .orderBy('user.createdAt', 'DESC');
+
+    if (search) {
+      qb.andWhere(
+        '(user.email ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search OR user.companyName ILIKE :search)',
+        { search: `%${search}%` },
+      );
+    }
+
+    const total = await qb.getCount();
+    const users = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    return {
+      data: users,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async adminGetUser(userId: string) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: [
+        'id',
+        'email',
+        'firstName',
+        'lastName',
+        'companyName',
+        'vatNumber',
+        'isActive',
+        'isVerified',
+        'preferredLanguage',
+        'stripeCustomerId',
+        'createdAt',
+        'updatedAt',
+      ],
+    });
+
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    return user;
+  }
+
+  async adminUpdateUserStatus(userId: string, isActive: boolean) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    user.isActive = isActive;
+    await this.userRepository.save(user);
+
+    this.logger.log(
+      `Admin updated user ${userId} status to ${isActive ? 'active' : 'inactive'}`,
+      'AdminAuthService',
+    );
+
+    return { id: user.id, email: user.email, isActive: user.isActive };
   }
 
   private async createRefreshToken(adminId: string): Promise<string> {

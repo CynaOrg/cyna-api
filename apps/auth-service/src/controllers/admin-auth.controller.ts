@@ -12,10 +12,7 @@ export class AdminAuthController {
   constructor(private readonly adminAuthService: AdminAuthService) {}
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_LOGIN)
-  async adminLogin(
-    @Payload() data: AdminLoginDto,
-    @Ctx() context: RmqContext,
-  ) {
+  async adminLogin(@Payload() data: AdminLoginDto, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -30,10 +27,7 @@ export class AdminAuthController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_VERIFY_2FA)
-  async verify2FA(
-    @Payload() data: Verify2FADto,
-    @Ctx() context: RmqContext,
-  ) {
+  async verify2FA(@Payload() data: Verify2FADto, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -48,10 +42,7 @@ export class AdminAuthController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_RESEND_2FA)
-  async resend2FA(
-    @Payload() data: Resend2FADto,
-    @Ctx() context: RmqContext,
-  ) {
+  async resend2FA(@Payload() data: Resend2FADto, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -66,10 +57,7 @@ export class AdminAuthController {
   }
 
   @MessagePattern({ cmd: 'auth.admin_refresh_token' })
-  async refreshToken(
-    @Payload() data: RefreshTokenDto,
-    @Ctx() context: RmqContext,
-  ) {
+  async refreshToken(@Payload() data: RefreshTokenDto, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -93,6 +81,54 @@ export class AdminAuthController {
 
     try {
       const result = await this.adminAuthService.logout(data.adminId, data.refreshToken);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_GET_USERS)
+  async adminGetUsers(
+    @Payload() data: { search?: string; page?: number; limit?: number },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    try {
+      const result = await this.adminAuthService.adminGetUsers(data);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_GET_USER)
+  async adminGetUser(@Payload() data: { userId: string }, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    try {
+      const result = await this.adminAuthService.adminGetUser(data.userId);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_UPDATE_USER_STATUS)
+  async adminUpdateUserStatus(
+    @Payload() data: { userId: string; isActive: boolean },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    try {
+      const result = await this.adminAuthService.adminUpdateUserStatus(data.userId, data.isActive);
       channel.ack(originalMsg);
       return result;
     } catch (error) {

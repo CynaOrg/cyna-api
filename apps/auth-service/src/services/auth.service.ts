@@ -15,6 +15,7 @@ import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
 import { UpdatePasswordDto } from '../dto/update-password.dto';
+import { UpdateLanguageDto } from '../dto/update-language.dto';
 import { AuthResponseDto, UserResponseDto } from '../dto/responses';
 
 @Injectable()
@@ -690,6 +691,42 @@ export class AuthService {
 
     return {
       message: 'Password updated successfully',
+    };
+  }
+
+  async updateLanguage(
+    userId: string,
+    dto: UpdateLanguageDto,
+  ): Promise<{ message: string; user: UserResponseDto }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    if (!user.isActive) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Account is disabled',
+        code: 'ACCOUNT_DISABLED',
+      });
+    }
+
+    user.preferredLanguage = dto.preferredLanguage;
+    await this.userRepository.save(user);
+
+    this.logger.log(
+      `Language preference updated for user: ${user.email} to ${dto.preferredLanguage}`,
+      'AuthService',
+    );
+
+    return {
+      message: 'Language preference updated successfully',
+      user: UserResponseDto.fromEntity(user),
     };
   }
 }

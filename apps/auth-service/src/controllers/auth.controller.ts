@@ -19,6 +19,7 @@ import { RefreshTokenDto } from '../dto';
 import { LogoutDto } from '../dto';
 import { UpdateProfileDto } from '../dto';
 import { UpdatePasswordDto } from '../dto';
+import { UpdateLanguageDto } from '../dto';
 
 @Controller()
 export class AuthController {
@@ -213,6 +214,25 @@ export class AuthController {
     try {
       const { userId, ...passwordData } = data;
       const result = await this.authService.updatePassword(userId, passwordData);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_LANGUAGE)
+  async updateLanguage(
+    @Payload() data: { userId: string } & UpdateLanguageDto,
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const { userId, ...languageData } = data;
+      const result = await this.authService.updateLanguage(userId, languageData);
       channel.ack(originalMsg);
       return result;
     } catch (error) {

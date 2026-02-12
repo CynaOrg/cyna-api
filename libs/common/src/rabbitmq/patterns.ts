@@ -44,6 +44,7 @@ export const MESSAGE_PATTERNS = {
     UPDATE_PROFILE: { cmd: 'user.update_profile' },
     UPDATE_EMAIL: { cmd: 'user.update_email' },
     UPDATE_PASSWORD: { cmd: 'user.update_password' },
+    UPDATE_LANGUAGE: { cmd: 'user.update_language' },
     DELETE_ACCOUNT: { cmd: 'user.delete_account' },
     GET_ADDRESSES: { cmd: 'user.get_addresses' },
     CREATE_ADDRESS: { cmd: 'user.create_address' },

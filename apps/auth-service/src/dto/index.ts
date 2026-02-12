@@ -11,4 +11,5 @@ export * from './refresh-token.dto';
 export * from './logout.dto';
 export * from './update-profile.dto';
 export * from './update-password.dto';
+export * from './update-language.dto';
 export * from './responses';

@@ -11,7 +11,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ProfileService } from './profile.service';
-import { UpdateProfileDto, UpdatePasswordDto } from './dto';
+import { UpdateProfileDto, UpdatePasswordDto, UpdateLanguageDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards';
 import { CurrentUser } from '../auth/decorators';
 
@@ -54,5 +54,17 @@ export class ProfileController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async updatePassword(@CurrentUser('id') userId: string, @Body() dto: UpdatePasswordDto) {
     return this.profileService.updatePassword(userId, dto);
+  }
+
+  @Patch('language')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 req/min
+  @ApiOperation({ summary: 'Update language preference' })
+  @ApiResponse({ status: 200, description: 'Language preference updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updateLanguage(@CurrentUser('id') userId: string, @Body() dto: UpdateLanguageDto) {
+    return this.profileService.updateLanguage(userId, dto);
   }
 }

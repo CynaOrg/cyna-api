@@ -1,5 +1,12 @@
-import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload, Ctx, RmqContext } from '@nestjs/microservices';
+import { Controller, Logger } from '@nestjs/common';
+import {
+  MessagePattern,
+  EventPattern,
+  Payload,
+  Ctx,
+  RmqContext,
+  RpcException,
+} from '@nestjs/microservices';
 import { MESSAGE_PATTERNS } from '@cyna-api/common';
 import { AuthService } from '../services';
 import { CreateUserDto } from '../dto';
@@ -13,13 +20,12 @@ import { LogoutDto } from '../dto';
 
 @Controller()
 export class AuthController {
+  private readonly logger = new Logger(AuthController.name);
+
   constructor(private readonly authService: AuthService) {}
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.REGISTER_USER)
-  async registerUser(
-    @Payload() data: CreateUserDto,
-    @Ctx() context: RmqContext,
-  ) {
+  async registerUser(@Payload() data: CreateUserDto, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -34,10 +40,7 @@ export class AuthController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.VALIDATE_USER)
-  async validateUser(
-    @Payload() data: LoginUserDto,
-    @Ctx() context: RmqContext,
-  ) {
+  async validateUser(@Payload() data: LoginUserDto, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -52,10 +55,7 @@ export class AuthController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.VERIFY_EMAIL)
-  async verifyEmail(
-    @Payload() data: VerifyEmailDto,
-    @Ctx() context: RmqContext,
-  ) {
+  async verifyEmail(@Payload() data: VerifyEmailDto, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -70,10 +70,7 @@ export class AuthController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.RESEND_VERIFICATION)
-  async resendVerification(
-    @Payload() data: ResendVerificationDto,
-    @Ctx() context: RmqContext,
-  ) {
+  async resendVerification(@Payload() data: ResendVerificationDto, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -88,10 +85,7 @@ export class AuthController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.FORGOT_PASSWORD)
-  async forgotPassword(
-    @Payload() data: ForgotPasswordDto,
-    @Ctx() context: RmqContext,
-  ) {
+  async forgotPassword(@Payload() data: ForgotPasswordDto, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -106,10 +100,7 @@ export class AuthController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.RESET_PASSWORD)
-  async resetPassword(
-    @Payload() data: ResetPasswordDto,
-    @Ctx() context: RmqContext,
-  ) {
+  async resetPassword(@Payload() data: ResetPasswordDto, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -124,10 +115,7 @@ export class AuthController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.REFRESH_TOKEN)
-  async refreshToken(
-    @Payload() data: RefreshTokenDto,
-    @Ctx() context: RmqContext,
-  ) {
+  async refreshToken(@Payload() data: RefreshTokenDto, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -142,10 +130,7 @@ export class AuthController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.LOGOUT)
-  async logout(
-    @Payload() data: LogoutDto & { userId: string },
-    @Ctx() context: RmqContext,
-  ) {
+  async logout(@Payload() data: LogoutDto & { userId: string }, @Ctx() context: RmqContext) {
     const channel = context.getChannelRef();
     const originalMsg = context.getMessage();
 
@@ -156,6 +141,45 @@ export class AuthController {
     } catch (error) {
       channel.ack(originalMsg);
       throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.AUTH.GET_USER_BY_ID)
+  async getUserById(@Payload() data: { userId: string }, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const user = await this.authService.findUserById(data.userId);
+      channel.ack(originalMsg);
+      if (!user) {
+        throw new RpcException({
+          statusCode: 404,
+          message: 'User not found',
+          code: 'USER_NOT_FOUND',
+        });
+      }
+      return user;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @EventPattern('auth.update_stripe_customer_id')
+  async updateStripeCustomerId(
+    @Payload() data: { userId: string; stripeCustomerId: string },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      await this.authService.updateStripeCustomerId(data.userId, data.stripeCustomerId);
+      channel.ack(originalMsg);
+    } catch (error) {
+      this.logger.error(`Failed to update stripeCustomerId for user ${data.userId}: ${error}`);
+      channel.ack(originalMsg);
     }
   }
 }

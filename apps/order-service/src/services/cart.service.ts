@@ -81,6 +81,13 @@ export class CartService {
     return null;
   }
 
+  async findCartById(cartId: string): Promise<Cart | null> {
+    return this.cartRepository.findOne({
+      where: { id: cartId },
+      relations: ['items'],
+    });
+  }
+
   async getOrCreateCart(owner: CartOwner): Promise<Cart> {
     const cart = await this.findCart(owner);
     if (cart) return cart;

@@ -1,11 +1,12 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { I18nService } from 'nestjs-i18n';
 import helmet from 'helmet';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
+import * as express from 'express';
 
 import { GatewayModule } from './gateway.module';
 import {
@@ -33,6 +34,9 @@ async function bootstrap() {
   const swaggerPath = configService.get<string>('SWAGGER_PATH', 'docs');
   const corsOrigins = configService.get<string>('CORS_ORIGINS', 'http://localhost:4200');
 
+  // Raw body for Stripe webhook (BEFORE other middlewares)
+  app.use('/webhooks/stripe', express.raw({ type: 'application/json' }));
+
   // Security middlewares
   app.use(helmet());
   app.use(compression());
@@ -53,8 +57,10 @@ async function bootstrap() {
     ],
   });
 
-  // Global prefix
-  app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`);
+  // Global prefix (exclude webhook endpoint)
+  app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`, {
+    exclude: [{ path: 'webhooks/stripe', method: RequestMethod.POST }],
+  });
 
   // Global validation pipe
   app.useGlobalPipes(

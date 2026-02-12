@@ -35,6 +35,7 @@ export const MESSAGE_PATTERNS = {
     ADMIN_LOGIN: { cmd: 'auth.admin_login' },
     ADMIN_VERIFY_2FA: { cmd: 'auth.admin_verify_2fa' },
     ADMIN_RESEND_2FA: { cmd: 'auth.admin_resend_2fa' },
+    GET_USER_BY_ID: { cmd: 'auth.get_user_by_id' },
   },
 
   // User Service
@@ -112,6 +113,9 @@ export const MESSAGE_PATTERNS = {
     COMPLETE_CHECKOUT: { cmd: 'order.complete_checkout' },
     GET_ORDERS: { cmd: 'order.get_orders' },
     GET_ORDER: { cmd: 'order.get_order' },
+    CREATE_ORDER: { cmd: 'order.create_order' },
+    UPDATE_ORDER_STATUS: { cmd: 'order.update_order_status' },
+    GET_ORDER_BY_PAYMENT_INTENT: { cmd: 'order.get_order_by_payment_intent' },
     SUBSCRIBE: { cmd: 'order.subscribe' },
   },
 
@@ -122,10 +126,13 @@ export const MESSAGE_PATTERNS = {
     DELETE_PAYMENT_METHOD: { cmd: 'payment.delete_payment_method' },
     SET_DEFAULT_PAYMENT_METHOD: { cmd: 'payment.set_default_payment_method' },
     GET_SUBSCRIPTIONS: { cmd: 'payment.get_subscriptions' },
+    GET_SUBSCRIPTION: { cmd: 'payment.get_subscription' },
     UPDATE_BILLING_PERIOD: { cmd: 'payment.update_billing_period' },
     CANCEL_SUBSCRIPTION: { cmd: 'payment.cancel_subscription' },
     REACTIVATE_SUBSCRIPTION: { cmd: 'payment.reactivate_subscription' },
     CREATE_CHECKOUT_SESSION: { cmd: 'payment.create_checkout_session' },
+    CREATE_PAYMENT_INTENT: { cmd: 'payment.create_payment_intent' },
+    CREATE_SUBSCRIPTION: { cmd: 'payment.create_subscription' },
   },
 
   // Content Service
@@ -201,6 +208,7 @@ export const EVENT_PATTERNS = {
     CONFIRMED: 'payment.payment.confirmed',
     FAILED: 'payment.payment.failed',
     REFUNDED: 'payment.payment.refunded',
+    WEBHOOK_RECEIVED: 'payment.webhook.received',
     SUBSCRIPTION_CREATED: 'payment.subscription.created',
     SUBSCRIPTION_RENEWED: 'payment.subscription.renewed',
     SUBSCRIPTION_CANCELLED: 'payment.subscription.cancelled',

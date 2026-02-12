@@ -564,4 +564,12 @@ export class AuthService {
       refreshTokens: refreshResult.affected || 0,
     };
   }
+
+  async updateStripeCustomerId(userId: string, stripeCustomerId: string): Promise<void> {
+    await this.userRepository.update({ id: userId }, { stripeCustomerId });
+  }
+
+  async findUserById(userId: string): Promise<User | null> {
+    return this.userRepository.findOne({ where: { id: userId } });
+  }
 }

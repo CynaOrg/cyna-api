@@ -1,14 +1,24 @@
 import { Controller, Logger } from '@nestjs/common';
-import { MessagePattern, Payload, Ctx, RmqContext, RpcException } from '@nestjs/microservices';
-import { MESSAGE_PATTERNS } from '@cyna-api/common';
-import { CartService } from '../services';
+import {
+  MessagePattern,
+  EventPattern,
+  Payload,
+  Ctx,
+  RmqContext,
+  RpcException,
+} from '@nestjs/microservices';
+import { MESSAGE_PATTERNS, EVENT_PATTERNS } from '@cyna-api/common';
+import { CartService, OrderService } from '../services';
 import { AddCartItemDto, UpdateCartItemDto } from '../dto';
 
 @Controller()
 export class OrderController {
   private readonly logger = new Logger(OrderController.name);
 
-  constructor(private readonly cartService: CartService) {}
+  constructor(
+    private readonly cartService: CartService,
+    private readonly orderService: OrderService,
+  ) {}
 
   private wrapError(error: unknown): RpcException {
     if (error instanceof RpcException) return error;
@@ -155,6 +165,150 @@ export class OrderController {
     } catch (error) {
       channel.ack(originalMsg);
       throw this.wrapError(error);
+    }
+  }
+
+  // ---- Order handlers ----
+
+  @MessagePattern(MESSAGE_PATTERNS.ORDER.CREATE_ORDER)
+  async createOrder(
+    @Payload()
+    data: {
+      userId?: string;
+      cartId: string;
+      billingAddress: Record<string, any>;
+      shippingAddress?: Record<string, any>;
+      email: string;
+      stripePaymentIntentId: string;
+    },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const result = await this.orderService.createOrderFromCart(data);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw this.wrapError(error);
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.ORDER.GET_ORDERS)
+  async getOrders(@Payload() data: { userId: string }, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const result = await this.orderService.getOrdersByUserId(data.userId);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw this.wrapError(error);
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.ORDER.GET_ORDER)
+  async getOrder(
+    @Payload() data: { orderId: string; userId?: string },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const result = await this.orderService.getOrderById(data.orderId, data.userId);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw this.wrapError(error);
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.ORDER.GET_ORDER_BY_PAYMENT_INTENT)
+  async getOrderByPaymentIntent(
+    @Payload() data: { paymentIntentId: string },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const result = await this.orderService.getOrderByPaymentIntentId(data.paymentIntentId);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw this.wrapError(error);
+    }
+  }
+
+  @EventPattern(EVENT_PATTERNS.PAYMENT.CONFIRMED)
+  async onPaymentConfirmed(
+    @Payload() data: { paymentIntentId: string },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      await this.orderService.handlePaymentConfirmed(data.paymentIntentId);
+      channel.ack(originalMsg);
+    } catch (error) {
+      this.logger.error(`Failed to handle payment confirmed: ${error}`);
+      channel.ack(originalMsg);
+    }
+  }
+
+  @EventPattern(EVENT_PATTERNS.PAYMENT.FAILED)
+  async onPaymentFailed(@Payload() data: { paymentIntentId: string }, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      await this.orderService.handlePaymentFailed(data.paymentIntentId);
+      channel.ack(originalMsg);
+    } catch (error) {
+      this.logger.error(`Failed to handle payment failed: ${error}`);
+      channel.ack(originalMsg);
+    }
+  }
+
+  @EventPattern(EVENT_PATTERNS.PAYMENT.REFUNDED)
+  async onPaymentRefunded(
+    @Payload() data: { paymentIntentId: string },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      await this.orderService.handlePaymentRefunded(data.paymentIntentId);
+      channel.ack(originalMsg);
+    } catch (error) {
+      this.logger.error(`Failed to handle payment refunded: ${error}`);
+      channel.ack(originalMsg);
+    }
+  }
+
+  @EventPattern(MESSAGE_PATTERNS.ORDER.UPDATE_ORDER_STATUS.cmd)
+  async onUpdateOrderStatus(
+    @Payload() data: { orderId: string; stripePaymentIntentId: string },
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      await this.orderService.updateStripePaymentIntentId(data.orderId, data.stripePaymentIntentId);
+      channel.ack(originalMsg);
+    } catch (error) {
+      this.logger.error(`Failed to update order payment intent: ${error}`);
+      channel.ack(originalMsg);
     }
   }
 }

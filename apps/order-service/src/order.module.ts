@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { CynaConfigModule, LoggerModule, SERVICE_NAMES, CynaCacheModule } from '@cyna-api/common';
-import { Cart, CartItem } from './entities';
-import { CartService } from './services';
+import { Cart, CartItem, Order, OrderItem } from './entities';
+import { CartService, OrderService } from './services';
 import { OrderController } from './controllers';
 
 @Module({
@@ -18,11 +18,11 @@ import { OrderController } from './controllers';
       username: process.env.DATABASE_USER || 'cyna',
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
-      entities: [Cart, CartItem],
+      entities: [Cart, CartItem, Order, OrderItem],
       synchronize: process.env.DATABASE_SYNC === 'true',
       logging: process.env.DATABASE_LOGGING === 'true',
     }),
-    TypeOrmModule.forFeature([Cart, CartItem]),
+    TypeOrmModule.forFeature([Cart, CartItem, Order, OrderItem]),
     ClientsModule.register([
       {
         name: SERVICE_NAMES.CATALOG,
@@ -38,6 +38,6 @@ import { OrderController } from './controllers';
     ]),
   ],
   controllers: [OrderController],
-  providers: [CartService],
+  providers: [CartService, OrderService],
 })
 export class OrderModule {}

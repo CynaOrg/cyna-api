@@ -6,6 +6,10 @@ import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { CartModule } from './cart/cart.module';
+import { WebhookModule } from './webhooks/webhook.module';
+import { CheckoutModule } from './checkout/checkout.module';
+import { OrderModule } from './orders/order.module';
+import { SubscriptionModule } from './subscriptions/subscription.module';
 
 /**
  * Gateway Module
@@ -32,6 +36,10 @@ import { CartModule } from './cart/cart.module';
     AuthModule,
     CatalogModule,
     CartModule,
+    WebhookModule,
+    CheckoutModule,
+    OrderModule,
+    SubscriptionModule,
   ],
   providers: [
     {

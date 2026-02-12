@@ -139,7 +139,7 @@ export class OrderService {
           slug: product.slug,
           productType: product.productType,
           price: unitPrice,
-          image: product.images?.[0]?.url || null,
+          image: product.images?.[0]?.imageUrl || null,
         },
         quantity: cartItem.quantity,
         unitPrice,

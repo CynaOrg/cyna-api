@@ -1,5 +1,5 @@
 import { Controller } from '@nestjs/common';
-import { EventPattern, Payload, Ctx, RmqContext } from '@nestjs/microservices';
+import { EventPattern, Payload } from '@nestjs/microservices';
 import { EVENT_PATTERNS, CynaLoggerService } from '@cyna-api/common';
 import { EmailService } from '../email/email.service';
 import { EmailTemplateService } from '../email/email-template.service';
@@ -18,13 +18,7 @@ export class AuthEventsHandler {
   ) {}
 
   @EventPattern(EVENT_PATTERNS.AUTH.USER_REGISTERED)
-  async handleUserRegistered(
-    @Payload() data: UserRegisteredEvent,
-    @Ctx() context: RmqContext,
-  ): Promise<void> {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async handleUserRegistered(@Payload() data: UserRegisteredEvent): Promise<void> {
     this.logger.log(
       `Processing user_registered event for user: ${data.email}`,
       'AuthEventsHandler',
@@ -39,16 +33,12 @@ export class AuthEventsHandler {
         en: 'Verify your email address - CYNA',
       };
 
-      const html = this.emailTemplateService.render(
-        'email-verification',
-        data.language,
-        {
-          firstName: data.firstName,
-          lastName: data.lastName,
-          verificationLink,
-          frontendUrl,
-        },
-      );
+      const html = this.emailTemplateService.render('email-verification', data.language, {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        verificationLink,
+        frontendUrl,
+      });
 
       await this.emailService.sendEmail({
         to: data.email,
@@ -56,30 +46,18 @@ export class AuthEventsHandler {
         html,
       });
 
-      channel.ack(originalMsg);
-      this.logger.log(
-        `Verification email sent successfully to ${data.email}`,
-        'AuthEventsHandler',
-      );
+      this.logger.log(`Verification email sent successfully to ${data.email}`, 'AuthEventsHandler');
     } catch (error) {
       this.logger.error(
         `Failed to process user_registered event: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
         'AuthEventsHandler',
       );
-      // Requeue the message for retry
-      channel.nack(originalMsg, false, true);
     }
   }
 
   @EventPattern(EVENT_PATTERNS.AUTH.PASSWORD_RESET_REQUESTED)
-  async handlePasswordResetRequested(
-    @Payload() data: PasswordResetRequestedEvent,
-    @Ctx() context: RmqContext,
-  ): Promise<void> {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async handlePasswordResetRequested(@Payload() data: PasswordResetRequestedEvent): Promise<void> {
     this.logger.log(
       `Processing password_reset_requested event for user: ${data.email}`,
       'AuthEventsHandler',
@@ -94,15 +72,11 @@ export class AuthEventsHandler {
         en: 'Reset your password - CYNA',
       };
 
-      const html = this.emailTemplateService.render(
-        'password-reset',
-        data.language,
-        {
-          firstName: data.firstName,
-          resetLink,
-          frontendUrl,
-        },
-      );
+      const html = this.emailTemplateService.render('password-reset', data.language, {
+        firstName: data.firstName,
+        resetLink,
+        frontendUrl,
+      });
 
       await this.emailService.sendEmail({
         to: data.email,
@@ -110,7 +84,6 @@ export class AuthEventsHandler {
         html,
       });
 
-      channel.ack(originalMsg);
       this.logger.log(
         `Password reset email sent successfully to ${data.email}`,
         'AuthEventsHandler',
@@ -121,41 +94,33 @@ export class AuthEventsHandler {
         error instanceof Error ? error.stack : undefined,
         'AuthEventsHandler',
       );
-      channel.nack(originalMsg, false, true);
     }
   }
 
   @EventPattern(EVENT_PATTERNS.AUTH.ADMIN_2FA_CODE_REQUESTED)
-  async handleAdmin2FACodeRequested(
-    @Payload() data: Admin2FACodeRequestedEvent,
-    @Ctx() context: RmqContext,
-  ): Promise<void> {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async handleAdmin2FACodeRequested(@Payload() data: Admin2FACodeRequestedEvent): Promise<void> {
     this.logger.log(
       `Processing admin_2fa_code_requested event for admin: ${data.email}`,
       'AuthEventsHandler',
     );
 
     try {
-      const backofficeUrl = this.configService.get<string>('BACKOFFICE_URL', 'http://localhost:4201');
+      const backofficeUrl = this.configService.get<string>(
+        'BACKOFFICE_URL',
+        'http://localhost:4201',
+      );
 
       const subjects: Record<string, string> = {
         fr: 'Votre code de vérification - CYNA Admin',
         en: 'Your verification code - CYNA Admin',
       };
 
-      const html = this.emailTemplateService.render(
-        'admin-2fa-code',
-        data.language,
-        {
-          firstName: data.firstName,
-          code: data.code,
-          expiresInMinutes: data.expiresInMinutes,
-          backofficeUrl,
-        },
-      );
+      const html = this.emailTemplateService.render('admin-2fa-code', data.language, {
+        firstName: data.firstName,
+        code: data.code,
+        expiresInMinutes: data.expiresInMinutes,
+        backofficeUrl,
+      });
 
       await this.emailService.sendEmail({
         to: data.email,
@@ -163,18 +128,13 @@ export class AuthEventsHandler {
         html,
       });
 
-      channel.ack(originalMsg);
-      this.logger.log(
-        `2FA code email sent successfully to ${data.email}`,
-        'AuthEventsHandler',
-      );
+      this.logger.log(`2FA code email sent successfully to ${data.email}`, 'AuthEventsHandler');
     } catch (error) {
       this.logger.error(
         `Failed to process admin_2fa_code_requested event: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
         'AuthEventsHandler',
       );
-      channel.nack(originalMsg, false, true);
     }
   }
 }

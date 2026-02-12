@@ -1,5 +1,5 @@
 import { Controller, Logger } from '@nestjs/common';
-import { MessagePattern, Payload, Ctx, RmqContext, RpcException } from '@nestjs/microservices';
+import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS } from '@cyna-api/common';
 import { PaymentService } from '../services/payment.service';
 import { SubscriptionService } from '../services/subscription.service';
@@ -31,80 +31,50 @@ export class PaymentController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.PAYMENT.CREATE_PAYMENT_INTENT)
-  async createPaymentIntent(@Payload() dto: CreatePaymentIntentDto, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async createPaymentIntent(@Payload() dto: CreatePaymentIntentDto) {
     try {
-      const result = await this.paymentService.createPaymentIntent(dto);
-      channel.ack(originalMsg);
-      return result;
+      return await this.paymentService.createPaymentIntent(dto);
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
 
   @MessagePattern(MESSAGE_PATTERNS.PAYMENT.CREATE_SUBSCRIPTION)
-  async createSubscription(@Payload() dto: CreateSubscriptionDto, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async createSubscription(@Payload() dto: CreateSubscriptionDto) {
     try {
-      const result = await this.paymentService.createSubscription(dto);
-      channel.ack(originalMsg);
-      return result;
+      return await this.paymentService.createSubscription(dto);
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
 
   @MessagePattern(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS)
-  async getSubscriptions(@Payload() data: { userId: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async getSubscriptions(@Payload() data: { userId: string }) {
     try {
-      const result = await this.paymentService.getSubscriptionsForUser(data.userId);
-      channel.ack(originalMsg);
-      return result;
+      return await this.paymentService.getSubscriptionsForUser(data.userId);
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
 
   @MessagePattern(MESSAGE_PATTERNS.PAYMENT.CANCEL_SUBSCRIPTION)
-  async cancelSubscription(@Payload() dto: CancelSubscriptionDto, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async cancelSubscription(@Payload() dto: CancelSubscriptionDto) {
     try {
-      const result = await this.subscriptionService.cancel(
+      return await this.subscriptionService.cancel(
         dto.subscriptionId,
         dto.userId,
         dto.cancelAtPeriodEnd ?? true,
       );
-      channel.ack(originalMsg);
-      return result;
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
 
   @MessagePattern(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTION)
-  async getSubscription(@Payload() data: { subscriptionId: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async getSubscription(@Payload() data: { subscriptionId: string }) {
     try {
-      const result = await this.subscriptionService.findById(data.subscriptionId);
-      channel.ack(originalMsg);
-      return result;
+      return await this.subscriptionService.findById(data.subscriptionId);
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }

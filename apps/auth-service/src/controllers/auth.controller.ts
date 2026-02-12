@@ -18,6 +18,7 @@ import { ResetPasswordDto } from '../dto';
 import { RefreshTokenDto } from '../dto';
 import { LogoutDto } from '../dto';
 import { UpdateProfileDto } from '../dto';
+import { UpdatePasswordDto } from '../dto';
 
 @Controller()
 export class AuthController {
@@ -193,6 +194,25 @@ export class AuthController {
     try {
       const { userId, ...profileData } = data;
       const result = await this.authService.updateProfile(userId, profileData);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_PASSWORD)
+  async updatePassword(
+    @Payload() data: { userId: string } & UpdatePasswordDto,
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const { userId, ...passwordData } = data;
+      const result = await this.authService.updatePassword(userId, passwordData);
       channel.ack(originalMsg);
       return result;
     } catch (error) {

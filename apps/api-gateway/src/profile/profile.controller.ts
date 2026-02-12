@@ -1,8 +1,17 @@
-import { Controller, Get, Patch, Body, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Post,
+  Body,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ProfileService } from './profile.service';
-import { UpdateProfileDto } from './dto';
+import { UpdateProfileDto, UpdatePasswordDto } from './dto';
 import { JwtAuthGuard } from '../auth/guards';
 import { CurrentUser } from '../auth/decorators';
 
@@ -33,5 +42,17 @@ export class ProfileController {
   @ApiResponse({ status: 404, description: 'User not found' })
   async updateProfile(@CurrentUser('id') userId: string, @Body() dto: UpdateProfileDto) {
     return this.profileService.updateProfile(userId, dto);
+  }
+
+  @Post('password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 req/min
+  @ApiOperation({ summary: 'Change password' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid input' })
+  @ApiResponse({ status: 401, description: 'Current password is incorrect' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  async updatePassword(@CurrentUser('id') userId: string, @Body() dto: UpdatePasswordDto) {
+    return this.profileService.updatePassword(userId, dto);
   }
 }

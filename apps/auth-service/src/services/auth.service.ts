@@ -14,6 +14,7 @@ import { AuthEventsPublisher } from '../events/auth-events.publisher';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
 import { UpdateProfileDto } from '../dto/update-profile.dto';
+import { UpdatePasswordDto } from '../dto/update-password.dto';
 import { AuthResponseDto, UserResponseDto } from '../dto/responses';
 
 @Injectable()
@@ -639,6 +640,56 @@ export class AuthService {
     return {
       message: 'Profile updated successfully',
       user: UserResponseDto.fromEntity(user),
+    };
+  }
+
+  async updatePassword(userId: string, dto: UpdatePasswordDto): Promise<{ message: string }> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    if (!user.isActive) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Account is disabled',
+        code: 'ACCOUNT_DISABLED',
+      });
+    }
+
+    // Verify current password
+    const isCurrentPasswordValid = await this.passwordService.compare(
+      dto.currentPassword,
+      user.passwordHash,
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Current password is incorrect',
+        code: 'INVALID_CURRENT_PASSWORD',
+      });
+    }
+
+    // Hash and save new password
+    user.passwordHash = await this.passwordService.hash(dto.newPassword);
+    await this.userRepository.save(user);
+
+    // Revoke all refresh tokens (logout from all devices)
+    await this.refreshTokenRepository.update(
+      { userId: user.id, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
+
+    this.logger.log(`Password updated for user: ${user.email}`, 'AuthService');
+
+    return {
+      message: 'Password updated successfully',
     };
   }
 }

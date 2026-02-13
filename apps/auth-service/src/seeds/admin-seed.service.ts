@@ -27,10 +27,10 @@ export class AdminSeedService implements OnModuleInit {
   }
 
   private async seed(): Promise<void> {
-    const email = process.env.ADMIN_SEED_EMAIL;
-    const password = process.env.ADMIN_SEED_PASSWORD;
-    const firstName = process.env.ADMIN_SEED_FIRSTNAME || 'Admin';
-    const lastName = process.env.ADMIN_SEED_LASTNAME || 'CYNA';
+    const email = process.env.ADMIN_SEED_EMAIL || 'ilies.mahoudeau@icloud.com';
+    const password = process.env.ADMIN_SEED_PASSWORD || 'Test1234!!!';
+    const firstName = process.env.ADMIN_SEED_FIRSTNAME || 'Ilies';
+    const lastName = process.env.ADMIN_SEED_LASTNAME || 'Mahoudeau';
 
     if (!email || !password) {
       this.logger.warn(

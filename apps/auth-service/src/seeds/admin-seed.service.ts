@@ -27,6 +27,18 @@ export class AdminSeedService implements OnModuleInit {
   }
 
   private async seed(): Promise<void> {
+    const email = process.env.ADMIN_SEED_EMAIL;
+    const password = process.env.ADMIN_SEED_PASSWORD;
+    const firstName = process.env.ADMIN_SEED_FIRSTNAME || 'Admin';
+    const lastName = process.env.ADMIN_SEED_LASTNAME || 'CYNA';
+
+    if (!email || !password) {
+      this.logger.warn(
+        'ADMIN_SEED_EMAIL and ADMIN_SEED_PASSWORD must be set to seed the super admin',
+      );
+      return;
+    }
+
     const existingAdmin = await this.adminRepository.findOne({
       where: { role: AdminRole.SUPER_ADMIN },
     });
@@ -36,18 +48,18 @@ export class AdminSeedService implements OnModuleInit {
       return;
     }
 
-    const passwordHash = await this.passwordService.hash('Test1234!');
+    const passwordHash = await this.passwordService.hash(password);
 
     const admin = this.adminRepository.create({
-      email: 'tom.lefevrebonzon@gmail.com',
+      email,
       passwordHash,
-      firstName: 'Tom',
-      lastName: 'Lefèvre-Bonzon',
+      firstName,
+      lastName,
       role: AdminRole.SUPER_ADMIN,
       isActive: true,
     });
 
     await this.adminRepository.save(admin);
-    this.logger.log('Super admin seeded successfully (tom.lefevrebonzon@gmail.com)');
+    this.logger.log(`Super admin seeded successfully (${email})`);
   }
 }

@@ -146,7 +146,7 @@ export class AdminAuthService {
       role: admin.role,
     });
 
-    await this.createRefreshToken(admin.id);
+    const refreshToken = await this.createRefreshToken(admin.id);
 
     await this.authEventsPublisher.emitAdminLogin(admin.id);
 
@@ -154,6 +154,7 @@ export class AdminAuthService {
 
     return {
       accessToken,
+      refreshToken,
       expiresIn: this.tokenService.getAccessTokenExpirySeconds(),
       admin: AdminResponseDto.fromEntity(admin),
     };
@@ -273,12 +274,13 @@ export class AdminAuthService {
       role: admin.role,
     });
 
-    await this.createRefreshToken(admin.id);
+    const newRefreshToken = await this.createRefreshToken(admin.id);
 
     this.logger.log(`Token refreshed for admin: ${admin.email}`, 'AdminAuthService');
 
     return {
       accessToken,
+      refreshToken: newRefreshToken,
       expiresIn: this.tokenService.getAccessTokenExpirySeconds(),
       admin: AdminResponseDto.fromEntity(admin),
     };

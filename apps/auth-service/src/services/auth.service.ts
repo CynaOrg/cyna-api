@@ -3,7 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, LessThan, MoreThan, Not } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { RpcException } from '@nestjs/microservices';
-import { CynaLoggerService, Language } from '@cyna-api/common';
+import {
+  CynaLoggerService,
+  Language,
+  UpdateProfileDto,
+  UpdatePasswordDto,
+  UpdateLanguageDto,
+  DeleteAccountDto,
+} from '@cyna-api/common';
 import { User } from '../entities/user.entity';
 import { EmailVerificationToken } from '../entities/email-verification-token.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
@@ -13,10 +20,6 @@ import { TokenService } from './token.service';
 import { AuthEventsPublisher } from '../events/auth-events.publisher';
 import { CreateUserDto } from '../dto/create-user.dto';
 import { LoginUserDto } from '../dto/login-user.dto';
-import { UpdateProfileDto } from '../dto/update-profile.dto';
-import { UpdatePasswordDto } from '../dto/update-password.dto';
-import { UpdateLanguageDto } from '../dto/update-language.dto';
-import { DeleteAccountDto } from '../dto/delete-account.dto';
 import { AuthResponseDto, UserResponseDto } from '../dto/responses';
 
 @Injectable()
@@ -577,7 +580,7 @@ export class AuthService {
     return this.userRepository.findOne({ where: { id: userId } });
   }
 
-  async getProfile(userId: string): Promise<UserResponseDto> {
+  private async findActiveUserOrThrow(userId: string): Promise<User> {
     const user = await this.userRepository.findOne({ where: { id: userId } });
 
     if (!user) {
@@ -596,6 +599,11 @@ export class AuthService {
       });
     }
 
+    return user;
+  }
+
+  async getProfile(userId: string): Promise<UserResponseDto> {
+    const user = await this.findActiveUserOrThrow(userId);
     return UserResponseDto.fromEntity(user);
   }
 
@@ -603,23 +611,7 @@ export class AuthService {
     userId: string,
     dto: UpdateProfileDto,
   ): Promise<{ message: string; user: UserResponseDto }> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-
-    if (!user) {
-      throw new RpcException({
-        statusCode: 404,
-        message: 'User not found',
-        code: 'USER_NOT_FOUND',
-      });
-    }
-
-    if (!user.isActive) {
-      throw new RpcException({
-        statusCode: 403,
-        message: 'Account is disabled',
-        code: 'ACCOUNT_DISABLED',
-      });
-    }
+    const user = await this.findActiveUserOrThrow(userId);
 
     // Update only provided fields
     if (dto.firstName !== undefined) {
@@ -646,23 +638,7 @@ export class AuthService {
   }
 
   async updatePassword(userId: string, dto: UpdatePasswordDto): Promise<{ message: string }> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-
-    if (!user) {
-      throw new RpcException({
-        statusCode: 404,
-        message: 'User not found',
-        code: 'USER_NOT_FOUND',
-      });
-    }
-
-    if (!user.isActive) {
-      throw new RpcException({
-        statusCode: 403,
-        message: 'Account is disabled',
-        code: 'ACCOUNT_DISABLED',
-      });
-    }
+    const user = await this.findActiveUserOrThrow(userId);
 
     // Verify current password
     const isCurrentPasswordValid = await this.passwordService.compare(
@@ -678,6 +654,15 @@ export class AuthService {
       });
     }
 
+    // Ensure new password is different from current password
+    if (dto.currentPassword === dto.newPassword) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'New password must be different from current password',
+        code: 'SAME_PASSWORD',
+      });
+    }
+
     // Hash and save new password
     user.passwordHash = await this.passwordService.hash(dto.newPassword);
     await this.userRepository.save(user);
@@ -686,6 +671,13 @@ export class AuthService {
     await this.refreshTokenRepository.update(
       { userId: user.id, revokedAt: IsNull() },
       { revokedAt: new Date() },
+    );
+
+    // Emit password changed event for notification
+    await this.authEventsPublisher.emitPasswordChanged(
+      user.id,
+      user.email,
+      user.preferredLanguage,
     );
 
     this.logger.log(`Password updated for user: ${user.email}`, 'AuthService');
@@ -699,23 +691,7 @@ export class AuthService {
     userId: string,
     dto: UpdateLanguageDto,
   ): Promise<{ message: string; user: UserResponseDto }> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-
-    if (!user) {
-      throw new RpcException({
-        statusCode: 404,
-        message: 'User not found',
-        code: 'USER_NOT_FOUND',
-      });
-    }
-
-    if (!user.isActive) {
-      throw new RpcException({
-        statusCode: 403,
-        message: 'Account is disabled',
-        code: 'ACCOUNT_DISABLED',
-      });
-    }
+    const user = await this.findActiveUserOrThrow(userId);
 
     user.preferredLanguage = dto.preferredLanguage;
     await this.userRepository.save(user);
@@ -732,23 +708,7 @@ export class AuthService {
   }
 
   async deleteAccount(userId: string, dto: DeleteAccountDto): Promise<{ message: string }> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-
-    if (!user) {
-      throw new RpcException({
-        statusCode: 404,
-        message: 'User not found',
-        code: 'USER_NOT_FOUND',
-      });
-    }
-
-    if (!user.isActive) {
-      throw new RpcException({
-        statusCode: 403,
-        message: 'Account is already disabled',
-        code: 'ACCOUNT_DISABLED',
-      });
-    }
+    const user = await this.findActiveUserOrThrow(userId);
 
     // Verify password
     const isPasswordValid = await this.passwordService.compare(dto.password, user.passwordHash);
@@ -770,6 +730,12 @@ export class AuthService {
       { userId: user.id, revokedAt: IsNull() },
       { revokedAt: new Date() },
     );
+
+    // Emit account deleted event (handles Stripe subscription cancellation + notification)
+    await this.authEventsPublisher.emitAccountDeleted({
+      userId: user.id,
+      stripeCustomerId: user.stripeCustomerId,
+    });
 
     this.logger.log(`Account deleted (soft) for user: ${user.email}`, 'AuthService');
 

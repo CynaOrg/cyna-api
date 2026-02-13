@@ -171,6 +171,8 @@ export const EVENT_PATTERNS = {
     ADMIN_2FA_CODE_REQUESTED: 'auth.admin.2fa_code_requested',
     PASSWORD_RESET_REQUESTED: 'auth.password.reset.requested',
     PASSWORD_RESET_COMPLETED: 'auth.password.reset.completed',
+    PASSWORD_CHANGED: 'auth.password.changed',
+    ACCOUNT_DELETED: 'auth.account.deleted',
   },
 
   // User Events

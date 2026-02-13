@@ -3,7 +3,6 @@ import {
   Get,
   Patch,
   Post,
-  Delete,
   Body,
   HttpCode,
   HttpStatus,
@@ -12,7 +11,7 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ProfileService } from './profile.service';
-import { UpdateProfileDto, UpdatePasswordDto, UpdateLanguageDto, DeleteAccountDto } from './dto';
+import { UpdateProfileDto, UpdatePasswordDto, UpdateLanguageDto, DeleteAccountDto } from '@cyna-api/common';
 import { JwtAuthGuard } from '../auth/guards';
 import { CurrentUser } from '../auth/decorators';
 
@@ -69,7 +68,7 @@ export class ProfileController {
     return this.profileService.updateLanguage(userId, dto);
   }
 
-  @Delete()
+  @Post('delete')
   @HttpCode(HttpStatus.OK)
   @Throttle({ default: { limit: 3, ttl: 60000 } }) // 3 req/min
   @ApiOperation({ summary: 'Delete account (soft delete)' })

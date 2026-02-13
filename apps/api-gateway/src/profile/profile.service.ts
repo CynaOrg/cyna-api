@@ -1,8 +1,14 @@
 import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
-import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
-import { UpdateProfileDto, UpdatePasswordDto, UpdateLanguageDto, DeleteAccountDto } from './dto';
+import {
+  SERVICE_NAMES,
+  MESSAGE_PATTERNS,
+  UpdateProfileDto,
+  UpdatePasswordDto,
+  UpdateLanguageDto,
+  DeleteAccountDto,
+} from '@cyna-api/common';
 
 @Injectable()
 export class ProfileService {

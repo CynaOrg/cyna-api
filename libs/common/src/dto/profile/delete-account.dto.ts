@@ -6,7 +6,7 @@ export class DeleteAccountDto {
     description: 'Current password for confirmation',
     example: 'MySecurePassword123!',
   })
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'validation.string.required' })
   @IsString()
   password: string;
 }

@@ -1,6 +1,6 @@
 import { IsEnum, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { Language } from '@cyna-api/common';
+import { Language } from '../../enums/language.enum';
 
 export class UpdateLanguageDto {
   @ApiProperty({
@@ -8,7 +8,7 @@ export class UpdateLanguageDto {
     enum: Language,
     example: Language.FR,
   })
-  @IsNotEmpty()
-  @IsEnum(Language)
+  @IsNotEmpty({ message: 'validation.string.required' })
+  @IsEnum(Language, { message: 'validation.enum.invalid' })
   preferredLanguage: Language;
 }

@@ -2,7 +2,13 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
-import { CynaLoggerService } from '@cyna-api/common';
+import {
+  CynaLoggerService,
+  CynaCacheService,
+  generateCacheKey,
+  CACHE_PREFIXES,
+  CACHE_KEYS,
+} from '@cyna-api/common';
 import { S3Service } from '@cyna-api/s3';
 import { Product, ProductImage } from '../entities';
 import { RequestUploadUrlDto, ConfirmUploadDto, PresignedUploadResponseDto } from '../dto';
@@ -19,6 +25,7 @@ export class ImageService {
     @InjectRepository(ProductImage)
     private readonly imageRepository: Repository<ProductImage>,
     private readonly s3Service: S3Service,
+    private readonly cacheService: CynaCacheService,
     private readonly logger: CynaLoggerService,
   ) {}
 
@@ -135,6 +142,8 @@ export class ImageService {
 
     const saved = await this.imageRepository.save(image);
 
+    await this.invalidateProductCache(dto.productId);
+
     this.logger.log(`Image confirmed for product ${dto.productId}: ${saved.id}`);
 
     return saved;
@@ -181,7 +190,15 @@ export class ImageService {
       }
     }
 
+    await this.invalidateProductCache(productId);
+
     this.logger.log(`Deleted image ${imageId} from product ${productId}`);
+  }
+
+  private async invalidateProductCache(productId: string): Promise<void> {
+    await this.cacheService.del(generateCacheKey.productById(productId));
+    await this.cacheService.delByPattern(`${CACHE_PREFIXES.PRODUCT}list:*`);
+    await this.cacheService.delByPattern(`${CACHE_KEYS.PRODUCTS_FEATURED}*`);
   }
 
   private getExtensionFromMime(mimeType: string): string {

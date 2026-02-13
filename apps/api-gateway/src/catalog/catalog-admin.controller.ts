@@ -8,6 +8,7 @@ import {
   Query,
   Body,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { CatalogService } from './catalog.service';
@@ -22,6 +23,8 @@ import {
   AddImageDto,
   ReorderImagesDto,
   UpdateStockDto,
+  RequestUploadUrlDto,
+  ConfirmUploadDto,
 } from './dto';
 
 @ApiTags('Admin - Catalog')
@@ -151,6 +154,34 @@ export class CatalogAdminController {
   @ApiResponse({ status: 400, description: 'Invalid image IDs' })
   async reorderProductImages(@Param('productId') productId: string, @Body() dto: ReorderImagesDto) {
     return this.catalogService.reorderProductImages(productId, dto.imageIds);
+  }
+
+  @Post('products/:productId/images/upload-url')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get presigned URL for image upload' })
+  @ApiParam({ name: 'productId', description: 'Product ID' })
+  @ApiResponse({ status: 201, description: 'Presigned URL generated' })
+  @ApiResponse({ status: 400, description: 'Max images reached or invalid file' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
+  async requestImageUploadUrl(
+    @Param('productId', ParseUUIDPipe) productId: string,
+    @Body() dto: RequestUploadUrlDto,
+  ) {
+    return this.catalogService.requestImageUploadUrl(productId, dto);
+  }
+
+  @Post('products/:productId/images/confirm')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Confirm image upload and create record' })
+  @ApiParam({ name: 'productId', description: 'Product ID' })
+  @ApiResponse({ status: 201, description: 'Image record created' })
+  @ApiResponse({ status: 400, description: 'Invalid storage key or max images reached' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
+  async confirmImageUpload(
+    @Param('productId', ParseUUIDPipe) productId: string,
+    @Body() dto: ConfirmUploadDto,
+  ) {
+    return this.catalogService.confirmImageUpload(productId, dto);
   }
 
   // ==================== Stock ====================

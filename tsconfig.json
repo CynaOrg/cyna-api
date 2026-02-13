@@ -18,12 +18,10 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@cyna-api/common": [
-        "libs/common/src"
-      ],
-      "@cyna-api/common/*": [
-        "libs/common/src/*"
-      ]
+      "@cyna-api/common": ["libs/common/src"],
+      "@cyna-api/common/*": ["libs/common/src/*"],
+      "@cyna-api/s3": ["libs/s3/src"],
+      "@cyna-api/s3/*": ["libs/s3/src/*"]
     }
   }
 }

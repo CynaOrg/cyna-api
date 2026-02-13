@@ -86,6 +86,8 @@ export const MESSAGE_PATTERNS = {
     PRODUCT_DELETE_IMAGE: { cmd: 'catalog.product.deleteImage' },
     PRODUCT_SET_PRIMARY_IMAGE: { cmd: 'catalog.product.setPrimaryImage' },
     PRODUCT_REORDER_IMAGES: { cmd: 'catalog.product.reorderImages' },
+    PRODUCT_REQUEST_UPLOAD_URL: { cmd: 'catalog.product.requestUploadUrl' },
+    PRODUCT_CONFIRM_IMAGE_UPLOAD: { cmd: 'catalog.product.confirmImageUpload' },
     // Stock
     STOCK_UPDATE: { cmd: 'catalog.stock.update' },
     STOCK_GET_INFO: { cmd: 'catalog.stock.getInfo' },

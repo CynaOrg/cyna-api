@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS, Language } from '@cyna-api/common';
-import { CategoryService, ProductService, StockService } from '../services';
+import { CategoryService, ProductService, StockService, ImageService } from '../services';
 import {
   CreateCategoryDto,
   UpdateCategoryDto,
@@ -15,6 +15,8 @@ import {
   PaginatedProductResponseDto,
   UpdateStockDto,
   ReserveStockDto,
+  RequestUploadUrlDto,
+  ConfirmUploadDto,
 } from '../dto';
 
 @Controller()
@@ -23,6 +25,7 @@ export class CatalogController {
     private readonly categoryService: CategoryService,
     private readonly productService: ProductService,
     private readonly stockService: StockService,
+    private readonly imageService: ImageService,
   ) {}
 
   // ==================== Categories ====================
@@ -148,8 +151,18 @@ export class CatalogController {
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_DELETE_IMAGE)
   async deleteProductImage(@Payload() data: { productId: string; imageId: string }) {
-    await this.productService.deleteImage(data.productId, data.imageId);
+    await this.imageService.deleteImage(data.productId, data.imageId);
     return { success: true };
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_REQUEST_UPLOAD_URL)
+  async requestImageUploadUrl(@Payload() dto: RequestUploadUrlDto) {
+    return this.imageService.requestUploadUrl(dto);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_CONFIRM_IMAGE_UPLOAD)
+  async confirmImageUpload(@Payload() dto: ConfirmUploadDto) {
+    return this.imageService.confirmUpload(dto);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_SET_PRIMARY_IMAGE)

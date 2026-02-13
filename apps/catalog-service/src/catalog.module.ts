@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { CynaConfigModule, LoggerModule, SERVICE_NAMES, CynaCacheModule } from '@cyna-api/common';
+import { S3Module } from '@cyna-api/s3';
 import {
   Category,
   Product,
@@ -11,7 +12,7 @@ import {
   ProductCharacteristic,
   StockReservation,
 } from './entities';
-import { CategoryService, ProductService, StockService } from './services';
+import { CategoryService, ProductService, StockService, ImageService } from './services';
 import { StockCleanupCron } from './cron';
 import { CatalogController } from './controllers';
 import { CatalogEventsPublisher } from './events';
@@ -23,6 +24,7 @@ import { InitialDataSeeder } from './seeds';
     CynaConfigModule,
     ConfigModule.forFeature(catalogConfig),
     LoggerModule,
+    S3Module,
     ScheduleModule.forRoot(),
     CynaCacheModule.forRoot({ useMemoryFallback: true }),
     TypeOrmModule.forRoot({
@@ -73,6 +75,7 @@ import { InitialDataSeeder } from './seeds';
     CategoryService,
     ProductService,
     StockService,
+    ImageService,
     StockCleanupCron,
     CatalogEventsPublisher,
     InitialDataSeeder,

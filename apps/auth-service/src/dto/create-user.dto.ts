@@ -22,7 +22,7 @@ export class CreateUserDto {
   @IsString()
   @MinLength(8, { message: 'validation.password.minLength' })
   @MaxLength(72, { message: 'validation.password.maxLength' })
-  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/, {
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d\s]).{8,}$/, {
     message: 'validation.password.weak',
   })
   password: string;

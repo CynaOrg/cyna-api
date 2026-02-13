@@ -35,6 +35,8 @@ export const MESSAGE_PATTERNS = {
     ADMIN_LOGIN: { cmd: 'auth.admin_login' },
     ADMIN_VERIFY_2FA: { cmd: 'auth.admin_verify_2fa' },
     ADMIN_RESEND_2FA: { cmd: 'auth.admin_resend_2fa' },
+    ADMIN_REFRESH_TOKEN: { cmd: 'auth.admin_refresh_token' },
+    ADMIN_LOGOUT: { cmd: 'auth.admin_logout' },
     GET_USER_BY_ID: { cmd: 'auth.get_user_by_id' },
     ADMIN_GET_USERS: { cmd: 'auth.admin_get_users' },
     ADMIN_GET_USER: { cmd: 'auth.admin_get_user' },

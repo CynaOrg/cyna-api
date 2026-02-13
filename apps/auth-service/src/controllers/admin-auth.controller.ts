@@ -26,12 +26,12 @@ export class AdminAuthController {
     return this.adminAuthService.resend2FA(data.tempToken);
   }
 
-  @MessagePattern({ cmd: 'auth.admin_refresh_token' })
+  @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_REFRESH_TOKEN)
   async refreshToken(@Payload() data: RefreshTokenDto) {
     return this.adminAuthService.refreshToken(data.refreshToken);
   }
 
-  @MessagePattern({ cmd: 'auth.admin_logout' })
+  @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_LOGOUT)
   async logout(@Payload() data: { adminId: string; refreshToken?: string }) {
     return this.adminAuthService.logout(data.adminId, data.refreshToken);
   }

@@ -69,6 +69,17 @@ import { AdminSeedService } from './seeds/admin-seed.service';
           },
         },
       },
+      {
+        name: SERVICE_NAMES.PAYMENT,
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672'],
+          queue: 'payment.queue',
+          queueOptions: {
+            durable: true,
+          },
+        },
+      },
     ]),
   ],
   controllers: [AuthController, AdminAuthController],

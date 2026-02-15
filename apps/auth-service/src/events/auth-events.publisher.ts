@@ -30,11 +30,18 @@ export interface Admin2FACodeRequestedEventData {
   language: Language;
 }
 
+export interface AccountDeletedEventData {
+  userId: string;
+  stripeCustomerId?: string;
+}
+
 @Injectable()
 export class AuthEventsPublisher {
   constructor(
     @Inject(SERVICE_NAMES.NOTIFICATION)
     private readonly notificationClient: ClientProxy,
+    @Inject(SERVICE_NAMES.PAYMENT)
+    private readonly paymentClient: ClientProxy,
     private readonly logger: CynaLoggerService,
   ) {}
 
@@ -160,6 +167,56 @@ export class AuthEventsPublisher {
     } catch (error) {
       this.logger.error(
         `Failed to emit password_reset_completed event: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+        'AuthEventsPublisher',
+      );
+    }
+  }
+
+  async emitPasswordChanged(userId: string, email: string, language: Language): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.notificationClient.emit(EVENT_PATTERNS.AUTH.PASSWORD_CHANGED, {
+          userId,
+          email,
+          language,
+          timestamp: new Date(),
+        }),
+      );
+      this.logger.log(
+        `Emitted password_changed event for user: ${userId}`,
+        'AuthEventsPublisher',
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit password_changed event: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+        'AuthEventsPublisher',
+      );
+    }
+  }
+
+  async emitAccountDeleted(data: AccountDeletedEventData): Promise<void> {
+    try {
+      // Notify notification service for email
+      await firstValueFrom(
+        this.notificationClient.emit(EVENT_PATTERNS.AUTH.ACCOUNT_DELETED, data),
+      );
+
+      // Notify payment service to cancel Stripe subscriptions
+      if (data.stripeCustomerId) {
+        await firstValueFrom(
+          this.paymentClient.emit(EVENT_PATTERNS.AUTH.ACCOUNT_DELETED, data),
+        );
+      }
+
+      this.logger.log(
+        `Emitted account_deleted event for user: ${data.userId}`,
+        'AuthEventsPublisher',
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to emit account_deleted event: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
         'AuthEventsPublisher',
       );

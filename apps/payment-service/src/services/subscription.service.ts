@@ -140,4 +140,39 @@ export class SubscriptionService {
 
     return this.subscriptionRepository.save(subscription);
   }
+
+  /**
+   * Cancel all active subscriptions for a Stripe customer (used when account is deleted)
+   */
+  async cancelAllForCustomer(stripeCustomerId: string): Promise<number> {
+    // Get all active subscriptions from Stripe for this customer
+    const stripeSubscriptions = await this.stripeService.listActiveSubscriptions(stripeCustomerId);
+
+    let cancelledCount = 0;
+    for (const stripeSub of stripeSubscriptions) {
+      try {
+        // Cancel immediately on Stripe (not at period end)
+        await this.stripeService.cancelSubscription(stripeSub.id, false);
+
+        // Update local record if exists
+        const localSub = await this.findByStripeId(stripeSub.id);
+        if (localSub) {
+          localSub.status = SubscriptionStatus.CANCELLED;
+          localSub.cancelledAt = new Date();
+          localSub.endedAt = new Date();
+          await this.subscriptionRepository.save(localSub);
+        }
+
+        cancelledCount++;
+        this.logger.log(`Cancelled subscription ${stripeSub.id} for customer ${stripeCustomerId}`);
+      } catch (error) {
+        this.logger.error(
+          `Failed to cancel subscription ${stripeSub.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error instanceof Error ? error.stack : undefined,
+        );
+      }
+    }
+
+    return cancelledCount;
+  }
 }

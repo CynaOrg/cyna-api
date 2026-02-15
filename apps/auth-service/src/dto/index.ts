@@ -10,3 +10,4 @@ export * from './resend-2fa.dto';
 export * from './refresh-token.dto';
 export * from './logout.dto';
 export * from './responses';
+// Profile DTOs are now in @cyna-api/common

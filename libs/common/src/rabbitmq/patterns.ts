@@ -54,6 +54,7 @@ export const MESSAGE_PATTERNS = {
     UPDATE_PROFILE: { cmd: 'user.update_profile' },
     UPDATE_EMAIL: { cmd: 'user.update_email' },
     UPDATE_PASSWORD: { cmd: 'user.update_password' },
+    UPDATE_LANGUAGE: { cmd: 'user.update_language' },
     DELETE_ACCOUNT: { cmd: 'user.delete_account' },
     GET_ADDRESSES: { cmd: 'user.get_addresses' },
     CREATE_ADDRESS: { cmd: 'user.create_address' },
@@ -203,6 +204,8 @@ export const EVENT_PATTERNS = {
     ADMIN_2FA_CODE_REQUESTED: 'auth.admin.2fa_code_requested',
     PASSWORD_RESET_REQUESTED: 'auth.password.reset.requested',
     PASSWORD_RESET_COMPLETED: 'auth.password.reset.completed',
+    PASSWORD_CHANGED: 'auth.password.changed',
+    ACCOUNT_DELETED: 'auth.account.deleted',
   },
 
   // User Events

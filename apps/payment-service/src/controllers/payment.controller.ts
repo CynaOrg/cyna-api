@@ -1,6 +1,13 @@
 import { Controller, Logger } from '@nestjs/common';
-import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
-import { MESSAGE_PATTERNS } from '@cyna-api/common';
+import {
+  MessagePattern,
+  EventPattern,
+  Payload,
+  Ctx,
+  RmqContext,
+  RpcException,
+} from '@nestjs/microservices';
+import { MESSAGE_PATTERNS, EVENT_PATTERNS } from '@cyna-api/common';
 import { PaymentService } from '../services/payment.service';
 import { SubscriptionService } from '../services/subscription.service';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
@@ -76,6 +83,49 @@ export class PaymentController {
       return await this.subscriptionService.findById(data.subscriptionId);
     } catch (error) {
       throw this.wrapError(error);
+    }
+  }
+
+  /**
+   * Handle account deletion event - cancel all active Stripe subscriptions
+   */
+  @EventPattern(EVENT_PATTERNS.AUTH.ACCOUNT_DELETED)
+  async handleAccountDeleted(
+    @Payload() data: { userId: string; stripeCustomerId?: string },
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    this.logger.log(
+      `Processing account_deleted event for user: ${data.userId}`,
+      'PaymentController',
+    );
+
+    try {
+      if (data.stripeCustomerId) {
+        const cancelledCount = await this.subscriptionService.cancelAllForCustomer(
+          data.stripeCustomerId,
+        );
+        this.logger.log(
+          `Cancelled ${cancelledCount} subscriptions for customer ${data.stripeCustomerId}`,
+          'PaymentController',
+        );
+      } else {
+        this.logger.log(
+          `No Stripe customer ID for user ${data.userId}, skipping subscription cancellation`,
+          'PaymentController',
+        );
+      }
+      channel.ack(originalMsg);
+    } catch (error) {
+      this.logger.error(
+        `Failed to handle account_deleted event: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+        'PaymentController',
+      );
+      // Requeue the message for retry
+      channel.nack(originalMsg, false, true);
     }
   }
 }

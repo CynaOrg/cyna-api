@@ -3,7 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, LessThan, MoreThan, Not } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { RpcException } from '@nestjs/microservices';
-import { CynaLoggerService, Language } from '@cyna-api/common';
+import {
+  CynaLoggerService,
+  Language,
+  UpdateProfileDto,
+  UpdatePasswordDto,
+  UpdateLanguageDto,
+  DeleteAccountDto,
+} from '@cyna-api/common';
 import { User } from '../entities/user.entity';
 import { EmailVerificationToken } from '../entities/email-verification-token.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
@@ -571,5 +578,169 @@ export class AuthService {
 
   async findUserById(userId: string): Promise<User | null> {
     return this.userRepository.findOne({ where: { id: userId } });
+  }
+
+  private async findActiveUserOrThrow(userId: string): Promise<User> {
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
+    if (!user) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'User not found',
+        code: 'USER_NOT_FOUND',
+      });
+    }
+
+    if (!user.isActive) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Account is disabled',
+        code: 'ACCOUNT_DISABLED',
+      });
+    }
+
+    return user;
+  }
+
+  async getProfile(userId: string): Promise<UserResponseDto> {
+    const user = await this.findActiveUserOrThrow(userId);
+    return UserResponseDto.fromEntity(user);
+  }
+
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<{ message: string; user: UserResponseDto }> {
+    const user = await this.findActiveUserOrThrow(userId);
+
+    // Update only provided fields
+    if (dto.firstName !== undefined) {
+      user.firstName = dto.firstName;
+    }
+    if (dto.lastName !== undefined) {
+      user.lastName = dto.lastName;
+    }
+    if (dto.companyName !== undefined) {
+      user.companyName = dto.companyName;
+    }
+    if (dto.vatNumber !== undefined) {
+      user.vatNumber = dto.vatNumber;
+    }
+
+    await this.userRepository.save(user);
+
+    this.logger.log(`Profile updated for user: ${user.email}`, 'AuthService');
+
+    return {
+      message: 'Profile updated successfully',
+      user: UserResponseDto.fromEntity(user),
+    };
+  }
+
+  async updatePassword(userId: string, dto: UpdatePasswordDto): Promise<{ message: string }> {
+    const user = await this.findActiveUserOrThrow(userId);
+
+    // Verify current password
+    const isCurrentPasswordValid = await this.passwordService.compare(
+      dto.currentPassword,
+      user.passwordHash,
+    );
+
+    if (!isCurrentPasswordValid) {
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Current password is incorrect',
+        code: 'INVALID_CURRENT_PASSWORD',
+      });
+    }
+
+    // Ensure new password is different from current password
+    if (dto.currentPassword === dto.newPassword) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'New password must be different from current password',
+        code: 'SAME_PASSWORD',
+      });
+    }
+
+    // Hash and save new password
+    user.passwordHash = await this.passwordService.hash(dto.newPassword);
+    await this.userRepository.save(user);
+
+    // Revoke all refresh tokens (logout from all devices)
+    await this.refreshTokenRepository.update(
+      { userId: user.id, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
+
+    // Emit password changed event for notification
+    await this.authEventsPublisher.emitPasswordChanged(
+      user.id,
+      user.email,
+      user.preferredLanguage,
+    );
+
+    this.logger.log(`Password updated for user: ${user.email}`, 'AuthService');
+
+    return {
+      message: 'Password updated successfully',
+    };
+  }
+
+  async updateLanguage(
+    userId: string,
+    dto: UpdateLanguageDto,
+  ): Promise<{ message: string; user: UserResponseDto }> {
+    const user = await this.findActiveUserOrThrow(userId);
+
+    user.preferredLanguage = dto.preferredLanguage;
+    await this.userRepository.save(user);
+
+    this.logger.log(
+      `Language preference updated for user: ${user.email} to ${dto.preferredLanguage}`,
+      'AuthService',
+    );
+
+    return {
+      message: 'Language preference updated successfully',
+      user: UserResponseDto.fromEntity(user),
+    };
+  }
+
+  async deleteAccount(userId: string, dto: DeleteAccountDto): Promise<{ message: string }> {
+    const user = await this.findActiveUserOrThrow(userId);
+
+    // Verify password
+    const isPasswordValid = await this.passwordService.compare(dto.password, user.passwordHash);
+
+    if (!isPasswordValid) {
+      throw new RpcException({
+        statusCode: 401,
+        message: 'Password is incorrect',
+        code: 'INVALID_PASSWORD',
+      });
+    }
+
+    // Soft delete: deactivate the account
+    user.isActive = false;
+    await this.userRepository.save(user);
+
+    // Revoke all refresh tokens
+    await this.refreshTokenRepository.update(
+      { userId: user.id, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
+
+    // Emit account deleted event (handles Stripe subscription cancellation + notification)
+    await this.authEventsPublisher.emitAccountDeleted({
+      userId: user.id,
+      stripeCustomerId: user.stripeCustomerId,
+    });
+
+    this.logger.log(`Account deleted (soft) for user: ${user.email}`, 'AuthService');
+
+    return {
+      message: 'Account deleted successfully',
+    };
   }
 }

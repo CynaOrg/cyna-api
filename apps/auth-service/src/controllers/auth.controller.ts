@@ -10,6 +10,12 @@ import { ForgotPasswordDto } from '../dto';
 import { ResetPasswordDto } from '../dto';
 import { RefreshTokenDto } from '../dto';
 import { LogoutDto } from '../dto';
+import {
+  UpdateProfileDto,
+  UpdatePasswordDto,
+  UpdateLanguageDto,
+  DeleteAccountDto,
+} from '@cyna-api/common';
 
 @Controller()
 export class AuthController {
@@ -68,6 +74,97 @@ export class AuthController {
       });
     }
     return user;
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.USER.GET_PROFILE)
+  async getProfile(@Payload() data: { userId: string }, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const result = await this.authService.getProfile(data.userId);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_PROFILE)
+  async updateProfile(
+    @Payload() data: { userId: string } & UpdateProfileDto,
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const { userId, ...profileData } = data;
+      const result = await this.authService.updateProfile(userId, profileData);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_PASSWORD)
+  async updatePassword(
+    @Payload() data: { userId: string } & UpdatePasswordDto,
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const { userId, ...passwordData } = data;
+      const result = await this.authService.updatePassword(userId, passwordData);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_LANGUAGE)
+  async updateLanguage(
+    @Payload() data: { userId: string } & UpdateLanguageDto,
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const { userId, ...languageData } = data;
+      const result = await this.authService.updateLanguage(userId, languageData);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.USER.DELETE_ACCOUNT)
+  async deleteAccount(
+    @Payload() data: { userId: string } & DeleteAccountDto,
+    @Ctx() context: RmqContext,
+  ) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+
+    try {
+      const { userId, ...deleteData } = data;
+      const result = await this.authService.deleteAccount(userId, deleteData);
+      channel.ack(originalMsg);
+      return result;
+    } catch (error) {
+      channel.ack(originalMsg);
+      throw error;
+    }
   }
 
   @EventPattern('auth.update_stripe_customer_id')

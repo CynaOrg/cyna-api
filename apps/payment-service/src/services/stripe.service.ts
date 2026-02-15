@@ -90,4 +90,12 @@ export class StripeService {
   async getPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
     return this.stripe.paymentIntents.retrieve(paymentIntentId);
   }
+
+  async listActiveSubscriptions(customerId: string): Promise<Stripe.Subscription[]> {
+    const subscriptions = await this.stripe.subscriptions.list({
+      customer: customerId,
+      status: 'active',
+    });
+    return subscriptions.data;
+  }
 }

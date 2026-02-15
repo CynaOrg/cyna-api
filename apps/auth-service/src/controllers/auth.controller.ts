@@ -17,10 +17,12 @@ import { ForgotPasswordDto } from '../dto';
 import { ResetPasswordDto } from '../dto';
 import { RefreshTokenDto } from '../dto';
 import { LogoutDto } from '../dto';
-import { UpdateProfileDto } from '../dto';
-import { UpdatePasswordDto } from '../dto';
-import { UpdateLanguageDto } from '../dto';
-import { DeleteAccountDto } from '../dto';
+import {
+  UpdateProfileDto,
+  UpdatePasswordDto,
+  UpdateLanguageDto,
+  DeleteAccountDto,
+} from '@cyna-api/common';
 
 @Controller()
 export class AuthController {

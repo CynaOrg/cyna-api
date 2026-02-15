@@ -1,7 +1,7 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload, Ctx, RmqContext } from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS, Language } from '@cyna-api/common';
-import { CategoryService, ProductService, StockService } from '../services';
+import { CategoryService, ProductService, StockService, ImageService } from '../services';
 import {
   CreateCategoryDto,
   UpdateCategoryDto,
@@ -15,6 +15,8 @@ import {
   PaginatedProductResponseDto,
   UpdateStockDto,
   ReserveStockDto,
+  RequestUploadUrlDto,
+  ConfirmUploadDto,
 } from '../dto';
 
 @Controller()
@@ -23,295 +25,106 @@ export class CatalogController {
     private readonly categoryService: CategoryService,
     private readonly productService: ProductService,
     private readonly stockService: StockService,
+    private readonly imageService: ImageService,
   ) {}
 
   // ==================== Categories ====================
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_CREATE)
-  async createCategory(@Payload() data: CreateCategoryDto, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const category = await this.categoryService.create(data);
-      const result = CategoryResponseDto.fromEntity(category);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async createCategory(@Payload() data: CreateCategoryDto) {
+    const category = await this.categoryService.create(data);
+    return CategoryResponseDto.fromEntity(category);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_UPDATE)
-  async updateCategory(
-    @Payload() data: { id: string; dto: UpdateCategoryDto },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const category = await this.categoryService.update(data.id, data.dto);
-      const result = CategoryResponseDto.fromEntity(category);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async updateCategory(@Payload() data: { id: string; dto: UpdateCategoryDto }) {
+    const category = await this.categoryService.update(data.id, data.dto);
+    return CategoryResponseDto.fromEntity(category);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_DELETE)
-  async deleteCategory(@Payload() data: { id: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      await this.categoryService.delete(data.id);
-      channel.ack(originalMsg);
-      return { success: true };
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async deleteCategory(@Payload() data: { id: string }) {
+    await this.categoryService.delete(data.id);
+    return { success: true };
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_ALL)
-  async findAllCategories(@Payload() data: CategoryQueryDto, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const categories = await this.categoryService.findAll(data);
-      const lang = data.lang ?? Language.FR;
-      const result = CategoryResponseDto.fromEntities(categories, lang);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async findAllCategories(@Payload() data: CategoryQueryDto) {
+    const categories = await this.categoryService.findAll(data);
+    const lang = data.lang ?? Language.FR;
+    return CategoryResponseDto.fromEntities(categories, lang);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_BY_SLUG)
-  async findCategoryBySlug(
-    @Payload() data: { slug: string; lang?: Language },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const category = await this.categoryService.findBySlug(data.slug);
-      const result = CategoryResponseDto.fromEntity(category, data.lang ?? Language.FR);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async findCategoryBySlug(@Payload() data: { slug: string; lang?: Language }) {
+    const category = await this.categoryService.findBySlug(data.slug);
+    return CategoryResponseDto.fromEntity(category, data.lang ?? Language.FR);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_BY_ID)
-  async findCategoryById(@Payload() data: { id: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const result = await this.categoryService.findById(data.id);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async findCategoryById(@Payload() data: { id: string }) {
+    return this.categoryService.findById(data.id);
   }
 
   // ==================== Products ====================
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_CREATE)
-  async createProduct(@Payload() data: CreateProductDto, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const product = await this.productService.create(data);
-      const result = ProductDetailResponseDto.fromEntity(product);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async createProduct(@Payload() data: CreateProductDto) {
+    const product = await this.productService.create(data);
+    return ProductDetailResponseDto.fromEntity(product);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_UPDATE)
-  async updateProduct(
-    @Payload() data: { id: string; dto: UpdateProductDto },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const product = await this.productService.update(data.id, data.dto);
-      const result = ProductDetailResponseDto.fromEntity(product);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async updateProduct(@Payload() data: { id: string; dto: UpdateProductDto }) {
+    const product = await this.productService.update(data.id, data.dto);
+    return ProductDetailResponseDto.fromEntity(product);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_DELETE)
-  async deleteProduct(@Payload() data: { id: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      await this.productService.delete(data.id);
-      channel.ack(originalMsg);
-      return { success: true };
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async deleteProduct(@Payload() data: { id: string }) {
+    await this.productService.delete(data.id);
+    return { success: true };
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL)
-  async findAllProducts(@Payload() data: ProductQueryDto, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const { data: products, meta } = await this.productService.findAll(data);
-      const lang = data.lang ?? Language.FR;
-      const result = PaginatedProductResponseDto.create(
-        products,
-        meta.total,
-        meta.page,
-        meta.limit,
-        lang,
-      );
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async findAllProducts(@Payload() data: ProductQueryDto) {
+    const { data: products, meta } = await this.productService.findAll(data);
+    const lang = data.lang ?? Language.FR;
+    return PaginatedProductResponseDto.create(products, meta.total, meta.page, meta.limit, lang);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_SLUG)
-  async findProductBySlug(
-    @Payload() data: { slug: string; lang?: Language },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const product = await this.productService.findBySlug(data.slug);
-      const result = ProductDetailResponseDto.fromEntity(product, data.lang ?? Language.FR);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async findProductBySlug(@Payload() data: { slug: string; lang?: Language }) {
+    const product = await this.productService.findBySlug(data.slug);
+    return ProductDetailResponseDto.fromEntity(product, data.lang ?? Language.FR);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID)
-  async findProductById(@Payload() data: { id: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const result = await this.productService.findById(data.id);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async findProductById(@Payload() data: { id: string }) {
+    return this.productService.findById(data.id);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_SEARCH)
-  async searchProducts(
-    @Payload() data: { searchTerm: string; query: ProductQueryDto },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const { data: products, meta } = await this.productService.search(
-        data.searchTerm,
-        data.query,
-      );
-      const lang = data.query.lang ?? Language.FR;
-      const result = PaginatedProductResponseDto.create(
-        products,
-        meta.total,
-        meta.page,
-        meta.limit,
-        lang,
-      );
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async searchProducts(@Payload() data: { searchTerm: string; query: ProductQueryDto }) {
+    const { data: products, meta } = await this.productService.search(data.searchTerm, data.query);
+    const lang = data.query.lang ?? Language.FR;
+    return PaginatedProductResponseDto.create(products, meta.total, meta.page, meta.limit, lang);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_FEATURED)
-  async findFeaturedProducts(
-    @Payload() data: { limit?: number; lang?: Language },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const products = await this.productService.findFeatured(data.limit ?? 10);
-      const result = ProductListResponseDto.fromEntities(products, data.lang ?? Language.FR);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async findFeaturedProducts(@Payload() data: { limit?: number; lang?: Language }) {
+    const products = await this.productService.findFeatured(data.limit ?? 10);
+    return ProductListResponseDto.fromEntities(products, data.lang ?? Language.FR);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_CATEGORY)
-  async findProductsByCategory(
-    @Payload() data: { categoryId: string; query: ProductQueryDto },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const { data: products, meta } = await this.productService.findByCategory(
-        data.categoryId,
-        data.query,
-      );
-      const lang = data.query.lang ?? Language.FR;
-      const result = PaginatedProductResponseDto.create(
-        products,
-        meta.total,
-        meta.page,
-        meta.limit,
-        lang,
-      );
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async findProductsByCategory(@Payload() data: { categoryId: string; query: ProductQueryDto }) {
+    const { data: products, meta } = await this.productService.findByCategory(
+      data.categoryId,
+      data.query,
+    );
+    const lang = data.query.lang ?? Language.FR;
+    return PaginatedProductResponseDto.create(products, meta.total, meta.page, meta.limit, lang);
   }
 
   // ==================== Product Images ====================
@@ -326,200 +139,82 @@ export class CatalogController {
       altTextEn?: string;
       isPrimary?: boolean;
     },
-    @Ctx() context: RmqContext,
   ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const result = await this.productService.addImage(
-        data.productId,
-        data.imageUrl,
-        data.altTextFr,
-        data.altTextEn,
-        data.isPrimary,
-      );
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+    return this.productService.addImage(
+      data.productId,
+      data.imageUrl,
+      data.altTextFr,
+      data.altTextEn,
+      data.isPrimary,
+    );
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_DELETE_IMAGE)
-  async deleteProductImage(
-    @Payload() data: { productId: string; imageId: string },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
+  async deleteProductImage(@Payload() data: { productId: string; imageId: string }) {
+    await this.imageService.deleteImage(data.productId, data.imageId);
+    return { success: true };
+  }
 
-    try {
-      await this.productService.deleteImage(data.productId, data.imageId);
-      channel.ack(originalMsg);
-      return { success: true };
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_REQUEST_UPLOAD_URL)
+  async requestImageUploadUrl(@Payload() dto: RequestUploadUrlDto) {
+    return this.imageService.requestUploadUrl(dto);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_CONFIRM_IMAGE_UPLOAD)
+  async confirmImageUpload(@Payload() dto: ConfirmUploadDto) {
+    return this.imageService.confirmUpload(dto);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_SET_PRIMARY_IMAGE)
-  async setPrimaryProductImage(
-    @Payload() data: { productId: string; imageId: string },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const result = await this.productService.setPrimaryImage(data.productId, data.imageId);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async setPrimaryProductImage(@Payload() data: { productId: string; imageId: string }) {
+    return this.productService.setPrimaryImage(data.productId, data.imageId);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_REORDER_IMAGES)
-  async reorderProductImages(
-    @Payload() data: { productId: string; imageIds: string[] },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const result = await this.productService.reorderImages(data.productId, data.imageIds);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async reorderProductImages(@Payload() data: { productId: string; imageIds: string[] }) {
+    return this.productService.reorderImages(data.productId, data.imageIds);
   }
 
   // ==================== Stock ====================
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.STOCK_UPDATE)
-  async updateStock(
-    @Payload() data: { productId: string; dto: UpdateStockDto },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const result = await this.stockService.updateStock(
-        data.productId,
-        data.dto.stockQuantity,
-        data.dto.stockAlertThreshold,
-      );
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async updateStock(@Payload() data: { productId: string; dto: UpdateStockDto }) {
+    return this.stockService.updateStock(
+      data.productId,
+      data.dto.stockQuantity,
+      data.dto.stockAlertThreshold,
+    );
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.STOCK_GET_INFO)
-  async getStockInfo(@Payload() data: { productId: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const result = await this.stockService.getStockInfo(data.productId);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async getStockInfo(@Payload() data: { productId: string }) {
+    return this.stockService.getStockInfo(data.productId);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.STOCK_GET_ALERTS)
-  async getStockAlerts(@Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const result = await this.stockService.getStockAlerts();
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async getStockAlerts() {
+    return this.stockService.getStockAlerts();
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.STOCK_CHECK_AVAILABILITY)
-  async checkStockAvailability(
-    @Payload() data: { productId: string; quantity: number },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const result = await this.stockService.checkAvailability(data.productId, data.quantity);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async checkStockAvailability(@Payload() data: { productId: string; quantity: number }) {
+    return this.stockService.checkAvailability(data.productId, data.quantity);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.STOCK_RESERVE)
-  async reserveStock(@Payload() data: ReserveStockDto, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const result = await this.stockService.reserveStock(
-        data.productId,
-        data.cartId,
-        data.quantity,
-        data.userId,
-      );
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async reserveStock(@Payload() data: ReserveStockDto) {
+    return this.stockService.reserveStock(data.productId, data.cartId, data.quantity, data.userId);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.STOCK_RELEASE)
-  async releaseStock(@Payload() data: { cartId: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      await this.stockService.releaseReservation(data.cartId);
-      channel.ack(originalMsg);
-      return { success: true };
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async releaseStock(@Payload() data: { cartId: string }) {
+    await this.stockService.releaseReservation(data.cartId);
+    return { success: true };
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.STOCK_CONFIRM)
-  async confirmStock(@Payload() data: { cartId: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      await this.stockService.confirmReservation(data.cartId);
-      channel.ack(originalMsg);
-      return { success: true };
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async confirmStock(@Payload() data: { cartId: string }) {
+    await this.stockService.confirmReservation(data.cartId);
+    return { success: true };
   }
 }

@@ -2,20 +2,11 @@ import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { OrderModule } from './order.module';
-import { ConfigService } from '@nestjs/config';
 
 const logger = new Logger('OrderService');
 
 async function bootstrap() {
-  const appContext = await NestFactory.createApplicationContext(OrderModule);
-  const configService = appContext.get(ConfigService);
-
-  const rabbitmqUrl = configService.get<string>(
-    'RABBITMQ_URL',
-    'amqp://guest:guest@localhost:5672',
-  );
-
-  await appContext.close();
+  const rabbitmqUrl = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
 
   const app = await NestFactory.createMicroservice<MicroserviceOptions>(OrderModule, {
     transport: Transport.RMQ,
@@ -26,7 +17,7 @@ async function bootstrap() {
         durable: true,
       },
       prefetchCount: 10,
-      noAck: false,
+      noAck: true,
     },
   });
 

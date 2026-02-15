@@ -1,24 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { RmqContext } from '@nestjs/microservices';
 import { CatalogController } from '../catalog.controller';
 import { CategoryService, ProductService, StockService } from '../../services';
 import { Category, Product, ProductType, ProductImage } from '../../entities';
 import { Language } from '@cyna-api/common';
-
-// Mock du channel RabbitMQ pour l'ACK manuel
-const mockChannel = {
-  ack: jest.fn(),
-};
-
-// Mock du RmqContext
-const createMockRmqContext = (): RmqContext =>
-  ({
-    getChannelRef: jest.fn().mockReturnValue(mockChannel),
-    getMessage: jest.fn().mockReturnValue({}),
-    getPattern: jest.fn(),
-    getArgs: jest.fn(),
-    getArgByIndex: jest.fn(),
-  }) as unknown as RmqContext;
 
 // Fixture: categorie pour les tests
 const createMockCategory = (overrides: Partial<Category> = {}): Category => ({
@@ -101,7 +85,6 @@ const mockStockService = {
 // Tests d'integration du CatalogController
 describe('CatalogController', () => {
   let controller: CatalogController;
-  let context: RmqContext;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -114,7 +97,6 @@ describe('CatalogController', () => {
     }).compile();
 
     controller = module.get<CatalogController>(CatalogController);
-    context = createMockRmqContext();
   });
 
   afterEach(() => {
@@ -123,94 +105,86 @@ describe('CatalogController', () => {
 
   // ==================== Category Endpoints ====================
   describe('Category Endpoints', () => {
-    // Verifie que createCategory appelle le service et ACK le message
+    // Verifie que createCategory appelle le service
     describe('createCategory()', () => {
-      it('should call categoryService.create and ACK the message', async () => {
+      it('should call categoryService.create and return the result', async () => {
         const dto = { slug: 'test', nameFr: 'Test', nameEn: 'Test' };
         const category = createMockCategory(dto);
 
         mockCategoryService.create.mockResolvedValue(category);
 
-        await controller.createCategory(dto, context);
+        await controller.createCategory(dto);
 
         expect(mockCategoryService.create).toHaveBeenCalledWith(dto);
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
 
-      // Verifie que le message est ACK meme en cas d'erreur
-      it('should ACK message even on error', async () => {
+      // Verifie que l'erreur est propagee
+      it('should propagate errors', async () => {
         mockCategoryService.create.mockRejectedValue(new Error('Test error'));
 
         await expect(
-          controller.createCategory({ slug: 'test', nameFr: 'Test', nameEn: 'Test' }, context),
+          controller.createCategory({ slug: 'test', nameFr: 'Test', nameEn: 'Test' }),
         ).rejects.toThrow();
-
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que updateCategory appelle le service avec les bons parametres
     describe('updateCategory()', () => {
-      it('should call categoryService.update and ACK the message', async () => {
+      it('should call categoryService.update with correct params', async () => {
         const category = createMockCategory();
         mockCategoryService.update.mockResolvedValue(category);
 
-        await controller.updateCategory({ id: 'cat-001', dto: { nameFr: 'Updated' } }, context);
+        await controller.updateCategory({ id: 'cat-001', dto: { nameFr: 'Updated' } });
 
         expect(mockCategoryService.update).toHaveBeenCalledWith('cat-001', { nameFr: 'Updated' });
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que deleteCategory appelle le service
     describe('deleteCategory()', () => {
-      it('should call categoryService.delete and ACK the message', async () => {
+      it('should call categoryService.delete and return success', async () => {
         mockCategoryService.delete.mockResolvedValue(undefined);
 
-        const result = await controller.deleteCategory({ id: 'cat-001' }, context);
+        const result = await controller.deleteCategory({ id: 'cat-001' });
 
         expect(mockCategoryService.delete).toHaveBeenCalledWith('cat-001');
         expect(result).toEqual({ success: true });
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que findAllCategories retourne les categories avec le bon language
     describe('findAllCategories()', () => {
-      it('should call categoryService.findAll and ACK the message', async () => {
+      it('should call categoryService.findAll and return results', async () => {
         const categories = [createMockCategory()];
         mockCategoryService.findAll.mockResolvedValue(categories);
 
-        await controller.findAllCategories({ isActive: true }, context);
+        await controller.findAllCategories({ isActive: true });
 
         expect(mockCategoryService.findAll).toHaveBeenCalledWith({ isActive: true });
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que findCategoryBySlug appelle le service
     describe('findCategoryBySlug()', () => {
-      it('should call categoryService.findBySlug and ACK the message', async () => {
+      it('should call categoryService.findBySlug and return result', async () => {
         const category = createMockCategory();
         mockCategoryService.findBySlug.mockResolvedValue(category);
 
-        await controller.findCategoryBySlug({ slug: 'services', lang: Language.EN }, context);
+        await controller.findCategoryBySlug({ slug: 'services', lang: Language.EN });
 
         expect(mockCategoryService.findBySlug).toHaveBeenCalledWith('services');
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que findCategoryById appelle le service
     describe('findCategoryById()', () => {
-      it('should call categoryService.findById and ACK the message', async () => {
+      it('should call categoryService.findById and return result', async () => {
         const category = createMockCategory();
         mockCategoryService.findById.mockResolvedValue(category);
 
-        await controller.findCategoryById({ id: 'cat-001' }, context);
+        await controller.findCategoryById({ id: 'cat-001' });
 
         expect(mockCategoryService.findById).toHaveBeenCalledWith('cat-001');
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
   });
@@ -219,7 +193,7 @@ describe('CatalogController', () => {
   describe('Product Endpoints', () => {
     // Verifie que createProduct appelle le service
     describe('createProduct()', () => {
-      it('should call productService.create and ACK the message', async () => {
+      it('should call productService.create and return result', async () => {
         const dto = {
           categoryId: 'cat-001',
           slug: 'test',
@@ -234,96 +208,86 @@ describe('CatalogController', () => {
 
         mockProductService.create.mockResolvedValue(product);
 
-        await controller.createProduct(dto, context);
+        await controller.createProduct(dto);
 
         expect(mockProductService.create).toHaveBeenCalledWith(dto);
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que updateProduct appelle le service
     describe('updateProduct()', () => {
-      it('should call productService.update and ACK the message', async () => {
+      it('should call productService.update with correct params', async () => {
         const product = createMockProduct();
         mockProductService.update.mockResolvedValue(product);
 
-        await controller.updateProduct({ id: 'prod-001', dto: { nameFr: 'Updated' } }, context);
+        await controller.updateProduct({ id: 'prod-001', dto: { nameFr: 'Updated' } });
 
         expect(mockProductService.update).toHaveBeenCalledWith('prod-001', { nameFr: 'Updated' });
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que deleteProduct appelle le service
     describe('deleteProduct()', () => {
-      it('should call productService.delete and ACK the message', async () => {
+      it('should call productService.delete and return success', async () => {
         mockProductService.delete.mockResolvedValue(undefined);
 
-        const result = await controller.deleteProduct({ id: 'prod-001' }, context);
+        const result = await controller.deleteProduct({ id: 'prod-001' });
 
         expect(mockProductService.delete).toHaveBeenCalledWith('prod-001');
         expect(result).toEqual({ success: true });
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que findAllProducts retourne les produits pagines
     describe('findAllProducts()', () => {
-      it('should call productService.findAll and ACK the message', async () => {
+      it('should call productService.findAll and return paginated results', async () => {
         mockProductService.findAll.mockResolvedValue({
           data: [createMockProduct()],
           meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
         });
 
-        await controller.findAllProducts({ page: 1, limit: 20 }, context);
+        await controller.findAllProducts({ page: 1, limit: 20 });
 
         expect(mockProductService.findAll).toHaveBeenCalledWith({ page: 1, limit: 20 });
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que findProductBySlug appelle le service
     describe('findProductBySlug()', () => {
-      it('should call productService.findBySlug and ACK the message', async () => {
+      it('should call productService.findBySlug and return result', async () => {
         const product = createMockProduct();
         mockProductService.findBySlug.mockResolvedValue(product);
 
-        await controller.findProductBySlug({ slug: 'soc-premium' }, context);
+        await controller.findProductBySlug({ slug: 'soc-premium' });
 
         expect(mockProductService.findBySlug).toHaveBeenCalledWith('soc-premium');
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que searchProducts appelle le service avec les bons parametres
     describe('searchProducts()', () => {
-      it('should call productService.search and ACK the message', async () => {
+      it('should call productService.search with correct params', async () => {
         mockProductService.search.mockResolvedValue({
           data: [],
           meta: { page: 1, limit: 20, total: 0, totalPages: 0 },
         });
 
-        await controller.searchProducts(
-          { searchTerm: 'security', query: { page: 1, limit: 20 } },
-          context,
-        );
+        await controller.searchProducts({ searchTerm: 'security', query: { page: 1, limit: 20 } });
 
         expect(mockProductService.search).toHaveBeenCalledWith('security', { page: 1, limit: 20 });
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que findFeaturedProducts appelle le service
     describe('findFeaturedProducts()', () => {
-      it('should call productService.findFeatured and ACK the message', async () => {
+      it('should call productService.findFeatured and return results', async () => {
         mockProductService.findFeatured.mockResolvedValue([
           createMockProduct({ isFeatured: true }),
         ]);
 
-        await controller.findFeaturedProducts({ limit: 5 }, context);
+        await controller.findFeaturedProducts({ limit: 5 });
 
         expect(mockProductService.findFeatured).toHaveBeenCalledWith(5);
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
   });
@@ -332,18 +296,15 @@ describe('CatalogController', () => {
   describe('Product Images Endpoints', () => {
     // Verifie que addProductImage appelle le service
     describe('addProductImage()', () => {
-      it('should call productService.addImage and ACK the message', async () => {
+      it('should call productService.addImage with correct params', async () => {
         const image = { id: 'img-001', isPrimary: true } as ProductImage;
         mockProductService.addImage.mockResolvedValue(image);
 
-        await controller.addProductImage(
-          {
-            productId: 'prod-001',
-            imageUrl: 'https://example.com/img.png',
-            isPrimary: true,
-          },
-          context,
-        );
+        await controller.addProductImage({
+          productId: 'prod-001',
+          imageUrl: 'https://example.com/img.png',
+          isPrimary: true,
+        });
 
         expect(mockProductService.addImage).toHaveBeenCalledWith(
           'prod-001',
@@ -352,57 +313,50 @@ describe('CatalogController', () => {
           undefined,
           true,
         );
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que deleteProductImage appelle le service
     describe('deleteProductImage()', () => {
-      it('should call productService.deleteImage and ACK the message', async () => {
+      it('should call productService.deleteImage and return success', async () => {
         mockProductService.deleteImage.mockResolvedValue(undefined);
 
-        const result = await controller.deleteProductImage(
-          { productId: 'prod-001', imageId: 'img-001' },
-          context,
-        );
+        const result = await controller.deleteProductImage({
+          productId: 'prod-001',
+          imageId: 'img-001',
+        });
 
         expect(mockProductService.deleteImage).toHaveBeenCalledWith('prod-001', 'img-001');
         expect(result).toEqual({ success: true });
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que setPrimaryProductImage appelle le service
     describe('setPrimaryProductImage()', () => {
-      it('should call productService.setPrimaryImage and ACK the message', async () => {
+      it('should call productService.setPrimaryImage with correct params', async () => {
         const image = { id: 'img-001', isPrimary: true } as ProductImage;
         mockProductService.setPrimaryImage.mockResolvedValue(image);
 
-        await controller.setPrimaryProductImage(
-          { productId: 'prod-001', imageId: 'img-001' },
-          context,
-        );
+        await controller.setPrimaryProductImage({ productId: 'prod-001', imageId: 'img-001' });
 
         expect(mockProductService.setPrimaryImage).toHaveBeenCalledWith('prod-001', 'img-001');
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que reorderProductImages appelle le service
     describe('reorderProductImages()', () => {
-      it('should call productService.reorderImages and ACK the message', async () => {
+      it('should call productService.reorderImages with correct params', async () => {
         mockProductService.reorderImages.mockResolvedValue([]);
 
-        await controller.reorderProductImages(
-          { productId: 'prod-001', imageIds: ['img-002', 'img-001'] },
-          context,
-        );
+        await controller.reorderProductImages({
+          productId: 'prod-001',
+          imageIds: ['img-002', 'img-001'],
+        });
 
         expect(mockProductService.reorderImages).toHaveBeenCalledWith('prod-001', [
           'img-002',
           'img-001',
         ]);
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
   });
@@ -411,72 +365,62 @@ describe('CatalogController', () => {
   describe('Stock Endpoints', () => {
     // Verifie que updateStock appelle le service
     describe('updateStock()', () => {
-      it('should call stockService.updateStock and ACK the message', async () => {
+      it('should call stockService.updateStock with correct params', async () => {
         const product = createMockProduct({
           productType: ProductType.PHYSICAL,
           stockQuantity: 100,
         });
         mockStockService.updateStock.mockResolvedValue(product);
 
-        await controller.updateStock(
-          { productId: 'prod-001', dto: { stockQuantity: 100 } },
-          context,
-        );
+        await controller.updateStock({ productId: 'prod-001', dto: { stockQuantity: 100 } });
 
         expect(mockStockService.updateStock).toHaveBeenCalledWith('prod-001', 100, undefined);
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que getStockInfo appelle le service
     describe('getStockInfo()', () => {
-      it('should call stockService.getStockInfo and ACK the message', async () => {
+      it('should call stockService.getStockInfo and return result', async () => {
         mockStockService.getStockInfo.mockResolvedValue({
           stockQuantity: 100,
           reservedQuantity: 10,
           availableQuantity: 90,
         });
 
-        await controller.getStockInfo({ productId: 'prod-001' }, context);
+        await controller.getStockInfo({ productId: 'prod-001' });
 
         expect(mockStockService.getStockInfo).toHaveBeenCalledWith('prod-001');
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que getStockAlerts appelle le service
     describe('getStockAlerts()', () => {
-      it('should call stockService.getStockAlerts and ACK the message', async () => {
+      it('should call stockService.getStockAlerts and return result', async () => {
         mockStockService.getStockAlerts.mockResolvedValue([]);
 
-        await controller.getStockAlerts(context);
+        await controller.getStockAlerts();
 
         expect(mockStockService.getStockAlerts).toHaveBeenCalled();
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que checkStockAvailability appelle le service
     describe('checkStockAvailability()', () => {
-      it('should call stockService.checkAvailability and ACK the message', async () => {
+      it('should call stockService.checkAvailability with correct params', async () => {
         mockStockService.checkAvailability.mockResolvedValue({ available: true });
 
-        await controller.checkStockAvailability({ productId: 'prod-001', quantity: 10 }, context);
+        await controller.checkStockAvailability({ productId: 'prod-001', quantity: 10 });
 
         expect(mockStockService.checkAvailability).toHaveBeenCalledWith('prod-001', 10);
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que reserveStock appelle le service
     describe('reserveStock()', () => {
-      it('should call stockService.reserveStock and ACK the message', async () => {
+      it('should call stockService.reserveStock with correct params', async () => {
         mockStockService.reserveStock.mockResolvedValue({ id: 'res-001' });
 
-        await controller.reserveStock(
-          { productId: 'prod-001', cartId: 'cart-001', quantity: 5 },
-          context,
-        );
+        await controller.reserveStock({ productId: 'prod-001', cartId: 'cart-001', quantity: 5 });
 
         expect(mockStockService.reserveStock).toHaveBeenCalledWith(
           'prod-001',
@@ -484,55 +428,31 @@ describe('CatalogController', () => {
           5,
           undefined,
         );
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que releaseStock appelle le service
     describe('releaseStock()', () => {
-      it('should call stockService.releaseReservation and ACK the message', async () => {
+      it('should call stockService.releaseReservation and return success', async () => {
         mockStockService.releaseReservation.mockResolvedValue(undefined);
 
-        const result = await controller.releaseStock({ cartId: 'cart-001' }, context);
+        const result = await controller.releaseStock({ cartId: 'cart-001' });
 
         expect(mockStockService.releaseReservation).toHaveBeenCalledWith('cart-001');
         expect(result).toEqual({ success: true });
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
     });
 
     // Verifie que confirmStock appelle le service
     describe('confirmStock()', () => {
-      it('should call stockService.confirmReservation and ACK the message', async () => {
+      it('should call stockService.confirmReservation and return success', async () => {
         mockStockService.confirmReservation.mockResolvedValue(undefined);
 
-        const result = await controller.confirmStock({ cartId: 'cart-001' }, context);
+        const result = await controller.confirmStock({ cartId: 'cart-001' });
 
         expect(mockStockService.confirmReservation).toHaveBeenCalledWith('cart-001');
         expect(result).toEqual({ success: true });
-        expect(mockChannel.ack).toHaveBeenCalled();
       });
-    });
-  });
-
-  // ==================== ACK Verification ====================
-  describe('RabbitMQ Manual ACK', () => {
-    // Verifie que tous les endpoints font un ACK manuel du message
-    it('should always ACK the message for all endpoints', async () => {
-      // Test multiple endpoints
-      mockCategoryService.findAll.mockResolvedValue([]);
-      await controller.findAllCategories({}, context);
-
-      mockProductService.findAll.mockResolvedValue({
-        data: [],
-        meta: { page: 1, limit: 20, total: 0, totalPages: 0 },
-      });
-      await controller.findAllProducts({}, context);
-
-      mockStockService.getStockAlerts.mockResolvedValue([]);
-      await controller.getStockAlerts(context);
-
-      expect(mockChannel.ack).toHaveBeenCalledTimes(3);
     });
   });
 });

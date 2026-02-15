@@ -11,6 +11,7 @@ import { Product } from './product.entity';
 
 @Entity('product_images')
 @Index('idx_product_image_product', ['productId'])
+@Index('idx_product_image_storage_key', ['storageKey'])
 export class ProductImage {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -32,6 +33,15 @@ export class ProductImage {
 
   @Column({ name: 'is_primary', type: 'boolean', default: false })
   isPrimary: boolean;
+
+  @Column({ name: 'storage_key', type: 'varchar', length: 500, nullable: true })
+  storageKey?: string;
+
+  @Column({ name: 'file_size', type: 'integer', nullable: true })
+  fileSize?: number;
+
+  @Column({ name: 'mime_type', type: 'varchar', length: 50, nullable: true })
+  mimeType?: string;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;

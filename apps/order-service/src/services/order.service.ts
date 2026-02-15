@@ -139,7 +139,7 @@ export class OrderService {
           slug: product.slug,
           productType: product.productType,
           price: unitPrice,
-          image: product.images?.[0]?.url || null,
+          image: product.images?.[0]?.imageUrl || null,
         },
         quantity: cartItem.quantity,
         unitPrice,
@@ -305,6 +305,82 @@ export class OrderService {
       where: { stripePaymentIntentId: paymentIntentId },
       relations: ['items'],
     });
+  }
+
+  async adminGetOrders(params: {
+    search?: string;
+    status?: string;
+    page?: number;
+    limit?: number;
+  }) {
+    const { search, status, page = 1, limit = 20 } = params;
+
+    const qb = this.orderRepository
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.items', 'items')
+      .orderBy('order.createdAt', 'DESC');
+
+    if (status) {
+      qb.andWhere('order.status = :status', { status });
+    }
+
+    if (search) {
+      qb.andWhere('(order.orderNumber ILIKE :search OR order.guestEmail ILIKE :search)', {
+        search: `%${search}%`,
+      });
+    }
+
+    const total = await qb.getCount();
+    const orders = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getMany();
+
+    return {
+      data: orders,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  async adminUpdateOrderStatus(orderId: string, status: string, notes?: string): Promise<Order> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['items'],
+    });
+
+    if (!order) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Order not found',
+        code: 'ORDER_NOT_FOUND',
+      });
+    }
+
+    order.status = status as OrderStatus;
+
+    if (notes) {
+      order.notes = notes;
+    }
+
+    // Set timestamps based on status transitions
+    if (status === OrderStatus.PAID) {
+      order.paidAt = new Date();
+    }
+    if (status === OrderStatus.SHIPPED) {
+      order.shippedAt = new Date();
+    }
+    if (status === OrderStatus.DELIVERED) {
+      order.deliveredAt = new Date();
+    }
+
+    await this.orderRepository.save(order);
+
+    this.logger.log(`Admin updated order ${order.orderNumber} status to ${status}`);
+
+    return order;
   }
 
   async updateStripePaymentIntentId(orderId: string, stripePaymentIntentId: string): Promise<void> {

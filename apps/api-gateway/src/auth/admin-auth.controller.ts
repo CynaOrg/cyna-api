@@ -21,12 +21,15 @@ import { CurrentUser } from './decorators';
 const isProduction =
   process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT_NAME;
 
+const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+
 const ADMIN_REFRESH_TOKEN_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: isProduction,
   sameSite: isProduction ? ('none' as const) : ('lax' as const),
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: '/',
+  ...(cookieDomain ? { domain: cookieDomain } : {}),
 };
 
 @ApiTags('Auth')

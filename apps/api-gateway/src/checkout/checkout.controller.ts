@@ -1,7 +1,8 @@
-import { Controller, Post, Body, Req, Inject, Logger } from '@nestjs/common';
+import { Controller, Post, Body, Req, Inject, Logger, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } from 'rxjs';
-import { Public, SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
+import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
+import { OptionalJwtAuthGuard } from '../auth/guards';
 
 @Controller('checkout')
 export class CheckoutController {
@@ -12,7 +13,7 @@ export class CheckoutController {
     @Inject(SERVICE_NAMES.PAYMENT) private readonly paymentClient: ClientProxy,
   ) {}
 
-  @Public()
+  @UseGuards(OptionalJwtAuthGuard)
   @Post('payment-intent')
   async createPaymentIntent(@Body() body: any, @Req() req: any) {
     const userId = req.user?.id;

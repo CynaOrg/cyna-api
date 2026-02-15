@@ -77,14 +77,11 @@ export class AuthService {
   }
 
   async adminRefreshToken(dto: { refreshToken: string }) {
-    return this.sendMessage(MESSAGE_PATTERNS.AUTH.REFRESH_TOKEN, {
-      ...dto,
-      isAdmin: true,
-    });
+    return this.sendMessage(MESSAGE_PATTERNS.AUTH.ADMIN_REFRESH_TOKEN, dto);
   }
 
   async adminLogout(adminId: string, dto: { refreshToken?: string }) {
-    return this.sendMessage(MESSAGE_PATTERNS.AUTH.LOGOUT, {
+    return this.sendMessage(MESSAGE_PATTERNS.AUTH.ADMIN_LOGOUT, {
       adminId,
       refreshToken: dto.refreshToken,
     });
@@ -103,18 +100,20 @@ export class AuthService {
             const message = err.message || 'An error occurred';
             const code = err.code || 'UNKNOWN_ERROR';
 
-            return throwError(() => new HttpException(
-              { message, error: code, statusCode },
-              statusCode,
-            ));
+            return throwError(
+              () => new HttpException({ message, error: code, statusCode }, statusCode),
+            );
           }
 
           // Handle timeout errors
           if (err.name === 'TimeoutError') {
-            return throwError(() => new HttpException(
-              { message: 'Service unavailable', error: 'SERVICE_TIMEOUT' },
-              HttpStatus.SERVICE_UNAVAILABLE,
-            ));
+            return throwError(
+              () =>
+                new HttpException(
+                  { message: 'Service unavailable', error: 'SERVICE_TIMEOUT' },
+                  HttpStatus.SERVICE_UNAVAILABLE,
+                ),
+            );
           }
 
           return throwError(() => err);

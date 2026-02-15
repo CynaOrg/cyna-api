@@ -1,12 +1,5 @@
 import { Controller, Logger } from '@nestjs/common';
-import {
-  MessagePattern,
-  EventPattern,
-  Payload,
-  Ctx,
-  RmqContext,
-  RpcException,
-} from '@nestjs/microservices';
+import { MessagePattern, EventPattern, Payload, RpcException } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS, EVENT_PATTERNS } from '@cyna-api/common';
 import { CartService, OrderService } from '../services';
 import { AddCartItemDto, UpdateCartItemDto } from '../dto';
@@ -35,43 +28,25 @@ export class OrderController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.ORDER.GET_CART)
-  async getCart(
-    @Payload() data: { userId?: string; sessionId?: string },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async getCart(@Payload() data: { userId?: string; sessionId?: string }) {
     try {
-      const result = await this.cartService.getCart({
+      return await this.cartService.getCart({
         userId: data.userId,
         sessionId: data.sessionId,
       });
-      channel.ack(originalMsg);
-      return result;
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
 
   @MessagePattern(MESSAGE_PATTERNS.ORDER.ADD_CART_ITEM)
-  async addCartItem(
-    @Payload() data: { userId?: string; sessionId?: string; dto: AddCartItemDto },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async addCartItem(@Payload() data: { userId?: string; sessionId?: string; dto: AddCartItemDto }) {
     try {
-      const result = await this.cartService.addItem(
+      return await this.cartService.addItem(
         { userId: data.userId, sessionId: data.sessionId },
         data.dto,
       );
-      channel.ack(originalMsg);
-      return result;
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
@@ -86,22 +61,15 @@ export class OrderController {
       dto: UpdateCartItemDto;
       billingPeriod?: string;
     },
-    @Ctx() context: RmqContext,
   ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
     try {
-      const result = await this.cartService.updateItem(
+      return await this.cartService.updateItem(
         { userId: data.userId, sessionId: data.sessionId },
         data.productId,
         data.dto,
         data.billingPeriod as any,
       );
-      channel.ack(originalMsg);
-      return result;
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
@@ -109,61 +77,41 @@ export class OrderController {
   @MessagePattern(MESSAGE_PATTERNS.ORDER.REMOVE_CART_ITEM)
   async removeCartItem(
     @Payload()
-    data: { userId?: string; sessionId?: string; productId: string; billingPeriod?: string },
-    @Ctx() context: RmqContext,
+    data: {
+      userId?: string;
+      sessionId?: string;
+      productId: string;
+      billingPeriod?: string;
+    },
   ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
     try {
-      const result = await this.cartService.removeItem(
+      return await this.cartService.removeItem(
         { userId: data.userId, sessionId: data.sessionId },
         data.productId,
         data.billingPeriod as any,
       );
-      channel.ack(originalMsg);
-      return result;
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
 
   @MessagePattern(MESSAGE_PATTERNS.ORDER.CLEAR_CART)
-  async clearCart(
-    @Payload() data: { userId?: string; sessionId?: string },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async clearCart(@Payload() data: { userId?: string; sessionId?: string }) {
     try {
-      const result = await this.cartService.clearCart({
+      return await this.cartService.clearCart({
         userId: data.userId,
         sessionId: data.sessionId,
       });
-      channel.ack(originalMsg);
-      return result;
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
 
   @MessagePattern(MESSAGE_PATTERNS.ORDER.MERGE_GUEST_CART)
-  async mergeGuestCart(
-    @Payload() data: { userId: string; sessionId: string },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async mergeGuestCart(@Payload() data: { userId: string; sessionId: string }) {
     try {
-      const result = await this.cartService.mergeGuestCart(data.userId, data.sessionId);
-      channel.ack(originalMsg);
-      return result;
+      return await this.cartService.mergeGuestCart(data.userId, data.sessionId);
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
@@ -181,134 +129,100 @@ export class OrderController {
       email: string;
       stripePaymentIntentId: string;
     },
-    @Ctx() context: RmqContext,
   ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
     try {
-      const result = await this.orderService.createOrderFromCart(data);
-      channel.ack(originalMsg);
-      return result;
+      return await this.orderService.createOrderFromCart(data);
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
 
   @MessagePattern(MESSAGE_PATTERNS.ORDER.GET_ORDERS)
-  async getOrders(@Payload() data: { userId: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async getOrders(@Payload() data: { userId: string }) {
     try {
-      const result = await this.orderService.getOrdersByUserId(data.userId);
-      channel.ack(originalMsg);
-      return result;
+      return await this.orderService.getOrdersByUserId(data.userId);
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
 
   @MessagePattern(MESSAGE_PATTERNS.ORDER.GET_ORDER)
-  async getOrder(
-    @Payload() data: { orderId: string; userId?: string },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async getOrder(@Payload() data: { orderId: string; userId?: string }) {
     try {
-      const result = await this.orderService.getOrderById(data.orderId, data.userId);
-      channel.ack(originalMsg);
-      return result;
+      return await this.orderService.getOrderById(data.orderId, data.userId);
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
 
   @MessagePattern(MESSAGE_PATTERNS.ORDER.GET_ORDER_BY_PAYMENT_INTENT)
-  async getOrderByPaymentIntent(
-    @Payload() data: { paymentIntentId: string },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async getOrderByPaymentIntent(@Payload() data: { paymentIntentId: string }) {
     try {
-      const result = await this.orderService.getOrderByPaymentIntentId(data.paymentIntentId);
-      channel.ack(originalMsg);
-      return result;
+      return await this.orderService.getOrderByPaymentIntentId(data.paymentIntentId);
     } catch (error) {
-      channel.ack(originalMsg);
       throw this.wrapError(error);
     }
   }
 
   @EventPattern(EVENT_PATTERNS.PAYMENT.CONFIRMED)
-  async onPaymentConfirmed(
-    @Payload() data: { paymentIntentId: string },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async onPaymentConfirmed(@Payload() data: { paymentIntentId: string }) {
     try {
       await this.orderService.handlePaymentConfirmed(data.paymentIntentId);
-      channel.ack(originalMsg);
     } catch (error) {
       this.logger.error(`Failed to handle payment confirmed: ${error}`);
-      channel.ack(originalMsg);
     }
   }
 
   @EventPattern(EVENT_PATTERNS.PAYMENT.FAILED)
-  async onPaymentFailed(@Payload() data: { paymentIntentId: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async onPaymentFailed(@Payload() data: { paymentIntentId: string }) {
     try {
       await this.orderService.handlePaymentFailed(data.paymentIntentId);
-      channel.ack(originalMsg);
     } catch (error) {
       this.logger.error(`Failed to handle payment failed: ${error}`);
-      channel.ack(originalMsg);
     }
   }
 
   @EventPattern(EVENT_PATTERNS.PAYMENT.REFUNDED)
-  async onPaymentRefunded(
-    @Payload() data: { paymentIntentId: string },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async onPaymentRefunded(@Payload() data: { paymentIntentId: string }) {
     try {
       await this.orderService.handlePaymentRefunded(data.paymentIntentId);
-      channel.ack(originalMsg);
     } catch (error) {
       this.logger.error(`Failed to handle payment refunded: ${error}`);
-      channel.ack(originalMsg);
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.ORDER.ADMIN_GET_ORDERS)
+  async adminGetOrders(
+    @Payload()
+    data: {
+      search?: string;
+      status?: string;
+      page?: number;
+      limit?: number;
+    },
+  ) {
+    try {
+      return await this.orderService.adminGetOrders(data);
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.ORDER.ADMIN_UPDATE_STATUS)
+  async adminUpdateStatus(@Payload() data: { orderId: string; status: string; notes?: string }) {
+    try {
+      return await this.orderService.adminUpdateOrderStatus(data.orderId, data.status, data.notes);
+    } catch (error) {
+      throw this.wrapError(error);
     }
   }
 
   @EventPattern(MESSAGE_PATTERNS.ORDER.UPDATE_ORDER_STATUS.cmd)
-  async onUpdateOrderStatus(
-    @Payload() data: { orderId: string; stripePaymentIntentId: string },
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
+  async onUpdateOrderStatus(@Payload() data: { orderId: string; stripePaymentIntentId: string }) {
     try {
       await this.orderService.updateStripePaymentIntentId(data.orderId, data.stripePaymentIntentId);
-      channel.ack(originalMsg);
     } catch (error) {
       this.logger.error(`Failed to update order payment intent: ${error}`);
-      channel.ack(originalMsg);
     }
   }
 }

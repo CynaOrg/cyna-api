@@ -35,7 +35,17 @@ export const MESSAGE_PATTERNS = {
     ADMIN_LOGIN: { cmd: 'auth.admin_login' },
     ADMIN_VERIFY_2FA: { cmd: 'auth.admin_verify_2fa' },
     ADMIN_RESEND_2FA: { cmd: 'auth.admin_resend_2fa' },
+    ADMIN_REFRESH_TOKEN: { cmd: 'auth.admin_refresh_token' },
+    ADMIN_LOGOUT: { cmd: 'auth.admin_logout' },
     GET_USER_BY_ID: { cmd: 'auth.get_user_by_id' },
+    ADMIN_GET_USERS: { cmd: 'auth.admin_get_users' },
+    ADMIN_GET_USER: { cmd: 'auth.admin_get_user' },
+    ADMIN_UPDATE_USER_STATUS: { cmd: 'auth.admin_update_user_status' },
+    ADMIN_GET_ADMINS: { cmd: 'auth.admin_get_admins' },
+    ADMIN_GET_ADMIN: { cmd: 'auth.admin_get_admin' },
+    ADMIN_CREATE_ADMIN: { cmd: 'auth.admin_create_admin' },
+    ADMIN_UPDATE_ADMIN: { cmd: 'auth.admin_update_admin' },
+    ADMIN_DELETE_ADMIN: { cmd: 'auth.admin_delete_admin' },
   },
 
   // User Service
@@ -77,6 +87,8 @@ export const MESSAGE_PATTERNS = {
     PRODUCT_DELETE_IMAGE: { cmd: 'catalog.product.deleteImage' },
     PRODUCT_SET_PRIMARY_IMAGE: { cmd: 'catalog.product.setPrimaryImage' },
     PRODUCT_REORDER_IMAGES: { cmd: 'catalog.product.reorderImages' },
+    PRODUCT_REQUEST_UPLOAD_URL: { cmd: 'catalog.product.requestUploadUrl' },
+    PRODUCT_CONFIRM_IMAGE_UPLOAD: { cmd: 'catalog.product.confirmImageUpload' },
     // Stock
     STOCK_UPDATE: { cmd: 'catalog.stock.update' },
     STOCK_GET_INFO: { cmd: 'catalog.stock.getInfo' },
@@ -118,6 +130,8 @@ export const MESSAGE_PATTERNS = {
     UPDATE_ORDER_STATUS: { cmd: 'order.update_order_status' },
     GET_ORDER_BY_PAYMENT_INTENT: { cmd: 'order.get_order_by_payment_intent' },
     SUBSCRIBE: { cmd: 'order.subscribe' },
+    ADMIN_GET_ORDERS: { cmd: 'order.admin_get_orders' },
+    ADMIN_UPDATE_STATUS: { cmd: 'order.admin_update_status' },
   },
 
   // Payment Service
@@ -138,11 +152,26 @@ export const MESSAGE_PATTERNS = {
 
   // Content Service
   CONTENT: {
+    // Public
     GET_HOMEPAGE: { cmd: 'content.get_homepage' },
     GET_CAROUSEL: { cmd: 'content.get_carousel' },
     GET_TOP_SERVICES: { cmd: 'content.get_top_services' },
     GET_TOP_PRODUCTS: { cmd: 'content.get_top_products' },
     CREATE_CONTACT_MESSAGE: { cmd: 'content.create_contact_message' },
+    // Admin - Carousel
+    ADMIN_GET_CAROUSEL: { cmd: 'content.admin_get_carousel' },
+    ADMIN_CREATE_SLIDE: { cmd: 'content.admin_create_slide' },
+    ADMIN_UPDATE_SLIDE: { cmd: 'content.admin_update_slide' },
+    ADMIN_DELETE_SLIDE: { cmd: 'content.admin_delete_slide' },
+    ADMIN_REORDER_CAROUSEL: { cmd: 'content.admin_reorder_carousel' },
+    // Admin - Hero & Top Products
+    ADMIN_UPDATE_HERO_TEXT: { cmd: 'content.admin_update_hero_text' },
+    ADMIN_UPDATE_TOP_SERVICES: { cmd: 'content.admin_update_top_services' },
+    ADMIN_UPDATE_TOP_PRODUCTS: { cmd: 'content.admin_update_top_products' },
+    // Admin - Contact Messages
+    ADMIN_GET_CONTACT_MESSAGES: { cmd: 'content.admin_get_contact_messages' },
+    ADMIN_UPDATE_CONTACT_MESSAGE: { cmd: 'content.admin_update_contact_message' },
+    ADMIN_DELETE_CONTACT_MESSAGE: { cmd: 'content.admin_delete_contact_message' },
   },
 
   // Analytics Service
@@ -151,8 +180,12 @@ export const MESSAGE_PATTERNS = {
     GET_SALES: { cmd: 'analytics.get_sales' },
     GET_SALES_BY_CATEGORY: { cmd: 'analytics.get_sales_by_category' },
     GET_SALES_BY_PRODUCT_TYPE: { cmd: 'analytics.get_sales_by_product_type' },
+    GET_AVERAGE_CART: { cmd: 'analytics.get_average_cart' },
     GET_MRR: { cmd: 'analytics.get_mrr' },
     GET_STOCK_STATUS: { cmd: 'analytics.get_stock_status' },
+    EXPORT_SALES: { cmd: 'analytics.export_sales' },
+    EXPORT_ORDERS: { cmd: 'analytics.export_orders' },
+    EXPORT_SUBSCRIPTIONS: { cmd: 'analytics.export_subscriptions' },
   },
 } as const;
 

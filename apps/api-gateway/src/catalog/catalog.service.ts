@@ -115,6 +115,20 @@ export class CatalogService {
     });
   }
 
+  async requestImageUploadUrl(productId: string, dto: any) {
+    return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_REQUEST_UPLOAD_URL, {
+      ...dto,
+      productId,
+    });
+  }
+
+  async confirmImageUpload(productId: string, dto: any) {
+    return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_CONFIRM_IMAGE_UPLOAD, {
+      ...dto,
+      productId,
+    });
+  }
+
   // ==================== Stock ====================
 
   async updateStock(

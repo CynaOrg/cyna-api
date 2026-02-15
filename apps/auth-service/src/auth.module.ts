@@ -23,6 +23,7 @@ import {
 import { AuthController, AdminAuthController } from './controllers';
 import { AuthEventsPublisher } from './events/auth-events.publisher';
 import { CleanupService } from './cron/cleanup.service';
+import { AdminSeedService } from './seeds/admin-seed.service';
 
 @Module({
   imports: [
@@ -90,6 +91,7 @@ import { CleanupService } from './cron/cleanup.service';
     AdminAuthService,
     AuthEventsPublisher,
     CleanupService,
+    AdminSeedService,
   ],
 })
 export class AuthModule {}

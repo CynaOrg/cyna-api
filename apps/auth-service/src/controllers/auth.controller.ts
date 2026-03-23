@@ -1,5 +1,12 @@
 import { Controller, Logger } from '@nestjs/common';
-import { MessagePattern, EventPattern, Payload, RpcException } from '@nestjs/microservices';
+import {
+  MessagePattern,
+  EventPattern,
+  Payload,
+  RpcException,
+  Ctx,
+  RmqContext,
+} from '@nestjs/microservices';
 import { MESSAGE_PATTERNS } from '@cyna-api/common';
 import { AuthService } from '../services';
 import { CreateUserDto } from '../dto';

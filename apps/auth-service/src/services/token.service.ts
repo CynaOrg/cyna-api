@@ -23,7 +23,9 @@ export class TokenService {
   private readonly refreshTokenExpiry: string;
 
   constructor(private readonly configService: ConfigService) {
-    this.jwtSecret = this.configService.get<string>('auth.jwt.secret', 'change-me');
+    const secret = this.configService.get<string>('auth.jwt.secret');
+    if (!secret) throw new Error('JWT_SECRET environment variable is required');
+    this.jwtSecret = secret;
     this.accessTokenExpiry = this.configService.get<string>('auth.jwt.accessTokenExpiry', '15m');
     this.refreshTokenExpiry = this.configService.get<string>('auth.jwt.refreshTokenExpiry', '7d');
   }

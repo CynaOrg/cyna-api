@@ -33,7 +33,7 @@ const isProduction =
 const REFRESH_TOKEN_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: 'lax' as const,
+  sameSite: 'strict' as const,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: '/',
   ...(isProduction && { domain: '.cyna.it' }),
@@ -179,7 +179,7 @@ export class AuthController {
     res.clearCookie('refresh_token', {
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'lax' as const,
+      sameSite: 'strict' as const,
       path: '/',
       ...(isProduction && { domain: '.cyna.it' }),
     });

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, IsNull, LessThan, MoreThan, Not } from 'typeorm';
+import { Repository, IsNull, LessThan, MoreThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { RpcException } from '@nestjs/microservices';
 import {
@@ -674,11 +674,7 @@ export class AuthService {
     );
 
     // Emit password changed event for notification
-    await this.authEventsPublisher.emitPasswordChanged(
-      user.id,
-      user.email,
-      user.preferredLanguage,
-    );
+    await this.authEventsPublisher.emitPasswordChanged(user.id, user.email, user.preferredLanguage);
 
     this.logger.log(`Password updated for user: ${user.email}`, 'AuthService');
 

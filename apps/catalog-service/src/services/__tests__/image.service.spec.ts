@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { ImageService } from '../image.service';
 import { Product, ProductImage, ProductType } from '../../entities';
 import { S3Service } from '@cyna-api/s3';
-import { CynaLoggerService } from '@cyna-api/common';
+import { CynaLoggerService, CynaCacheService } from '@cyna-api/common';
 
 // Mock du logger
 const mockLogger = {
@@ -92,6 +92,13 @@ describe('ImageService', () => {
         {
           provide: S3Service,
           useValue: mockS3Service,
+        },
+        {
+          provide: CynaCacheService,
+          useValue: {
+            del: jest.fn().mockResolvedValue(undefined),
+            delByPattern: jest.fn().mockResolvedValue(undefined),
+          },
         },
         {
           provide: CynaLoggerService,

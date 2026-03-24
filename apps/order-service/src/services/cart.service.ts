@@ -18,6 +18,55 @@ import { AddCartItemDto, UpdateCartItemDto } from '../dto';
 
 export type CartOwner = { userId?: string; sessionId?: string };
 
+interface CatalogProduct {
+  id: string;
+  nameFr?: string;
+  nameEn?: string;
+  slug?: string;
+  productType?: string;
+  priceMonthly?: number | string;
+  priceYearly?: number | string;
+  priceUnit?: number | string;
+  isAvailable?: boolean;
+  stockQuantity?: number | null;
+  images?: Array<{ imageUrl?: string }>;
+}
+
+interface CartItemWhereCondition {
+  cartId: string;
+  productId: string;
+  billingPeriod?: BillingPeriod;
+}
+
+export interface EnrichedCartItem {
+  id: string;
+  productId: string;
+  quantity: number;
+  billingPeriod: BillingPeriod;
+  product: {
+    nameFr?: string;
+    nameEn?: string;
+    slug?: string;
+    productType?: string;
+    priceMonthly?: number | string;
+    priceYearly?: number | string;
+    priceUnit?: number | string;
+    isAvailable?: boolean;
+    stockQuantity?: number | null;
+    images?: Array<{ imageUrl?: string }>;
+  } | null;
+}
+
+export interface CartResponse {
+  id: string | null;
+  userId: string | null;
+  sessionId: string | null;
+  items: EnrichedCartItem[];
+  itemCount: number;
+  createdAt: Date | null;
+  updatedAt: Date | null;
+}
+
 @Injectable()
 export class CartService {
   private readonly CATALOG_TIMEOUT = 5000;
@@ -45,7 +94,7 @@ export class CartService {
     await this.cacheService.del(this.cartCacheKey(owner));
   }
 
-  private async getProductFromCatalog(productId: string): Promise<any | null> {
+  private async getProductFromCatalog(productId: string): Promise<CatalogProduct | null> {
     try {
       return await firstValueFrom(
         this.catalogClient
@@ -117,7 +166,7 @@ export class CartService {
     };
   }
 
-  async getCart(owner: CartOwner): Promise<any> {
+  async getCart(owner: CartOwner): Promise<CartResponse> {
     return this.cacheService.getOrSet(
       this.cartCacheKey(owner),
       async () => {
@@ -164,7 +213,7 @@ export class CartService {
     );
   }
 
-  async addItem(owner: CartOwner, dto: AddCartItemDto): Promise<any> {
+  async addItem(owner: CartOwner, dto: AddCartItemDto): Promise<CartResponse> {
     const product = await this.getProductFromCatalog(dto.productId);
     if (!product) {
       throw new RpcException({
@@ -233,7 +282,7 @@ export class CartService {
     productId: string,
     dto: UpdateCartItemDto,
     billingPeriod?: BillingPeriod,
-  ): Promise<any> {
+  ): Promise<CartResponse> {
     const cart = await this.findCart(owner);
     if (!cart) {
       throw new RpcException({
@@ -243,7 +292,7 @@ export class CartService {
       });
     }
 
-    const whereCondition: any = {
+    const whereCondition: CartItemWhereCondition = {
       cartId: cart.id,
       productId,
     };
@@ -280,7 +329,7 @@ export class CartService {
     owner: CartOwner,
     productId: string,
     billingPeriod?: BillingPeriod,
-  ): Promise<any> {
+  ): Promise<CartResponse> {
     const cart = await this.findCart(owner);
     if (!cart) {
       throw new RpcException({
@@ -290,7 +339,7 @@ export class CartService {
       });
     }
 
-    const whereCondition: any = {
+    const whereCondition: CartItemWhereCondition = {
       cartId: cart.id,
       productId,
     };
@@ -329,7 +378,7 @@ export class CartService {
     return { success: true };
   }
 
-  async mergeGuestCart(userId: string, sessionId: string): Promise<any> {
+  async mergeGuestCart(userId: string, sessionId: string): Promise<CartResponse> {
     const guestCart = await this.cartRepository.findOne({
       where: { sessionId },
       relations: ['items'],

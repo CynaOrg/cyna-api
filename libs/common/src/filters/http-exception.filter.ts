@@ -63,9 +63,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         const resp = exceptionResponse as Record<string, unknown>;
         code = (resp.error as string) || this.getErrorCodeFromStatus(status);
         message = await this.getMessageFromResponse(resp, lang);
-        details = resp.message && Array.isArray(resp.message)
-          ? resp.message.map((msg: string) => ({ message: msg }))
-          : undefined;
+        details =
+          resp.message && Array.isArray(resp.message)
+            ? resp.message.map((msg: string) => ({ message: msg }))
+            : undefined;
       } else {
         code = this.getErrorCodeFromStatus(status);
         message = String(exceptionResponse);
@@ -99,10 +100,11 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     };
 
     // Log error
-    this.logger.warn(
-      `${request.method} ${request.url} ${status} - ${code}: ${message}`,
-      { correlationId, code, status },
-    );
+    this.logger.warn(`${request.method} ${request.url} ${status} - ${code}: ${message}`, {
+      correlationId,
+      code,
+      status,
+    });
 
     response.status(status).json(errorResponse);
   }

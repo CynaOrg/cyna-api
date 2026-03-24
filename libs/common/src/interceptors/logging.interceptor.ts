@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Logger } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { Request, Response } from 'express';
@@ -40,34 +34,28 @@ export class LoggingInterceptor implements NestInterceptor {
           const responseTime = Date.now() - startTime;
           const statusCode = response.statusCode;
 
-          this.logger.log(
-            `${method} ${url} ${statusCode} ${responseTime}ms`,
-            {
-              correlationId,
-              method,
-              url,
-              statusCode,
-              responseTime,
-              ip,
-            },
-          );
+          this.logger.log(`${method} ${url} ${statusCode} ${responseTime}ms`, {
+            correlationId,
+            method,
+            url,
+            statusCode,
+            responseTime,
+            ip,
+          });
         },
         error: (error) => {
           const responseTime = Date.now() - startTime;
           const statusCode = error.status || 500;
 
-          this.logger.warn(
-            `${method} ${url} ${statusCode} ${responseTime}ms - ${error.message}`,
-            {
-              correlationId,
-              method,
-              url,
-              statusCode,
-              responseTime,
-              ip,
-              error: error.message,
-            },
-          );
+          this.logger.warn(`${method} ${url} ${statusCode} ${responseTime}ms - ${error.message}`, {
+            correlationId,
+            method,
+            url,
+            statusCode,
+            responseTime,
+            ip,
+            error: error.message,
+          });
         },
       }),
     );

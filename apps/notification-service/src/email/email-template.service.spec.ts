@@ -2,7 +2,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { EmailTemplateService } from './email-template.service';
 import { CynaLoggerService } from '@cyna-api/common';
 import * as fs from 'fs';
-import * as path from 'path';
 
 jest.mock('fs');
 
@@ -24,7 +23,8 @@ describe('EmailTemplateService', () => {
     </html>
   `;
 
-  const mockFrTemplate = '<h1>Bienvenue {{firstName}}!</h1><a href="{{verificationLink}}">Verify</a>';
+  const mockFrTemplate =
+    '<h1>Bienvenue {{firstName}}!</h1><a href="{{verificationLink}}">Verify</a>';
   const mockEnTemplate = '<h1>Welcome {{firstName}}!</h1><a href="{{verificationLink}}">Verify</a>';
 
   beforeEach(async () => {
@@ -37,7 +37,8 @@ describe('EmailTemplateService', () => {
     (fs.existsSync as jest.Mock).mockImplementation((filePath: string) => {
       // Match paths with forward or back slashes (Windows/Unix)
       if (filePath.includes('layouts') && filePath.includes('base.hbs')) return true;
-      if (filePath.includes('templates') && (filePath.endsWith('fr') || filePath.endsWith('en'))) return true;
+      if (filePath.includes('templates') && (filePath.endsWith('fr') || filePath.endsWith('en')))
+        return true;
       return false;
     });
 

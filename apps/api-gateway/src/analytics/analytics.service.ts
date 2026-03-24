@@ -2,6 +2,7 @@ import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
+import { AnalyticsQueryDto, ExportQueryDto } from './dto';
 
 @Injectable()
 export class AnalyticsService {
@@ -14,31 +15,31 @@ export class AnalyticsService {
 
   // ==================== Dashboard ====================
 
-  async getDashboard(query: any) {
+  async getDashboard(query: AnalyticsQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.ANALYTICS.GET_DASHBOARD, query);
   }
 
   // ==================== Sales ====================
 
-  async getSales(query: any) {
+  async getSales(query: AnalyticsQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.ANALYTICS.GET_SALES, query);
   }
 
-  async getSalesByCategory(query: any) {
+  async getSalesByCategory(query: AnalyticsQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.ANALYTICS.GET_SALES_BY_CATEGORY, query);
   }
 
-  async getSalesByProductType(query: any) {
+  async getSalesByProductType(query: AnalyticsQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.ANALYTICS.GET_SALES_BY_PRODUCT_TYPE, query);
   }
 
-  async getAverageCart(query: any) {
+  async getAverageCart(query: AnalyticsQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.ANALYTICS.GET_AVERAGE_CART, query);
   }
 
   // ==================== MRR ====================
 
-  async getMrr(query: any) {
+  async getMrr(query: AnalyticsQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.ANALYTICS.GET_MRR, query);
   }
 
@@ -50,15 +51,15 @@ export class AnalyticsService {
 
   // ==================== Exports ====================
 
-  async exportSales(query: any) {
+  async exportSales(query: ExportQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.ANALYTICS.EXPORT_SALES, query);
   }
 
-  async exportOrders(query: any) {
+  async exportOrders(query: ExportQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.ANALYTICS.EXPORT_ORDERS, query);
   }
 
-  async exportSubscriptions(query: any) {
+  async exportSubscriptions(query: ExportQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.ANALYTICS.EXPORT_SUBSCRIPTIONS, query);
   }
 

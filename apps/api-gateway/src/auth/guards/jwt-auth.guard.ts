@@ -1,8 +1,8 @@
-import { CanActivate, ExecutionContext, Injectable, } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import * as jwt from 'jsonwebtoken';
-import { IS_PUBLIC_KEY, TokenExpiredException, TokenInvalidException, } from '@cyna-api/common';
+import { IS_PUBLIC_KEY, TokenExpiredException, TokenInvalidException } from '@cyna-api/common';
 import { JwtPayload } from '../interfaces';
 
 /**
@@ -49,15 +49,17 @@ export class JwtAuthGuard implements CanActivate {
       };
 
       return true;
-    } catch (error: any) {
-      if (error.name === 'TokenExpiredError') {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.name === 'TokenExpiredError') {
         throw new TokenExpiredException();
       }
       throw new TokenInvalidException();
     }
   }
 
-  private extractTokenFromHeader(request: any): string | undefined {
+  private extractTokenFromHeader(request: {
+    headers?: { authorization?: string };
+  }): string | undefined {
     const authorization = request.headers?.authorization;
     if (!authorization) return undefined;
 

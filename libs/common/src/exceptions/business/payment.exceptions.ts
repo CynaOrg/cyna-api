@@ -19,7 +19,10 @@ export class SubscriptionNotFoundException extends NotFoundException {
 
 export class SubscriptionAlreadyCancelledException extends ConflictException {
   constructor() {
-    super(ERROR_CODES.SUBSCRIPTION_ALREADY_CANCELLED, 'errors.payment.subscriptionAlreadyCancelled');
+    super(
+      ERROR_CODES.SUBSCRIPTION_ALREADY_CANCELLED,
+      'errors.payment.subscriptionAlreadyCancelled',
+    );
   }
 }
 

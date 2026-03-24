@@ -36,22 +36,26 @@ export class OptionalJwtAuthGuard implements CanActivate {
         type: payload.type,
         role: payload.role,
       };
-    } catch (error: any) {
-      if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') {
+    } catch (error: unknown) {
+      if (
+        error instanceof Error &&
+        (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError')
+      ) {
         // Token invalid or expired — treat as guest (normal case)
       } else {
         // Unexpected error (DI issue, etc.) — log it
-        this.logger.error(
-          `Unexpected error in OptionalJwtAuthGuard: ${error.message}`,
-          error.stack,
-        );
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        const stack = error instanceof Error ? error.stack : undefined;
+        this.logger.error(`Unexpected error in OptionalJwtAuthGuard: ${message}`, stack);
       }
     }
 
     return true;
   }
 
-  private extractTokenFromHeader(request: any): string | undefined {
+  private extractTokenFromHeader(request: {
+    headers?: { authorization?: string };
+  }): string | undefined {
     const authorization = request.headers?.authorization;
     if (!authorization) return undefined;
 

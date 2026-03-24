@@ -3,6 +3,18 @@ import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import { OptionalJwtAuthGuard } from '../auth/guards';
+import { Request } from 'express';
+
+interface CheckoutBody {
+  cartId: string;
+  billingAddress: Record<string, unknown>;
+  shippingAddress?: Record<string, unknown>;
+  email: string;
+}
+
+interface AuthenticatedRequest extends Request {
+  user?: { id: string; email: string; type: string; role?: string };
+}
 
 @Controller('checkout')
 export class CheckoutController {
@@ -15,7 +27,7 @@ export class CheckoutController {
 
   @UseGuards(OptionalJwtAuthGuard)
   @Post('payment-intent')
-  async createPaymentIntent(@Body() body: any, @Req() req: any) {
+  async createPaymentIntent(@Body() body: CheckoutBody, @Req() req: AuthenticatedRequest) {
     const userId = req.user?.id;
     this.logger.debug(
       `createPaymentIntent called with body: ${JSON.stringify(body)}, userId: ${userId}`,

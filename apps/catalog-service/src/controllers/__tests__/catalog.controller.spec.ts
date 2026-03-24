@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CatalogController } from '../catalog.controller';
-import { CategoryService, ProductService, StockService } from '../../services';
+import { CategoryService, ProductService, StockService, ImageService } from '../../services';
 import { Category, Product, ProductType, ProductImage } from '../../entities';
 import { Language } from '@cyna-api/common';
 
@@ -82,6 +82,13 @@ const mockStockService = {
   confirmReservation: jest.fn(),
 };
 
+// Mock du ImageService
+const mockImageService = {
+  requestUploadUrl: jest.fn(),
+  confirmUpload: jest.fn(),
+  deleteImage: jest.fn(),
+};
+
 // Tests d'integration du CatalogController
 describe('CatalogController', () => {
   let controller: CatalogController;
@@ -93,6 +100,7 @@ describe('CatalogController', () => {
         { provide: CategoryService, useValue: mockCategoryService },
         { provide: ProductService, useValue: mockProductService },
         { provide: StockService, useValue: mockStockService },
+        { provide: ImageService, useValue: mockImageService },
       ],
     }).compile();
 
@@ -318,15 +326,15 @@ describe('CatalogController', () => {
 
     // Verifie que deleteProductImage appelle le service
     describe('deleteProductImage()', () => {
-      it('should call productService.deleteImage and return success', async () => {
-        mockProductService.deleteImage.mockResolvedValue(undefined);
+      it('should call imageService.deleteImage and return success', async () => {
+        mockImageService.deleteImage.mockResolvedValue(undefined);
 
         const result = await controller.deleteProductImage({
           productId: 'prod-001',
           imageId: 'img-001',
         });
 
-        expect(mockProductService.deleteImage).toHaveBeenCalledWith('prod-001', 'img-001');
+        expect(mockImageService.deleteImage).toHaveBeenCalledWith('prod-001', 'img-001');
         expect(result).toEqual({ success: true });
       });
     });

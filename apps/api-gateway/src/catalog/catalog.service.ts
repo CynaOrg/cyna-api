@@ -2,6 +2,15 @@ import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS, Language } from '@cyna-api/common';
+import {
+  CreateCategoryDto,
+  UpdateCategoryDto,
+  CreateProductDto,
+  UpdateProductDto,
+  ProductQueryDto,
+  RequestUploadUrlDto,
+  ConfirmUploadDto,
+} from './dto';
 
 @Injectable()
 export class CatalogService {
@@ -14,11 +23,11 @@ export class CatalogService {
 
   // ==================== Categories ====================
 
-  async createCategory(dto: any) {
+  async createCategory(dto: CreateCategoryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_CREATE, dto);
   }
 
-  async updateCategory(id: string, dto: any) {
+  async updateCategory(id: string, dto: UpdateCategoryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_UPDATE, { id, dto });
   }
 
@@ -40,11 +49,11 @@ export class CatalogService {
 
   // ==================== Products ====================
 
-  async createProduct(dto: any) {
+  async createProduct(dto: CreateProductDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_CREATE, dto);
   }
 
-  async updateProduct(id: string, dto: any) {
+  async updateProduct(id: string, dto: UpdateProductDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_UPDATE, { id, dto });
   }
 
@@ -52,7 +61,7 @@ export class CatalogService {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_DELETE, { id });
   }
 
-  async findAllProducts(query: any) {
+  async findAllProducts(query: ProductQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL, query);
   }
 
@@ -64,7 +73,7 @@ export class CatalogService {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID, { id });
   }
 
-  async searchProducts(searchTerm: string, query: any) {
+  async searchProducts(searchTerm: string, query: ProductQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_SEARCH, { searchTerm, query });
   }
 
@@ -72,7 +81,7 @@ export class CatalogService {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_FEATURED, { limit, lang });
   }
 
-  async findProductsByCategory(categoryId: string, query: any) {
+  async findProductsByCategory(categoryId: string, query: ProductQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_CATEGORY, {
       categoryId,
       query,
@@ -115,14 +124,14 @@ export class CatalogService {
     });
   }
 
-  async requestImageUploadUrl(productId: string, dto: any) {
+  async requestImageUploadUrl(productId: string, dto: RequestUploadUrlDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_REQUEST_UPLOAD_URL, {
       ...dto,
       productId,
     });
   }
 
-  async confirmImageUpload(productId: string, dto: any) {
+  async confirmImageUpload(productId: string, dto: ConfirmUploadDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_CONFIRM_IMAGE_UPLOAD, {
       ...dto,
       productId,

@@ -37,9 +37,10 @@ export class WebhookController {
 
     try {
       event = this.stripe.webhooks.constructEvent(req.body, signature, this.webhookSecret);
-    } catch (err: any) {
-      this.logger.error(`Webhook signature verification failed: ${err.message}`);
-      return res.status(400).json({ error: `Webhook Error: ${err.message}` });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(`Webhook signature verification failed: ${message}`);
+      return res.status(400).json({ error: `Webhook Error: ${message}` });
     }
 
     this.logger.log(`Webhook received: ${event.type} (${event.id})`);

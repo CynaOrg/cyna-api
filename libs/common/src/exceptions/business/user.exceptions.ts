@@ -1,8 +1,4 @@
-import {
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-} from '../base.exception';
+import { NotFoundException, ConflictException, BadRequestException } from '../base.exception';
 import { ERROR_CODES } from '../error-codes';
 
 /**

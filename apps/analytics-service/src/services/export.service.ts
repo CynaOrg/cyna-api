@@ -3,10 +3,37 @@ import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, TimeoutError } from 'rxjs';
 import { CynaLoggerService, SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 
-interface ExportResult {
+export interface ExportResult {
   data: string;
   contentType: string;
   filename: string;
+}
+
+interface OrderRecord {
+  createdAt: string | Date;
+  id?: string;
+  orderNumber?: string;
+  customerEmail?: string;
+  userId?: string;
+  totalAmount?: string | number;
+  subtotal?: string | number;
+  taxAmount?: string | number;
+  status?: string;
+  paymentStatus?: string;
+  items?: unknown[];
+}
+
+interface SubscriptionRecord {
+  createdAt: string | Date;
+  id?: string;
+  subscriptionId?: string;
+  customerEmail?: string;
+  userId?: string;
+  productName?: string;
+  planName?: string;
+  amount?: string | number;
+  billingPeriod?: string;
+  status?: string;
 }
 
 @Injectable()
@@ -17,20 +44,20 @@ export class ExportService {
     private readonly logger: CynaLoggerService,
   ) {}
 
-  async exportSales(dateFrom: string, dateTo: string, format: string): Promise<ExportResult> {
+  async exportSales(dateFrom: string, dateTo: string, _format: string): Promise<ExportResult> {
     const orders = await this.fetchOrdersInRange(dateFrom, dateTo);
 
     const paidStatuses = ['paid', 'completed', 'shipped', 'delivered'];
-    const paidOrders = orders.filter((o: any) => paidStatuses.includes(o.status));
+    const paidOrders = orders.filter((o: OrderRecord) => paidStatuses.includes(o.status || ''));
 
     const headers = ['Date', 'Order ID', 'Customer', 'Amount', 'Currency', 'Status'];
-    const rows = paidOrders.map((order: any) => [
+    const rows = paidOrders.map((order: OrderRecord) => [
       new Date(order.createdAt).toISOString().slice(0, 10),
       order.id || order.orderNumber || '',
       order.customerEmail || order.userId || '',
-      (parseFloat(order.totalAmount) || 0).toFixed(2),
+      (parseFloat(String(order.totalAmount)) || 0).toFixed(2),
       'EUR',
-      order.status,
+      order.status || '',
     ]);
 
     const csv = [headers.join(','), ...rows.map((r: string[]) => r.join(','))].join('\n');
@@ -49,7 +76,7 @@ export class ExportService {
     };
   }
 
-  async exportOrders(dateFrom: string, dateTo: string, format: string): Promise<ExportResult> {
+  async exportOrders(dateFrom: string, dateTo: string, _format: string): Promise<ExportResult> {
     const orders = await this.fetchOrdersInRange(dateFrom, dateTo);
 
     const headers = [
@@ -65,16 +92,16 @@ export class ExportService {
       'Payment Status',
     ];
 
-    const rows = orders.map((order: any) => {
+    const rows = orders.map((order: OrderRecord) => {
       const items = order.items || [];
       return [
         new Date(order.createdAt).toISOString().slice(0, 10),
         order.id || order.orderNumber || '',
         order.customerEmail || order.userId || '',
         items.length.toString(),
-        (parseFloat(order.subtotal) || 0).toFixed(2),
-        (parseFloat(order.taxAmount) || 0).toFixed(2),
-        (parseFloat(order.totalAmount) || 0).toFixed(2),
+        (parseFloat(String(order.subtotal)) || 0).toFixed(2),
+        (parseFloat(String(order.taxAmount)) || 0).toFixed(2),
+        (parseFloat(String(order.totalAmount)) || 0).toFixed(2),
         'EUR',
         order.status || '',
         order.paymentStatus || '',
@@ -100,7 +127,7 @@ export class ExportService {
   async exportSubscriptions(
     dateFrom: string,
     dateTo: string,
-    format: string,
+    _format: string,
   ): Promise<ExportResult> {
     const subscriptions = await this.fetchSubscriptionsInRange(dateFrom, dateTo);
 
@@ -115,12 +142,12 @@ export class ExportService {
       'Status',
     ];
 
-    const rows = subscriptions.map((sub: any) => [
+    const rows = subscriptions.map((sub: SubscriptionRecord) => [
       new Date(sub.createdAt).toISOString().slice(0, 10),
       sub.id || sub.subscriptionId || '',
       sub.customerEmail || sub.userId || '',
       sub.productName || sub.planName || '',
-      (parseFloat(sub.amount) || 0).toFixed(2),
+      (parseFloat(String(sub.amount)) || 0).toFixed(2),
       'EUR',
       sub.billingPeriod || 'monthly',
       sub.status || '',
@@ -148,20 +175,22 @@ export class ExportService {
 
   // ==================== Private helpers ====================
 
-  private async fetchOrdersInRange(dateFrom: string, dateTo: string): Promise<any[]> {
+  private async fetchOrdersInRange(dateFrom: string, dateTo: string): Promise<OrderRecord[]> {
     try {
-      const result = await this.sendMessage<any>(
+      const result = await this.sendMessage<OrderRecord[] | { data: OrderRecord[] }>(
         this.orderClient,
         MESSAGE_PATTERNS.ORDER.ADMIN_GET_ORDERS,
         {},
       );
 
-      const orders = Array.isArray(result) ? result : (result as any)?.data || [];
+      const orders = Array.isArray(result)
+        ? result
+        : (result as { data: OrderRecord[] })?.data || [];
       const from = new Date(dateFrom);
       const to = new Date(dateTo);
       to.setUTCHours(23, 59, 59, 999);
 
-      return orders.filter((o: any) => {
+      return orders.filter((o: OrderRecord) => {
         const orderDate = new Date(o.createdAt);
         return orderDate >= from && orderDate <= to;
       });
@@ -171,9 +200,12 @@ export class ExportService {
     }
   }
 
-  private async fetchSubscriptionsInRange(dateFrom: string, dateTo: string): Promise<any[]> {
+  private async fetchSubscriptionsInRange(
+    dateFrom: string,
+    dateTo: string,
+  ): Promise<SubscriptionRecord[]> {
     try {
-      const result = await this.sendMessage<any>(
+      const result = await this.sendMessage<SubscriptionRecord[]>(
         this.paymentClient,
         MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS,
         { adminMode: true },
@@ -184,7 +216,7 @@ export class ExportService {
       const to = new Date(dateTo);
       to.setUTCHours(23, 59, 59, 999);
 
-      return subscriptions.filter((s: any) => {
+      return subscriptions.filter((s: SubscriptionRecord) => {
         const subDate = new Date(s.createdAt);
         return subDate >= from && subDate <= to;
       });
@@ -197,7 +229,7 @@ export class ExportService {
   private async sendMessage<T>(
     client: ClientProxy,
     pattern: Record<string, string>,
-    data: any,
+    data: unknown,
   ): Promise<T> {
     return firstValueFrom(
       client.send<T>(pattern, data).pipe(

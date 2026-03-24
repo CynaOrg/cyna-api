@@ -17,14 +17,6 @@ describe('AuthEventsHandler', () => {
     log: jest.Mock;
     error: jest.Mock;
   };
-  let mockChannel: {
-    ack: jest.Mock;
-    nack: jest.Mock;
-  };
-  let mockContext: {
-    getChannelRef: jest.Mock;
-    getMessage: jest.Mock;
-  };
 
   beforeEach(async () => {
     mockEmailService = {
@@ -38,16 +30,6 @@ describe('AuthEventsHandler', () => {
     mockLogger = {
       log: jest.fn(),
       error: jest.fn(),
-    };
-
-    mockChannel = {
-      ack: jest.fn(),
-      nack: jest.fn(),
-    };
-
-    mockContext = {
-      getChannelRef: jest.fn().mockReturnValue(mockChannel),
-      getMessage: jest.fn().mockReturnValue({}),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -97,19 +79,15 @@ describe('AuthEventsHandler', () => {
       language: 'fr' as const,
     };
 
-    it('should send verification email and acknowledge message', async () => {
-      await handler.handleUserRegistered(userRegisteredEvent, mockContext as any);
+    it('should send verification email', async () => {
+      await handler.handleUserRegistered(userRegisteredEvent);
 
-      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
-        'email-verification',
-        'fr',
-        {
-          firstName: 'John',
-          lastName: 'Doe',
-          verificationLink: 'http://localhost:4200/auth/verify-email?token=verification-token-123',
-          frontendUrl: 'http://localhost:4200',
-        },
-      );
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith('email-verification', 'fr', {
+        firstName: 'John',
+        lastName: 'Doe',
+        verificationLink: 'http://localhost:4200/auth/verify-email?token=verification-token-123',
+        frontendUrl: 'http://localhost:4200',
+      });
 
       expect(mockEmailService.sendEmail).toHaveBeenCalledWith({
         to: 'test@example.com',
@@ -117,7 +95,6 @@ describe('AuthEventsHandler', () => {
         html: '<html>Rendered template</html>',
       });
 
-      expect(mockChannel.ack).toHaveBeenCalled();
       expect(mockLogger.log).toHaveBeenCalledWith(
         'Verification email sent successfully to test@example.com',
         'AuthEventsHandler',
@@ -127,7 +104,7 @@ describe('AuthEventsHandler', () => {
     it('should use English subject for English language', async () => {
       const englishEvent = { ...userRegisteredEvent, language: 'en' as const };
 
-      await handler.handleUserRegistered(englishEvent, mockContext as any);
+      await handler.handleUserRegistered(englishEvent);
 
       expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -136,12 +113,11 @@ describe('AuthEventsHandler', () => {
       );
     });
 
-    it('should nack message on error', async () => {
+    it('should log error on failure', async () => {
       mockEmailService.sendEmail.mockRejectedValueOnce(new Error('SMTP error'));
 
-      await handler.handleUserRegistered(userRegisteredEvent, mockContext as any);
+      await handler.handleUserRegistered(userRegisteredEvent);
 
-      expect(mockChannel.nack).toHaveBeenCalledWith({}, false, true);
       expect(mockLogger.error).toHaveBeenCalled();
     });
   });
@@ -155,26 +131,20 @@ describe('AuthEventsHandler', () => {
       language: 'fr' as const,
     };
 
-    it('should send password reset email and acknowledge message', async () => {
-      await handler.handlePasswordResetRequested(passwordResetEvent, mockContext as any);
+    it('should send password reset email', async () => {
+      await handler.handlePasswordResetRequested(passwordResetEvent);
 
-      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
-        'password-reset',
-        'fr',
-        {
-          firstName: 'John',
-          resetLink: 'http://localhost:4200/auth/reset-password?token=reset-token-123',
-          frontendUrl: 'http://localhost:4200',
-        },
-      );
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith('password-reset', 'fr', {
+        firstName: 'John',
+        resetLink: 'http://localhost:4200/auth/reset-password?token=reset-token-123',
+        frontendUrl: 'http://localhost:4200',
+      });
 
       expect(mockEmailService.sendEmail).toHaveBeenCalledWith({
         to: 'test@example.com',
         subject: 'Réinitialisez votre mot de passe - CYNA',
         html: '<html>Rendered template</html>',
       });
-
-      expect(mockChannel.ack).toHaveBeenCalled();
     });
   });
 
@@ -188,33 +158,27 @@ describe('AuthEventsHandler', () => {
       language: 'fr' as const,
     };
 
-    it('should send 2FA code email and acknowledge message', async () => {
-      await handler.handleAdmin2FACodeRequested(admin2FAEvent, mockContext as any);
+    it('should send 2FA code email', async () => {
+      await handler.handleAdmin2FACodeRequested(admin2FAEvent);
 
-      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
-        'admin-2fa-code',
-        'fr',
-        {
-          firstName: 'Admin',
-          code: '123456',
-          expiresInMinutes: 5,
-          backofficeUrl: 'http://localhost:4201',
-        },
-      );
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith('admin-2fa-code', 'fr', {
+        firstName: 'Admin',
+        code: '123456',
+        expiresInMinutes: 5,
+        backofficeUrl: 'http://localhost:4201',
+      });
 
       expect(mockEmailService.sendEmail).toHaveBeenCalledWith({
         to: 'admin@example.com',
         subject: 'Votre code de vérification - CYNA Admin',
         html: '<html>Rendered template</html>',
       });
-
-      expect(mockChannel.ack).toHaveBeenCalled();
     });
 
     it('should use English subject for English language', async () => {
       const englishEvent = { ...admin2FAEvent, language: 'en' as const };
 
-      await handler.handleAdmin2FACodeRequested(englishEvent, mockContext as any);
+      await handler.handleAdmin2FACodeRequested(englishEvent);
 
       expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({

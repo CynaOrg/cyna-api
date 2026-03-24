@@ -73,8 +73,7 @@ export class AuthController {
     if (result.refreshToken) {
       res.cookie('refresh_token', result.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
       // Return response without refreshToken in body
-      const { refreshToken, ...responseWithoutToken } = result;
-      return responseWithoutToken;
+      delete result.refreshToken;
     }
 
     return result;
@@ -151,8 +150,7 @@ export class AuthController {
     if (result.refreshToken) {
       res.cookie('refresh_token', result.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
       // Return response without refreshToken in body
-      const { refreshToken: _, ...responseWithoutToken } = result;
-      return responseWithoutToken;
+      delete result.refreshToken;
     }
 
     return result;

@@ -8,13 +8,13 @@ import { ConfigService } from '@nestjs/config';
 import { AnalyticsCache } from '../entities';
 import { SalesPeriod, SalesGroupBy } from '../dto';
 
-interface SalesSeriesEntry {
+export interface SalesSeriesEntry {
   date: string;
   revenue: number;
   orders: number;
 }
 
-interface SalesResult {
+export interface SalesResult {
   period: string;
   groupBy: string;
   series: SalesSeriesEntry[];
@@ -24,26 +24,26 @@ interface SalesResult {
   };
 }
 
-interface CategorySalesEntry {
+export interface CategorySalesEntry {
   categoryId: string;
   name: string;
   revenue: number;
   percentage: number;
 }
 
-interface ProductTypeSalesEntry {
+export interface ProductTypeSalesEntry {
   type: string;
   revenue: number;
   percentage: number;
   count: number;
 }
 
-interface MrrHistory {
+export interface MrrHistory {
   month: string;
   mrr: number;
 }
 
-interface MrrResult {
+export interface MrrResult {
   currentMrr: number;
   history: MrrHistory[];
   growth: {
@@ -52,14 +52,69 @@ interface MrrResult {
   };
 }
 
-interface StockStatusResult {
+export interface StockProductEntry {
+  productId: string;
+  name: string;
+  currentStock: number;
+  threshold: number;
+  status: string;
+}
+
+export interface StockStatusResult {
   summary: {
     totalProducts: number;
     inStock: number;
     lowStock: number;
     outOfStock: number;
   };
-  products: any[];
+  products: StockProductEntry[];
+}
+
+interface OrderRecord {
+  createdAt: string | Date;
+  status: string;
+  totalAmount: string | number;
+  items?: Array<{
+    productId: string;
+    unitPrice: string | number;
+    quantity: number;
+  }>;
+}
+
+interface SubscriptionRecord {
+  status: string;
+  createdAt: string | Date;
+  cancelledAt?: string | Date | null;
+  updatedAt?: string | Date;
+  amount: string | number;
+  billingPeriod?: string;
+}
+
+interface ProductRecord {
+  id: string;
+  categoryId?: string;
+  categoryName?: string;
+  category?: { nameFr?: string };
+  type?: string;
+  productType?: string;
+  stockQuantity?: number;
+  stock?: number;
+  stockAlertThreshold?: number;
+}
+
+interface StockAlertRecord {
+  id?: string;
+  productId?: string;
+  name?: string;
+  productName?: string;
+  stockQuantity?: number;
+  currentStock?: number;
+  stockAlertThreshold?: number;
+  threshold?: number;
+}
+
+interface PaginatedResponse {
+  data: ProductRecord[];
 }
 
 @Injectable()
@@ -90,7 +145,7 @@ export class SalesService {
     const orders = await this.fetchOrders();
 
     const paidStatuses = ['paid', 'completed', 'shipped', 'delivered'];
-    const filteredOrders = orders.filter((o: any) => {
+    const filteredOrders = orders.filter((o: OrderRecord) => {
       const orderDate = new Date(o.createdAt);
       return (
         orderDate >= dateRange.start &&
@@ -111,7 +166,7 @@ export class SalesService {
       const bucket = this.getDateBucket(new Date(order.createdAt), groupBy);
       const entry = grouped.get(bucket);
       if (entry) {
-        entry.revenue += parseFloat(order.totalAmount) || 0;
+        entry.revenue += parseFloat(String(order.totalAmount)) || 0;
         entry.orders += 1;
       }
     }
@@ -173,7 +228,7 @@ export class SalesService {
       productsResult.status === 'fulfilled' ? productsResult.value : { data: [] };
     const products = Array.isArray(productsResponse)
       ? productsResponse
-      : (productsResponse as any)?.data || [];
+      : (productsResponse as PaginatedResponse)?.data || [];
 
     // Build product -> category map
     const productCategoryMap = new Map<string, { categoryId: string; categoryName: string }>();
@@ -187,7 +242,7 @@ export class SalesService {
     }
 
     const paidStatuses = ['paid', 'completed', 'shipped', 'delivered'];
-    const filteredOrders = orders.filter((o: any) => {
+    const filteredOrders = orders.filter((o: OrderRecord) => {
       const orderDate = new Date(o.createdAt);
       return (
         orderDate >= dateRange.start &&
@@ -206,7 +261,7 @@ export class SalesService {
         const productInfo = productCategoryMap.get(item.productId);
         const categoryId = productInfo?.categoryId || 'unknown';
         const categoryName = productInfo?.categoryName || 'Unknown';
-        const itemRevenue = (parseFloat(item.unitPrice) || 0) * (item.quantity || 1);
+        const itemRevenue = (parseFloat(String(item.unitPrice)) || 0) * (item.quantity || 1);
 
         const existing = categoryRevenue.get(categoryId);
         if (existing) {
@@ -265,7 +320,7 @@ export class SalesService {
       productsResult.status === 'fulfilled' ? productsResult.value : { data: [] };
     const products = Array.isArray(productsResponse)
       ? productsResponse
-      : (productsResponse as any)?.data || [];
+      : (productsResponse as PaginatedResponse)?.data || [];
 
     // Build product -> type map
     const productTypeMap = new Map<string, string>();
@@ -274,7 +329,7 @@ export class SalesService {
     }
 
     const paidStatuses = ['paid', 'completed', 'shipped', 'delivered'];
-    const filteredOrders = orders.filter((o: any) => {
+    const filteredOrders = orders.filter((o: OrderRecord) => {
       const orderDate = new Date(o.createdAt);
       return (
         orderDate >= dateRange.start &&
@@ -291,7 +346,7 @@ export class SalesService {
       const items = order.items || [];
       for (const item of items) {
         const productType = productTypeMap.get(item.productId) || 'unknown';
-        const itemRevenue = (parseFloat(item.unitPrice) || 0) * (item.quantity || 1);
+        const itemRevenue = (parseFloat(String(item.unitPrice)) || 0) * (item.quantity || 1);
 
         const existing = typeRevenue.get(productType);
         if (existing) {
@@ -335,14 +390,19 @@ export class SalesService {
 
     const cached = await this.getCachedMetric(cacheKey);
     if (cached) {
-      return cached as any;
+      return cached as {
+        period: string;
+        averageCartValue: number;
+        totalOrders: number;
+        totalRevenue: number;
+      };
     }
 
     const dateRange = this.getDateRangeForPeriod(period);
     const orders = await this.fetchOrders();
 
     const paidStatuses = ['paid', 'completed', 'shipped', 'delivered'];
-    const filteredOrders = orders.filter((o: any) => {
+    const filteredOrders = orders.filter((o: OrderRecord) => {
       const orderDate = new Date(o.createdAt);
       return (
         orderDate >= dateRange.start &&
@@ -352,7 +412,7 @@ export class SalesService {
     });
 
     const totalRevenue = filteredOrders.reduce(
-      (sum: number, o: any) => sum + (parseFloat(o.totalAmount) || 0),
+      (sum: number, o: OrderRecord) => sum + (parseFloat(String(o.totalAmount)) || 0),
       0,
     );
 
@@ -381,11 +441,13 @@ export class SalesService {
     }
 
     const subscriptions = await this.fetchSubscriptions();
-    const activeSubscriptions = subscriptions.filter((s: any) => s.status === 'active');
+    const activeSubscriptions = subscriptions.filter(
+      (s: SubscriptionRecord) => s.status === 'active',
+    );
 
     // Calculate current MRR
-    const currentMrr = activeSubscriptions.reduce((sum: number, s: any) => {
-      const amount = parseFloat(s.amount) || 0;
+    const currentMrr = activeSubscriptions.reduce((sum: number, s: SubscriptionRecord) => {
+      const amount = parseFloat(String(s.amount)) || 0;
       if (s.billingPeriod === 'yearly' || s.billingPeriod === 'annual') {
         return sum + amount / 12;
       }
@@ -412,7 +474,7 @@ export class SalesService {
       } else {
         // Calculate MRR for this month based on subscriptions active at month end
         const monthMrr = subscriptions
-          .filter((s: any) => {
+          .filter((s: SubscriptionRecord) => {
             const createdAt = new Date(s.createdAt);
             if (createdAt > monthEnd) return false;
             if (s.status === 'active') return true;
@@ -422,8 +484,8 @@ export class SalesService {
             }
             return false;
           })
-          .reduce((sum: number, s: any) => {
-            const amount = parseFloat(s.amount) || 0;
+          .reduce((sum: number, s: SubscriptionRecord) => {
+            const amount = parseFloat(String(s.amount)) || 0;
             if (s.billingPeriod === 'yearly' || s.billingPeriod === 'annual') {
               return sum + amount / 12;
             }
@@ -503,7 +565,7 @@ export class SalesService {
       productsResult.status === 'fulfilled' ? productsResult.value : { data: [] };
     const products = Array.isArray(productsResponse)
       ? productsResponse
-      : (productsResponse as any)?.data || [];
+      : (productsResponse as PaginatedResponse)?.data || [];
 
     if (alertsResult.status === 'rejected') {
       this.logger.warn(`Failed to fetch stock alerts: ${alertsResult.reason}`);
@@ -514,7 +576,7 @@ export class SalesService {
 
     // Calculate stock summary
     const totalProducts = products.length;
-    const lowStockIds = new Set(alerts.map((a: any) => a.productId || a.id));
+    const lowStockIds = new Set(alerts.map((a: StockAlertRecord) => a.productId || a.id));
 
     let inStock = 0;
     let lowStock = 0;
@@ -538,8 +600,8 @@ export class SalesService {
         lowStock,
         outOfStock,
       },
-      products: alerts.map((a: any) => ({
-        productId: a.productId || a.id,
+      products: alerts.map((a: StockAlertRecord) => ({
+        productId: a.productId || a.id || '',
         name: a.name || a.productName || 'Unknown',
         currentStock: a.stockQuantity ?? a.currentStock ?? 0,
         threshold: a.stockAlertThreshold ?? a.threshold ?? 0,
@@ -555,23 +617,23 @@ export class SalesService {
 
   // ==================== Private helpers ====================
 
-  private async fetchOrders(): Promise<any[]> {
+  private async fetchOrders(): Promise<OrderRecord[]> {
     try {
-      const result = await this.sendMessage<any>(
+      const result = await this.sendMessage<OrderRecord[] | { data: OrderRecord[] }>(
         this.orderClient,
         MESSAGE_PATTERNS.ORDER.ADMIN_GET_ORDERS,
         {},
       );
-      return Array.isArray(result) ? result : (result as any)?.data || [];
+      return Array.isArray(result) ? result : (result as { data: OrderRecord[] })?.data || [];
     } catch {
       this.logger.warn('Failed to fetch orders for sales analytics');
       return [];
     }
   }
 
-  private async fetchSubscriptions(): Promise<any[]> {
+  private async fetchSubscriptions(): Promise<SubscriptionRecord[]> {
     try {
-      const result = await this.sendMessage<any>(
+      const result = await this.sendMessage<SubscriptionRecord[]>(
         this.paymentClient,
         MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS,
         { adminMode: true },
@@ -658,7 +720,7 @@ export class SalesService {
   private async sendMessage<T>(
     client: ClientProxy,
     pattern: Record<string, string>,
-    data: any,
+    data: unknown,
   ): Promise<T> {
     return firstValueFrom(
       client.send<T>(pattern, data).pipe(
@@ -679,7 +741,7 @@ export class SalesService {
     );
   }
 
-  private async getCachedMetric(key: string): Promise<Record<string, any> | null> {
+  private async getCachedMetric(key: string): Promise<unknown | null> {
     try {
       const cached = await this.analyticsCacheRepository.findOne({
         where: {
@@ -694,11 +756,7 @@ export class SalesService {
     }
   }
 
-  private async setCachedMetric(
-    key: string,
-    value: Record<string, any>,
-    ttlSeconds: number,
-  ): Promise<void> {
+  private async setCachedMetric(key: string, value: unknown, ttlSeconds: number): Promise<void> {
     try {
       const now = new Date();
       const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
@@ -707,15 +765,16 @@ export class SalesService {
         where: { metricKey: key },
       });
 
+      const metricValue = value as Record<string, unknown>;
       if (existing) {
-        existing.metricValue = value;
+        existing.metricValue = metricValue;
         existing.calculatedAt = now;
         existing.expiresAt = expiresAt;
         await this.analyticsCacheRepository.save(existing);
       } else {
         const cacheEntry = this.analyticsCacheRepository.create({
           metricKey: key,
-          metricValue: value,
+          metricValue,
           calculatedAt: now,
           expiresAt,
         });

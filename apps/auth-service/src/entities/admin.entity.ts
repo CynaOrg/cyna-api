@@ -1,9 +1,4 @@
-import {
-  Entity,
-  Column,
-  Index,
-  OneToMany,
-} from 'typeorm';
+import { Entity, Column, Index, OneToMany } from 'typeorm';
 import { BaseEntity, AdminRole } from '@cyna-api/common';
 import { Admin2FACode } from './admin-2fa-code.entity';
 import { RefreshToken } from './refresh-token.entity';

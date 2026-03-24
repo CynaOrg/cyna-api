@@ -3,6 +3,16 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { CynaLoggerService } from '../logger';
 
+interface CacheStore {
+  keys?: (pattern: string) => Promise<string[]>;
+  reset?: () => Promise<void>;
+}
+
+interface CacheManagerExtended {
+  store?: CacheStore;
+  clear?: () => Promise<void>;
+}
+
 /**
  * CYNA Cache Service
  * Provides high-level caching operations with logging and error handling
@@ -70,7 +80,7 @@ export class CynaCacheService {
   async delByPattern(pattern: string): Promise<void> {
     try {
       // Access the underlying store for pattern-based operations
-      const store = (this.cacheManager as any).store;
+      const store = (this.cacheManager as unknown as CacheManagerExtended).store;
       if (store && typeof store.keys === 'function') {
         const keys = await store.keys(pattern);
         if (keys && keys.length > 0) {
@@ -120,12 +130,13 @@ export class CynaCacheService {
   async reset(): Promise<void> {
     try {
       // Try to access clear method or underlying store reset
-      const store = (this.cacheManager as any).store;
+      const extended = this.cacheManager as unknown as CacheManagerExtended;
+      const store = extended.store;
       if (store && typeof store.reset === 'function') {
         await store.reset();
         this.logger.log('Cache reset completed');
-      } else if (typeof (this.cacheManager as any).clear === 'function') {
-        await (this.cacheManager as any).clear();
+      } else if (typeof extended.clear === 'function') {
+        await extended.clear();
         this.logger.log('Cache cleared completed');
       } else {
         this.logger.debug('Cache reset not supported for current store');

@@ -98,7 +98,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
 
     const exchangeEntries = Object.entries(EXCHANGES) as [string, ExchangeDefinition][];
 
-    for (const [key, exchange] of exchangeEntries) {
+    for (const [, exchange] of exchangeEntries) {
       await this.channel.assertExchange(exchange.name, exchange.type, exchange.options);
       this.logger.debug(`Declared exchange: ${exchange.name} (${exchange.type})`);
     }

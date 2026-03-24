@@ -48,7 +48,7 @@ describe('OrderService', () => {
         quantity: 1,
         unitPrice: 49.99,
         totalPrice: 49.99,
-      } as any,
+      } as unknown as OrderItem,
     ],
   };
 
@@ -103,6 +103,9 @@ describe('OrderService', () => {
     };
 
     cartService = {
+      findCartById: jest
+        .fn()
+        .mockResolvedValue({ id: 'cart-1', userId: 'user-1', sessionId: null }),
       getCart: jest.fn().mockResolvedValue(mockCart),
       clearCart: jest.fn().mockResolvedValue(undefined),
     };

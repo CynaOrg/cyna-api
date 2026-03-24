@@ -1,8 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder, UpdateResult } from 'typeorm';
-import { RpcException } from '@nestjs/microservices';
-import { ProductService, PaginatedResult } from '../product.service';
+import { ProductService } from '../product.service';
 import {
   Product,
   Category,
@@ -550,7 +549,7 @@ describe('ProductService', () => {
         productRepository.findOne.mockResolvedValue(existingProduct);
         productRepository.save.mockResolvedValue(updatedProduct);
 
-        const result = await service.update(id, dto);
+        await service.update(id, dto);
 
         expect(productRepository.save).toHaveBeenCalled();
         expect(mockEventsPublisher.emitProductUpdated).toHaveBeenCalled();
@@ -907,7 +906,9 @@ describe('ProductService', () => {
 
       productRepository.findOne.mockResolvedValue(existingProduct);
       productRepository.save.mockResolvedValue(existingProduct);
-      characteristicRepository.delete.mockResolvedValue({ affected: 1 } as any);
+      characteristicRepository.delete.mockResolvedValue({
+        affected: 1,
+      } as unknown as import('typeorm').DeleteResult);
       characteristicRepository.create.mockReturnValue({} as ProductCharacteristic);
       (characteristicRepository.save as jest.Mock).mockResolvedValue([]);
 
@@ -925,7 +926,9 @@ describe('ProductService', () => {
 
       productRepository.findOne.mockResolvedValue(existingProduct);
       productRepository.save.mockResolvedValue(existingProduct);
-      characteristicRepository.delete.mockResolvedValue({ affected: 1 } as any);
+      characteristicRepository.delete.mockResolvedValue({
+        affected: 1,
+      } as unknown as import('typeorm').DeleteResult);
 
       await service.update(id, dto);
 
@@ -950,7 +953,7 @@ describe('ProductService', () => {
         productRepository.findOne.mockResolvedValue(product);
         productRepository.save.mockResolvedValue({ ...product, stockQuantity: 100 });
 
-        const result = await service.updateStock(productId, 100);
+        await service.updateStock(productId, 100);
 
         expect(productRepository.save).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -1054,7 +1057,7 @@ describe('ProductService', () => {
         productRepository.findOne.mockResolvedValue(product);
         productRepository.save.mockResolvedValue({ ...product, stockQuantity: 90 });
 
-        const result = await service.decrementStock('prod-001', 10);
+        await service.decrementStock('prod-001', 10);
 
         expect(productRepository.save).toHaveBeenCalledWith(
           expect.objectContaining({ stockQuantity: 90 }),
@@ -1105,7 +1108,7 @@ describe('ProductService', () => {
         productRepository.findOne.mockResolvedValue(product);
         productRepository.save.mockResolvedValue({ ...product, stockQuantity: 120 });
 
-        const result = await service.incrementStock('prod-001', 20);
+        await service.incrementStock('prod-001', 20);
 
         expect(productRepository.save).toHaveBeenCalledWith(
           expect.objectContaining({ stockQuantity: 120 }),

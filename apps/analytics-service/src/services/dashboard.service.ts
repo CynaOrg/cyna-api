@@ -8,6 +8,22 @@ import { ConfigService } from '@nestjs/config';
 import { AnalyticsCache } from '../entities';
 import { DashboardPeriod } from '../dto';
 
+interface OrderRecord {
+  createdAt: string | Date;
+  status: string;
+  totalAmount: string | number;
+  type?: string;
+}
+
+interface SubscriptionRecord {
+  status: string;
+  createdAt: string | Date;
+  cancelledAt?: string | Date | null;
+  updatedAt?: string | Date;
+  amount: string | number;
+  billingPeriod?: string;
+}
+
 interface DateRange {
   start: Date;
   end: Date;
@@ -15,7 +31,7 @@ interface DateRange {
   prevEnd: Date;
 }
 
-interface DashboardResult {
+export interface DashboardResult {
   revenue: {
     total: number;
     recurring: number;
@@ -92,63 +108,69 @@ export class DashboardService {
     const subscriptions = Array.isArray(allSubscriptions) ? allSubscriptions : [];
 
     // Filter orders by current period
-    const currentOrders = orders.filter((o: any) => {
+    const currentOrders = orders.filter((o: OrderRecord) => {
       const orderDate = new Date(o.createdAt);
       return orderDate >= dateRange.start && orderDate <= dateRange.end;
     });
 
     // Filter orders by previous period
-    const prevOrders = orders.filter((o: any) => {
+    const prevOrders = orders.filter((o: OrderRecord) => {
       const orderDate = new Date(o.createdAt);
       return orderDate >= dateRange.prevStart && orderDate <= dateRange.prevEnd;
     });
 
     // Calculate revenue
     const completedStatuses = ['paid', 'completed', 'shipped', 'delivered'];
-    const currentPaidOrders = currentOrders.filter((o: any) =>
+    const currentPaidOrders = currentOrders.filter((o: OrderRecord) =>
       completedStatuses.includes(o.status),
     );
-    const prevPaidOrders = prevOrders.filter((o: any) => completedStatuses.includes(o.status));
+    const prevPaidOrders = prevOrders.filter((o: OrderRecord) =>
+      completedStatuses.includes(o.status),
+    );
 
     const currentRevenue = currentPaidOrders.reduce(
-      (sum: number, o: any) => sum + (parseFloat(o.totalAmount) || 0),
+      (sum: number, o: OrderRecord) => sum + (parseFloat(String(o.totalAmount)) || 0),
       0,
     );
     const prevRevenue = prevPaidOrders.reduce(
-      (sum: number, o: any) => sum + (parseFloat(o.totalAmount) || 0),
+      (sum: number, o: OrderRecord) => sum + (parseFloat(String(o.totalAmount)) || 0),
       0,
     );
 
     // Calculate recurring vs one-time revenue
     const recurringRevenue = currentPaidOrders
-      .filter((o: any) => o.type === 'subscription')
-      .reduce((sum: number, o: any) => sum + (parseFloat(o.totalAmount) || 0), 0);
+      .filter((o: OrderRecord) => o.type === 'subscription')
+      .reduce((sum: number, o: OrderRecord) => sum + (parseFloat(String(o.totalAmount)) || 0), 0);
     const oneTimeRevenue = currentRevenue - recurringRevenue;
 
     // Order stats
-    const completedCount = currentOrders.filter((o: any) =>
+    const completedCount = currentOrders.filter((o: OrderRecord) =>
       completedStatuses.includes(o.status),
     ).length;
-    const pendingCount = currentOrders.filter((o: any) =>
+    const pendingCount = currentOrders.filter((o: OrderRecord) =>
       ['pending', 'processing'].includes(o.status),
     ).length;
-    const cancelledCount = currentOrders.filter((o: any) => o.status === 'cancelled').length;
+    const cancelledCount = currentOrders.filter(
+      (o: OrderRecord) => o.status === 'cancelled',
+    ).length;
 
     // Subscription stats
-    const activeSubscriptions = subscriptions.filter((s: any) => s.status === 'active');
-    const currentNewSubs = subscriptions.filter((s: any) => {
+    const activeSubscriptions = subscriptions.filter(
+      (s: SubscriptionRecord) => s.status === 'active',
+    );
+    const currentNewSubs = subscriptions.filter((s: SubscriptionRecord) => {
       const subDate = new Date(s.createdAt);
       return subDate >= dateRange.start && subDate <= dateRange.end;
     });
-    const churnedSubs = subscriptions.filter((s: any) => {
+    const churnedSubs = subscriptions.filter((s: SubscriptionRecord) => {
       if (s.status !== 'cancelled' && s.status !== 'canceled') return false;
-      const cancelDate = new Date(s.cancelledAt || s.updatedAt);
+      const cancelDate = new Date((s.cancelledAt || s.updatedAt || new Date()) as string | Date);
       return cancelDate >= dateRange.start && cancelDate <= dateRange.end;
     });
 
     // MRR calculation
-    const mrr = activeSubscriptions.reduce((sum: number, s: any) => {
-      const amount = parseFloat(s.amount) || 0;
+    const mrr = activeSubscriptions.reduce((sum: number, s: SubscriptionRecord) => {
+      const amount = parseFloat(String(s.amount)) || 0;
       if (s.billingPeriod === 'yearly' || s.billingPeriod === 'annual') {
         return sum + amount / 12;
       }
@@ -159,11 +181,13 @@ export class DashboardService {
     const revenueChange = this.calcChangePercent(currentRevenue, prevRevenue);
     const ordersChange = this.calcChangePercent(currentOrders.length, prevOrders.length);
 
-    const prevActiveSubsCount = subscriptions.filter((s: any) => {
+    const prevActiveSubsCount = subscriptions.filter((s: SubscriptionRecord) => {
       const subDate = new Date(s.createdAt);
       return (
         subDate <= dateRange.prevEnd &&
-        (s.status === 'active' || new Date(s.cancelledAt || s.updatedAt) > dateRange.prevEnd)
+        (s.status === 'active' ||
+          new Date((s.cancelledAt || s.updatedAt || new Date()) as string | Date) >
+            dateRange.prevEnd)
       );
     }).length;
     const subsChange = this.calcChangePercent(activeSubscriptions.length, prevActiveSubsCount);
@@ -272,7 +296,7 @@ export class DashboardService {
   private async sendMessage<T>(
     client: ClientProxy,
     pattern: Record<string, string>,
-    data: any,
+    data: unknown,
   ): Promise<T> {
     return firstValueFrom(
       client.send<T>(pattern, data).pipe(
@@ -296,7 +320,7 @@ export class DashboardService {
   /**
    * Get a cached metric from the analytics_cache table
    */
-  private async getCachedMetric(key: string): Promise<Record<string, any> | null> {
+  private async getCachedMetric(key: string): Promise<unknown | null> {
     try {
       const cached = await this.analyticsCacheRepository.findOne({
         where: {
@@ -305,7 +329,7 @@ export class DashboardService {
         },
       });
       return cached ? cached.metricValue : null;
-    } catch (error) {
+    } catch {
       this.logger.warn(`Failed to read analytics cache for key: ${key}`);
       return null;
     }
@@ -314,11 +338,7 @@ export class DashboardService {
   /**
    * Set a cached metric in the analytics_cache table
    */
-  private async setCachedMetric(
-    key: string,
-    value: Record<string, any>,
-    ttlSeconds: number,
-  ): Promise<void> {
+  private async setCachedMetric(key: string, value: unknown, ttlSeconds: number): Promise<void> {
     try {
       const now = new Date();
       const expiresAt = new Date(now.getTime() + ttlSeconds * 1000);
@@ -327,21 +347,22 @@ export class DashboardService {
         where: { metricKey: key },
       });
 
+      const metricValue = value as Record<string, unknown>;
       if (existing) {
-        existing.metricValue = value;
+        existing.metricValue = metricValue;
         existing.calculatedAt = now;
         existing.expiresAt = expiresAt;
         await this.analyticsCacheRepository.save(existing);
       } else {
         const cacheEntry = this.analyticsCacheRepository.create({
           metricKey: key,
-          metricValue: value,
+          metricValue,
           calculatedAt: now,
           expiresAt,
         });
         await this.analyticsCacheRepository.save(cacheEntry);
       }
-    } catch (error) {
+    } catch {
       this.logger.warn(`Failed to write analytics cache for key: ${key}`);
     }
   }

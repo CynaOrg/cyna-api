@@ -72,14 +72,16 @@ class UpdateSubscriptionStatusDto {
  * Convert an RPC error to an HttpException Observable so the
  * GlobalExceptionFilter can return the proper status code and message.
  */
-function rpcToHttpError(err: any): Observable<never> {
+function rpcToHttpError(err: unknown): Observable<never> {
   if (err instanceof TimeoutError) {
     return throwError(() => new HttpException('Payment service timeout', 503));
   }
-  const payload = typeof err?.message === 'object' ? err.message : err;
+  const errObj = err as Record<string, unknown> | undefined;
+  const payload =
+    typeof errObj?.message === 'object' ? (errObj.message as Record<string, unknown>) : errObj;
   const statusCode = typeof payload?.statusCode === 'number' ? payload.statusCode : 500;
   const message =
-    (typeof payload?.message === 'string' ? payload.message : err?.message) ||
+    (typeof payload?.message === 'string' ? payload.message : (errObj?.message as string)) ||
     'Internal server error';
   return throwError(() => new HttpException(message, statusCode));
 }

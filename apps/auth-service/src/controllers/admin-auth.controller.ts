@@ -52,7 +52,7 @@ export class AdminAuthController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_GET_ADMINS)
-  async getAdmins(@Payload() data: Record<string, never>) {
+  async getAdmins(@Payload() _data: Record<string, never>) {
     return this.adminAuthService.getAdmins();
   }
 

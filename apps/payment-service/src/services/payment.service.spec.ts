@@ -1,22 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { RpcException } from '@nestjs/microservices';
-import { of, throwError } from 'rxjs';
+import { of } from 'rxjs';
 import { PaymentService } from './payment.service';
 import { StripeService } from './stripe.service';
 import { SubscriptionService } from './subscription.service';
-import { SERVICE_NAMES, MESSAGE_PATTERNS, SubscriptionStatus } from '@cyna-api/common';
+import { SERVICE_NAMES, SubscriptionStatus, BillingPeriod } from '@cyna-api/common';
 
 describe('PaymentService', () => {
   let service: PaymentService;
   let stripeService: Partial<StripeService>;
   let subscriptionService: Partial<SubscriptionService>;
-  let orderClient: { send: jest.Mock; emit: jest.Mock };
   let catalogClient: { send: jest.Mock };
   let authClient: { send: jest.Mock; emit: jest.Mock };
 
   const mockProduct = {
     id: 'prod-1',
     price: '49.99',
+    priceMonthly: '49.99',
+    priceYearly: '499.99',
     productType: 'license',
     stripePriceId: 'price_default',
     stripePriceIdMonthly: 'price_monthly',
@@ -25,19 +26,6 @@ describe('PaymentService', () => {
     nameEn: 'Test Product',
     slug: 'test-product',
   };
-
-  const mockCart = {
-    id: 'cart-1',
-    items: [
-      { productId: 'prod-1', quantity: 2 },
-      { productId: 'prod-2', quantity: 1 },
-    ],
-  };
-
-  const mockProducts = [
-    { id: 'prod-1', price: '49.99', productType: 'license' },
-    { id: 'prod-2', price: '29.99', productType: 'physical' },
-  ];
 
   beforeEach(async () => {
     stripeService = {
@@ -56,11 +44,12 @@ describe('PaymentService', () => {
         current_period_start: Math.floor(Date.now() / 1000),
         current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
         latest_invoice: {
-          payment_intent: {
+          confirmation_secret: {
             client_secret: 'pi_sub_secret_xxx',
           },
         },
       }),
+      getInvoice: jest.fn(),
     };
 
     subscriptionService = {
@@ -68,11 +57,6 @@ describe('PaymentService', () => {
         id: 'local-sub-1',
         stripeSubscriptionId: 'sub_stripe_new',
       }),
-    };
-
-    orderClient = {
-      send: jest.fn(),
-      emit: jest.fn(),
     };
 
     catalogClient = {
@@ -89,7 +73,6 @@ describe('PaymentService', () => {
         PaymentService,
         { provide: StripeService, useValue: stripeService },
         { provide: SubscriptionService, useValue: subscriptionService },
-        { provide: SERVICE_NAMES.ORDER, useValue: orderClient },
         { provide: SERVICE_NAMES.CATALOG, useValue: catalogClient },
         { provide: SERVICE_NAMES.AUTH, useValue: authClient },
       ],
@@ -103,129 +86,39 @@ describe('PaymentService', () => {
   });
 
   describe('createPaymentIntent', () => {
-    it('should create a payment intent with server-side calculated amount', async () => {
-      // Cart returns 2x prod-1 ($49.99) + 1x prod-2 ($29.99) = 129.97
-      orderClient.send.mockReturnValue(of(mockCart));
-      catalogClient.send
-        .mockReturnValueOnce(of(mockProducts[0]))
-        .mockReturnValueOnce(of(mockProducts[1]));
-
+    it('should create a payment intent with the provided amount', async () => {
       const result = await service.createPaymentIntent({
-        cartId: 'cart-1',
+        orderId: 'order-1',
+        amount: 129.97,
+        currency: 'EUR',
         userId: 'user-1',
-        billingAddress: { street: '1 Rue', city: 'Paris', postalCode: '75001', country: 'FR' },
       });
 
       expect(result.clientSecret).toBe('pi_test_123_secret_xxx');
       expect(result.paymentIntentId).toBe('pi_test_123');
       expect(result.currency).toBe('eur');
 
-      // Verify server-side calculation: 49.99*2 + 29.99*1 = 129.97 -> 12997 cents
+      // 129.97 * 100 = 12997 cents
       expect(stripeService.createPaymentIntent).toHaveBeenCalledWith(
         12997,
         'eur',
-        expect.objectContaining({ cartId: 'cart-1', userId: 'user-1' }),
+        expect.objectContaining({ orderId: 'order-1', userId: 'user-1' }),
       );
     });
 
-    it('should throw when cart is empty', async () => {
-      orderClient.send.mockReturnValue(of({ id: 'cart-1', items: [] }));
-
+    it('should throw when amount is zero or negative', async () => {
       await expect(
         service.createPaymentIntent({
-          cartId: 'cart-1',
-          billingAddress: {
-            street: '1 Rue',
-            city: 'Paris',
-            postalCode: '75001',
-            country: 'FR',
-          },
+          orderId: 'order-1',
+          amount: 0,
         }),
       ).rejects.toThrow(RpcException);
-    });
-
-    it('should throw when cart is null', async () => {
-      orderClient.send.mockReturnValue(of(null));
-
-      await expect(
-        service.createPaymentIntent({
-          cartId: 'cart-1',
-          billingAddress: {
-            street: '1 Rue',
-            city: 'Paris',
-            postalCode: '75001',
-            country: 'FR',
-          },
-        }),
-      ).rejects.toThrow(RpcException);
-    });
-
-    it('should throw when product not found in product map lookup', async () => {
-      // Cart has a product that catalog returns, but with a different ID,
-      // so the Map lookup fails and throws PRODUCT_NOT_FOUND
-      const cartWithBadRef = {
-        id: 'cart-1',
-        items: [{ productId: 'prod-missing', quantity: 1 }],
-      };
-      orderClient.send.mockReturnValue(of(cartWithBadRef));
-      // Catalog returns a valid product but with different ID
-      catalogClient.send.mockReturnValueOnce(of({ id: 'prod-other', price: '10.00' }));
-
-      await expect(
-        service.createPaymentIntent({
-          cartId: 'cart-1',
-          billingAddress: {
-            street: '1 Rue',
-            city: 'Paris',
-            postalCode: '75001',
-            country: 'FR',
-          },
-        }),
-      ).rejects.toThrow(RpcException);
-    });
-
-    it('should never use frontend-provided amounts (security: server-side calculation)', async () => {
-      const cartWithOneItem = {
-        id: 'cart-1',
-        items: [{ productId: 'prod-1', quantity: 1 }],
-      };
-      orderClient.send.mockReturnValue(of(cartWithOneItem));
-      catalogClient.send.mockReturnValueOnce(of({ id: 'prod-1', price: '100.00' }));
-
-      await service.createPaymentIntent({
-        cartId: 'cart-1',
-        billingAddress: {
-          street: '1 Rue',
-          city: 'Paris',
-          postalCode: '75001',
-          country: 'FR',
-        },
-      });
-
-      // Verify amount is from product.price, not from any DTO field
-      expect(stripeService.createPaymentIntent).toHaveBeenCalledWith(
-        10000, // 100.00 * 100 cents
-        'eur',
-        expect.any(Object),
-      );
     });
 
     it('should set empty string for userId and guestEmail in metadata when not provided', async () => {
-      const cartWithOneItem = {
-        id: 'cart-1',
-        items: [{ productId: 'prod-1', quantity: 1 }],
-      };
-      orderClient.send.mockReturnValue(of(cartWithOneItem));
-      catalogClient.send.mockReturnValueOnce(of({ id: 'prod-1', price: '10.00' }));
-
       await service.createPaymentIntent({
-        cartId: 'cart-1',
-        billingAddress: {
-          street: '1 Rue',
-          city: 'Paris',
-          postalCode: '75001',
-          country: 'FR',
-        },
+        orderId: 'order-1',
+        amount: 10.0,
       });
 
       expect(stripeService.createPaymentIntent).toHaveBeenCalledWith(
@@ -250,7 +143,7 @@ describe('PaymentService', () => {
       const result = await service.createSubscription({
         userId: 'user-1',
         productId: 'prod-1',
-        billingPeriod: 'monthly' as any,
+        billingPeriod: BillingPeriod.MONTHLY,
         billingAddress: {
           street: '1 Rue',
           city: 'Paris',
@@ -283,7 +176,7 @@ describe('PaymentService', () => {
       await service.createSubscription({
         userId: 'user-1',
         productId: 'prod-1',
-        billingPeriod: 'monthly' as any,
+        billingPeriod: BillingPeriod.MONTHLY,
         billingAddress: {
           street: '1 Rue',
           city: 'Paris',
@@ -314,7 +207,7 @@ describe('PaymentService', () => {
       await service.createSubscription({
         userId: 'user-1',
         productId: 'prod-1',
-        billingPeriod: 'yearly' as any,
+        billingPeriod: BillingPeriod.YEARLY,
         billingAddress: {
           street: '1 Rue',
           city: 'Paris',
@@ -344,7 +237,7 @@ describe('PaymentService', () => {
         service.createSubscription({
           userId: 'user-1',
           productId: 'prod-missing',
-          billingPeriod: 'monthly' as any,
+          billingPeriod: BillingPeriod.MONTHLY,
           billingAddress: {
             street: '1 Rue',
             city: 'Paris',
@@ -376,7 +269,7 @@ describe('PaymentService', () => {
         service.createSubscription({
           userId: 'user-1',
           productId: 'prod-1',
-          billingPeriod: 'monthly' as any,
+          billingPeriod: BillingPeriod.MONTHLY,
           billingAddress: {
             street: '1 Rue',
             city: 'Paris',
@@ -398,14 +291,16 @@ describe('PaymentService', () => {
       catalogClient.send.mockReturnValue(of(mockProduct));
       (stripeService.createSubscription as jest.Mock).mockResolvedValueOnce({
         id: 'sub_stripe_new',
-        latest_invoice: { payment_intent: null },
+        latest_invoice: {
+          confirmation_secret: null,
+        },
       });
 
       await expect(
         service.createSubscription({
           userId: 'user-1',
           productId: 'prod-1',
-          billingPeriod: 'monthly' as any,
+          billingPeriod: BillingPeriod.MONTHLY,
           billingAddress: {
             street: '1 Rue',
             city: 'Paris',
@@ -429,7 +324,7 @@ describe('PaymentService', () => {
       await service.createSubscription({
         userId: 'user-1',
         productId: 'prod-1',
-        billingPeriod: 'monthly' as any,
+        billingPeriod: BillingPeriod.MONTHLY,
         billingAddress: {
           street: '1 Rue',
           city: 'Paris',

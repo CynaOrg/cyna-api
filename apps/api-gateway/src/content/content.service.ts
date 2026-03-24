@@ -2,6 +2,14 @@ import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
+import {
+  CreateContactMessageDto,
+  CreateSlideDto,
+  UpdateSlideDto,
+  UpdateHeroTextDto,
+  ContactMessageQueryDto,
+  UpdateContactMessageDto,
+} from './dto';
 
 @Injectable()
 export class ContentService {
@@ -30,7 +38,7 @@ export class ContentService {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.GET_TOP_PRODUCTS, { limit, lang });
   }
 
-  async createContactMessage(dto: any) {
+  async createContactMessage(dto: CreateContactMessageDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.CREATE_CONTACT_MESSAGE, dto);
   }
 
@@ -40,11 +48,11 @@ export class ContentService {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_CAROUSEL, {});
   }
 
-  async adminCreateSlide(dto: any) {
+  async adminCreateSlide(dto: CreateSlideDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_CREATE_SLIDE, dto);
   }
 
-  async adminUpdateSlide(slideId: string, dto: any) {
+  async adminUpdateSlide(slideId: string, dto: UpdateSlideDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_SLIDE, { id: slideId, dto });
   }
 
@@ -58,7 +66,7 @@ export class ContentService {
 
   // ==================== Admin - Hero & Top Products ====================
 
-  async adminUpdateHeroText(dto: any) {
+  async adminUpdateHeroText(dto: UpdateHeroTextDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_HERO_TEXT, dto);
   }
 
@@ -72,11 +80,11 @@ export class ContentService {
 
   // ==================== Admin - Contact Messages ====================
 
-  async adminGetContactMessages(query: any) {
+  async adminGetContactMessages(query: ContactMessageQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_CONTACT_MESSAGES, query);
   }
 
-  async adminUpdateContactMessage(messageId: string, dto: any) {
+  async adminUpdateContactMessage(messageId: string, dto: UpdateContactMessageDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_CONTACT_MESSAGE, {
       id: messageId,
       dto,

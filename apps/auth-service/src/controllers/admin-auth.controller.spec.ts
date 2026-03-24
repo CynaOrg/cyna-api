@@ -6,24 +6,8 @@ import { AdminRole } from '@cyna-api/common';
 describe('AdminAuthController', () => {
   let controller: AdminAuthController;
   let adminAuthService: Partial<AdminAuthService>;
-  let mockContext: {
-    getChannelRef: jest.Mock;
-    getMessage: jest.Mock;
-  };
-  let mockChannel: {
-    ack: jest.Mock;
-  };
 
   beforeEach(async () => {
-    mockChannel = {
-      ack: jest.fn(),
-    };
-
-    mockContext = {
-      getChannelRef: jest.fn().mockReturnValue(mockChannel),
-      getMessage: jest.fn().mockReturnValue({}),
-    };
-
     adminAuthService = {
       adminLogin: jest.fn().mockResolvedValue({
         requires2FA: true,
@@ -32,6 +16,7 @@ describe('AdminAuthController', () => {
       }),
       verify2FA: jest.fn().mockResolvedValue({
         accessToken: 'access-token',
+        refreshToken: 'refresh-token',
         expiresIn: 900,
         admin: {
           id: 'admin-123',
@@ -48,6 +33,7 @@ describe('AdminAuthController', () => {
       }),
       refreshToken: jest.fn().mockResolvedValue({
         accessToken: 'new-access-token',
+        refreshToken: 'new-refresh-token',
         expiresIn: 900,
         admin: {},
       }),
@@ -78,12 +64,11 @@ describe('AdminAuthController', () => {
         password: 'Password123!',
       };
 
-      const result = await controller.adminLogin(dto, mockContext as any);
+      const result = await controller.adminLogin(dto);
 
       expect(result.requires2FA).toBe(true);
       expect(result.tempToken).toBe('temp-token');
       expect(adminAuthService.adminLogin).toHaveBeenCalledWith(dto);
-      expect(mockChannel.ack).toHaveBeenCalled();
     });
   });
 
@@ -94,12 +79,11 @@ describe('AdminAuthController', () => {
         code: '123456',
       };
 
-      const result = await controller.verify2FA(dto, mockContext as any);
+      const result = await controller.verify2FA(dto);
 
       expect(result.accessToken).toBe('access-token');
       expect(result.admin.email).toBe('admin@example.com');
       expect(adminAuthService.verify2FA).toHaveBeenCalledWith(dto);
-      expect(mockChannel.ack).toHaveBeenCalled();
     });
   });
 
@@ -107,12 +91,11 @@ describe('AdminAuthController', () => {
     it('should resend 2FA code', async () => {
       const dto = { tempToken: 'temp-token' };
 
-      const result = await controller.resend2FA(dto, mockContext as any);
+      const result = await controller.resend2FA(dto);
 
       expect(result.requires2FA).toBe(true);
       expect(result.tempToken).toBe('new-temp-token');
       expect(adminAuthService.resend2FA).toHaveBeenCalledWith('temp-token');
-      expect(mockChannel.ack).toHaveBeenCalled();
     });
   });
 
@@ -120,11 +103,10 @@ describe('AdminAuthController', () => {
     it('should refresh admin access token', async () => {
       const dto = { refreshToken: 'refresh-token' };
 
-      const result = await controller.refreshToken(dto, mockContext as any);
+      const result = await controller.refreshToken(dto);
 
       expect(result.accessToken).toBe('new-access-token');
       expect(adminAuthService.refreshToken).toHaveBeenCalledWith('refresh-token');
-      expect(mockChannel.ack).toHaveBeenCalled();
     });
   });
 
@@ -132,11 +114,10 @@ describe('AdminAuthController', () => {
     it('should logout admin', async () => {
       const dto = { adminId: 'admin-123', refreshToken: 'refresh-token' };
 
-      const result = await controller.logout(dto, mockContext as any);
+      const result = await controller.logout(dto);
 
       expect(result.success).toBe(true);
       expect(adminAuthService.logout).toHaveBeenCalledWith('admin-123', 'refresh-token');
-      expect(mockChannel.ack).toHaveBeenCalled();
     });
   });
 });

@@ -66,12 +66,7 @@ export class ErrorResponseDto {
   };
   meta: ApiResponseMetaDto;
 
-  constructor(
-    code: string,
-    message: string,
-    requestId: string,
-    details?: ErrorDetailDto[],
-  ) {
+  constructor(code: string, message: string, requestId: string, details?: ErrorDetailDto[]) {
     this.error = {
       code,
       message,

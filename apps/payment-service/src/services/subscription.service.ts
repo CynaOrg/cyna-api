@@ -101,7 +101,7 @@ export class SubscriptionService {
   }
 
   async syncFromStripe(stripeSubscription: Stripe.Subscription): Promise<Subscription> {
-    let subscription = await this.findByStripeId(stripeSubscription.id);
+    const subscription = await this.findByStripeId(stripeSubscription.id);
     if (!subscription) {
       this.logger.warn(`Subscription ${stripeSubscription.id} not found locally during sync`);
       throw new RpcException({
@@ -122,7 +122,7 @@ export class SubscriptionService {
 
     subscription.status = statusMap[stripeSubscription.status] || subscription.status;
     // current_period_start/end removed from Stripe SDK v20 types but still in API response
-    const sub = stripeSubscription as any;
+    const sub = stripeSubscription as unknown as Record<string, number>;
     if (sub.current_period_start) {
       subscription.currentPeriodStart = new Date(sub.current_period_start * 1000);
     }

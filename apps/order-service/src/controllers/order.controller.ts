@@ -1,6 +1,6 @@
 import { Controller, Logger } from '@nestjs/common';
 import { MessagePattern, EventPattern, Payload, RpcException } from '@nestjs/microservices';
-import { MESSAGE_PATTERNS, EVENT_PATTERNS } from '@cyna-api/common';
+import { MESSAGE_PATTERNS, EVENT_PATTERNS, BillingPeriod } from '@cyna-api/common';
 import { CartService, OrderService } from '../services';
 import { AddCartItemDto, UpdateCartItemDto } from '../dto';
 
@@ -67,7 +67,7 @@ export class OrderController {
         { userId: data.userId, sessionId: data.sessionId },
         data.productId,
         data.dto,
-        data.billingPeriod as any,
+        data.billingPeriod as BillingPeriod | undefined,
       );
     } catch (error) {
       throw this.wrapError(error);
@@ -88,7 +88,7 @@ export class OrderController {
       return await this.cartService.removeItem(
         { userId: data.userId, sessionId: data.sessionId },
         data.productId,
-        data.billingPeriod as any,
+        data.billingPeriod as BillingPeriod | undefined,
       );
     } catch (error) {
       throw this.wrapError(error);
@@ -124,8 +124,8 @@ export class OrderController {
     data: {
       userId?: string;
       cartId: string;
-      billingAddress: Record<string, any>;
-      shippingAddress?: Record<string, any>;
+      billingAddress: Record<string, unknown>;
+      shippingAddress?: Record<string, unknown>;
       email: string;
       stripePaymentIntentId: string;
     },

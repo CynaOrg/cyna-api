@@ -26,7 +26,7 @@ const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
 const ADMIN_REFRESH_TOKEN_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: isProduction,
-  sameSite: isProduction ? ('none' as const) : ('lax' as const),
+  sameSite: 'strict' as const,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: '/',
   ...(cookieDomain ? { domain: cookieDomain } : {}),
@@ -179,7 +179,7 @@ export class AdminAuthController {
     res.clearCookie('admin_refresh_token', {
       httpOnly: true,
       secure: isProduction,
-      sameSite: isProduction ? ('none' as const) : ('lax' as const),
+      sameSite: 'strict' as const,
       path: '/',
     });
 

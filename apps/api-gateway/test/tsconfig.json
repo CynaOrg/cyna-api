@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../../dist/test",
+    "types": ["jest", "node"]
+  },
+  "include": [
+    "./**/*.ts",
+    "../src/**/*.ts",
+    "../../../apps/auth-service/src/**/*.ts",
+    "../../../libs/common/src/**/*.ts",
+    "../../../libs/s3/src/**/*.ts"
+  ]
+}

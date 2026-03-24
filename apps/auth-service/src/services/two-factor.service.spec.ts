@@ -12,7 +12,9 @@ describe('TwoFactorService', () => {
   beforeEach(async () => {
     mockRepository = {
       create: jest.fn().mockImplementation((entity) => entity),
-      save: jest.fn().mockImplementation((entity) => Promise.resolve({ id: 'code-123', ...entity })),
+      save: jest
+        .fn()
+        .mockImplementation((entity) => Promise.resolve({ id: 'code-123', ...entity })),
       findOne: jest.fn(),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
     };

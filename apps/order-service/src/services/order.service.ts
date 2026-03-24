@@ -15,6 +15,19 @@ import { Order } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
 import { CartService } from './cart.service';
 
+interface CatalogProduct {
+  id: string;
+  productType: string;
+  priceMonthly?: number | string;
+  priceYearly?: number | string;
+  priceUnit?: number | string;
+  price?: number | string;
+  nameFr?: string;
+  nameEn?: string;
+  slug?: string;
+  images?: Array<{ imageUrl?: string }>;
+}
+
 @Injectable()
 export class OrderService {
   private readonly logger = new Logger(OrderService.name);
@@ -41,8 +54,8 @@ export class OrderService {
   async createOrderFromCart(data: {
     userId?: string;
     cartId: string;
-    billingAddress: Record<string, any>;
-    shippingAddress?: Record<string, any>;
+    billingAddress: Record<string, unknown>;
+    shippingAddress?: Record<string, unknown>;
     email: string;
     stripePaymentIntentId: string;
   }): Promise<Order> {
@@ -71,7 +84,7 @@ export class OrderService {
     }
 
     // 2. Get products from catalog to calculate prices server-side
-    const productIds = cart.items.map((item: any) => item.productId);
+    const productIds = cart.items.map((item: { productId: string }) => item.productId);
     const products = await Promise.all(
       productIds.map((productId: string) =>
         firstValueFrom(
@@ -98,7 +111,7 @@ export class OrderService {
       ),
     );
 
-    const productMap = new Map(products.map((p: any) => [p.id, p]));
+    const productMap = new Map(products.map((p: CatalogProduct) => [p.id, p]));
 
     // 3. Determine order type and calculate totals
     const productTypes = new Set<string>();
@@ -279,7 +292,7 @@ export class OrderService {
   }
 
   async getOrderById(orderId: string, userId?: string): Promise<Order> {
-    const where: any = { id: orderId };
+    const where: { id: string; userId?: string } = { id: orderId };
     if (userId) {
       where.userId = userId;
     }

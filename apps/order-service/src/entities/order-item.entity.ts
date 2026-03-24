@@ -17,7 +17,7 @@ export class OrderItem extends BaseEntity {
   productId: string;
 
   @Column({ name: 'product_snapshot', type: 'jsonb' })
-  productSnapshot: Record<string, any>;
+  productSnapshot: Record<string, unknown>;
 
   @Column({ type: 'integer', default: 1 })
   quantity: number;

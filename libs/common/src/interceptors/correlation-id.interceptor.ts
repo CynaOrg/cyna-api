@@ -1,16 +1,7 @@
-import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-} from '@nestjs/common';
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { Request, Response } from 'express';
-import {
-  runWithContext,
-  generateCorrelationId,
-  RequestContext,
-} from '@cyna-api/common/logger';
+import { runWithContext, generateCorrelationId, RequestContext } from '@cyna-api/common/logger';
 
 const CORRELATION_ID_HEADER = 'x-correlation-id';
 

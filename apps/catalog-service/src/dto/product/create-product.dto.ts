@@ -56,7 +56,7 @@ export class CreateProductDto {
   @IsNotEmpty({ message: 'validation.slug.required' })
   @IsString()
   @MaxLength(150, { message: 'validation.slug.maxLength' })
-  @Matches(/^[a-z0-9\-]+$/, { message: 'validation.slug.invalid' })
+  @Matches(/^[a-z0-9-]+$/, { message: 'validation.slug.invalid' })
   @Transform(({ value }) => value?.toLowerCase().trim())
   slug: string;
 

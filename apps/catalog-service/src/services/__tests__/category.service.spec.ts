@@ -337,7 +337,7 @@ describe('CategoryService', () => {
       const id = 'cat-uuid-001';
       const category = createMockCategory({
         id,
-        products: [{ id: 'prod-001' } as any],
+        products: [{ id: 'prod-001' } as unknown as import('../../entities').Product],
       });
 
       repository.findOne.mockResolvedValue(category);

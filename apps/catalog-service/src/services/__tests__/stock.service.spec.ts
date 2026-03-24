@@ -1,8 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder, LessThan, IsNull } from 'typeorm';
+import { Repository, SelectQueryBuilder, IsNull } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { RpcException } from '@nestjs/microservices';
 import { StockService } from '../stock.service';
 import { Product, ProductType, StockReservation } from '../../entities';
 import { StockStatus } from '../../dto';
@@ -52,7 +51,7 @@ const createMockProduct = (overrides: Partial<Product> = {}): Product => ({
   displayOrder: 0,
   createdAt: new Date('2024-01-01'),
   updatedAt: new Date('2024-01-01'),
-  category: {} as any,
+  category: {} as unknown as import('../../entities').Category,
   images: [],
   characteristics: [],
   stockReservations: [],
@@ -419,7 +418,7 @@ describe('StockService', () => {
         reservationRepository.findOne.mockResolvedValue(existingReservation);
         reservationRepository.save.mockResolvedValue(updatedReservation);
 
-        const result = await service.reserveStock('prod-uuid-001', 'cart-uuid-001', 5);
+        await service.reserveStock('prod-uuid-001', 'cart-uuid-001', 5);
 
         expect(reservationRepository.save).toHaveBeenCalledWith(
           expect.objectContaining({ quantity: 5 }),
@@ -438,7 +437,7 @@ describe('StockService', () => {
         ];
 
         reservationRepository.find.mockResolvedValue(reservations);
-        reservationRepository.remove.mockResolvedValue(reservations as any);
+        reservationRepository.remove.mockResolvedValue(reservations as unknown as StockReservation);
 
         await service.releaseReservation('cart-uuid-001');
 
@@ -458,7 +457,7 @@ describe('StockService', () => {
         const reservations = [createMockReservation()];
 
         reservationRepository.find.mockResolvedValue(reservations);
-        reservationRepository.remove.mockResolvedValue(reservations as any);
+        reservationRepository.remove.mockResolvedValue(reservations as unknown as StockReservation);
 
         await service.releaseReservation('cart-uuid-001', StockReleaseReason.CHECKOUT_FAILED);
 
@@ -479,7 +478,9 @@ describe('StockService', () => {
 
         reservationRepository.find.mockResolvedValue([reservation]);
         productRepository.save.mockResolvedValue({ ...product, stockQuantity: 90 });
-        reservationRepository.remove.mockResolvedValue([reservation] as any);
+        reservationRepository.remove.mockResolvedValue([
+          reservation,
+        ] as unknown as StockReservation);
 
         await service.confirmReservation('cart-uuid-001');
 
@@ -496,7 +497,7 @@ describe('StockService', () => {
 
         reservationRepository.find.mockResolvedValue(reservations);
         productRepository.save.mockResolvedValue({ ...product, stockQuantity: 95 });
-        reservationRepository.remove.mockResolvedValue(reservations as any);
+        reservationRepository.remove.mockResolvedValue(reservations as unknown as StockReservation);
 
         await service.confirmReservation('cart-uuid-001');
 
@@ -522,7 +523,9 @@ describe('StockService', () => {
 
         reservationRepository.find.mockResolvedValue([reservation]);
         productRepository.save.mockResolvedValue({ ...product, stockQuantity: 5 });
-        reservationRepository.remove.mockResolvedValue([reservation] as any);
+        reservationRepository.remove.mockResolvedValue([
+          reservation,
+        ] as unknown as StockReservation);
 
         await service.confirmReservation('cart-uuid-001');
 
@@ -548,7 +551,9 @@ describe('StockService', () => {
         ];
 
         reservationRepository.find.mockResolvedValue(expiredReservations);
-        reservationRepository.remove.mockResolvedValue(expiredReservations as any);
+        reservationRepository.remove.mockResolvedValue(
+          expiredReservations as unknown as StockReservation,
+        );
 
         const result = await service.cleanupExpiredReservations();
 

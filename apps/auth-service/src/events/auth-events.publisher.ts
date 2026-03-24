@@ -183,10 +183,7 @@ export class AuthEventsPublisher {
           timestamp: new Date(),
         }),
       );
-      this.logger.log(
-        `Emitted password_changed event for user: ${userId}`,
-        'AuthEventsPublisher',
-      );
+      this.logger.log(`Emitted password_changed event for user: ${userId}`, 'AuthEventsPublisher');
     } catch (error) {
       this.logger.error(
         `Failed to emit password_changed event: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -199,15 +196,11 @@ export class AuthEventsPublisher {
   async emitAccountDeleted(data: AccountDeletedEventData): Promise<void> {
     try {
       // Notify notification service for email
-      await firstValueFrom(
-        this.notificationClient.emit(EVENT_PATTERNS.AUTH.ACCOUNT_DELETED, data),
-      );
+      await firstValueFrom(this.notificationClient.emit(EVENT_PATTERNS.AUTH.ACCOUNT_DELETED, data));
 
       // Notify payment service to cancel Stripe subscriptions
       if (data.stripeCustomerId) {
-        await firstValueFrom(
-          this.paymentClient.emit(EVENT_PATTERNS.AUTH.ACCOUNT_DELETED, data),
-        );
+        await firstValueFrom(this.paymentClient.emit(EVENT_PATTERNS.AUTH.ACCOUNT_DELETED, data));
       }
 
       this.logger.log(

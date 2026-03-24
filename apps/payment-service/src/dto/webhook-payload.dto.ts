@@ -1,6 +1,6 @@
 export class WebhookPayloadDto {
   eventId: string;
   eventType: string;
-  data: any;
+  data: Record<string, unknown>;
   created: number;
 }

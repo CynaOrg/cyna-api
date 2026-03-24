@@ -7,6 +7,7 @@ import { ProcessedWebhook } from '../entities/processed-webhook.entity';
 import { SubscriptionService } from './subscription.service';
 import { LicenseService } from './license.service';
 import { WebhookPayloadDto } from '../dto/webhook-payload.dto';
+import Stripe from 'stripe';
 
 @Injectable()
 export class WebhookService {
@@ -90,10 +91,10 @@ export class WebhookService {
     await this.processedWebhookRepository.save(webhook);
   }
 
-  private async handlePaymentIntentSucceeded(data: any): Promise<void> {
-    const paymentIntentId = data.id;
-    const amount = data.amount;
-    const metadata = data.metadata || {};
+  private async handlePaymentIntentSucceeded(data: Record<string, unknown>): Promise<void> {
+    const paymentIntentId = data.id as string;
+    const amount = data.amount as number;
+    const metadata = (data.metadata as Record<string, unknown>) || {};
 
     this.logger.log(`Payment Intent succeeded: ${paymentIntentId}`);
 
@@ -112,21 +113,21 @@ export class WebhookService {
     });
   }
 
-  private async handlePaymentIntentFailed(data: any): Promise<void> {
-    const paymentIntentId = data.id;
-    const lastPaymentError = data.last_payment_error;
+  private async handlePaymentIntentFailed(data: Record<string, unknown>): Promise<void> {
+    const paymentIntentId = data.id as string;
+    const lastPaymentError = data.last_payment_error as Record<string, unknown> | undefined;
 
     this.logger.warn(`Payment Intent failed: ${paymentIntentId}`);
 
     // Emit event for Order Service to cancel the order and release stock
     this.orderClient.emit(EVENT_PATTERNS.PAYMENT.FAILED, {
       paymentIntentId,
-      error: lastPaymentError?.message || 'Payment failed',
+      error: (lastPaymentError?.message as string) || 'Payment failed',
     });
   }
 
-  private async handleInvoicePaid(data: any): Promise<void> {
-    const subscriptionId = data.subscription;
+  private async handleInvoicePaid(data: Record<string, unknown>): Promise<void> {
+    const subscriptionId = data.subscription as string | undefined;
     if (!subscriptionId) return;
 
     this.logger.log(`Invoice paid for subscription: ${subscriptionId}`);
@@ -134,7 +135,10 @@ export class WebhookService {
     // Update subscription period
     const subscription = await this.subscriptionService.findByStripeId(subscriptionId);
     if (subscription) {
-      const periodEnd = data.lines?.data?.[0]?.period?.end;
+      const lines = data.lines as Record<string, unknown> | undefined;
+      const linesData = (lines?.data as Array<Record<string, unknown>>) || [];
+      const period = linesData[0]?.period as Record<string, number> | undefined;
+      const periodEnd = period?.end;
       if (periodEnd) {
         subscription.currentPeriodEnd = new Date(periodEnd * 1000);
         await this.subscriptionService.create(subscription);
@@ -149,8 +153,8 @@ export class WebhookService {
     }
   }
 
-  private async handleInvoicePaymentFailed(data: any): Promise<void> {
-    const subscriptionId = data.subscription;
+  private async handleInvoicePaymentFailed(data: Record<string, unknown>): Promise<void> {
+    const subscriptionId = data.subscription as string | undefined;
     if (!subscriptionId) return;
 
     this.logger.warn(`Invoice payment failed for subscription: ${subscriptionId}`);
@@ -169,21 +173,21 @@ export class WebhookService {
     }
   }
 
-  private async handleSubscriptionCreated(data: any): Promise<void> {
+  private async handleSubscriptionCreated(data: Record<string, unknown>): Promise<void> {
     this.logger.log(`Subscription created on Stripe: ${data.id}`);
 
     this.notificationClient.emit(EVENT_PATTERNS.PAYMENT.SUBSCRIPTION_CREATED, {
-      stripeSubscriptionId: data.id,
-      customerId: data.customer,
+      stripeSubscriptionId: data.id as string,
+      customerId: data.customer as string,
     });
   }
 
-  private async handleSubscriptionUpdated(data: any): Promise<void> {
+  private async handleSubscriptionUpdated(data: Record<string, unknown>): Promise<void> {
     this.logger.log(`Subscription updated on Stripe: ${data.id}`);
 
     // Sync local state from Stripe
     try {
-      await this.subscriptionService.syncFromStripe(data);
+      await this.subscriptionService.syncFromStripe(data as unknown as Stripe.Subscription);
     } catch (error) {
       this.logger.warn(
         `Could not sync subscription ${data.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -191,10 +195,10 @@ export class WebhookService {
     }
   }
 
-  private async handleSubscriptionDeleted(data: any): Promise<void> {
+  private async handleSubscriptionDeleted(data: Record<string, unknown>): Promise<void> {
     this.logger.log(`Subscription deleted on Stripe: ${data.id}`);
 
-    const subscription = await this.subscriptionService.findByStripeId(data.id);
+    const subscription = await this.subscriptionService.findByStripeId(data.id as string);
     if (subscription) {
       subscription.status = SubscriptionStatus.CANCELLED;
       subscription.endedAt = new Date();
@@ -209,16 +213,16 @@ export class WebhookService {
     }
   }
 
-  private async handleChargeRefunded(data: any): Promise<void> {
-    const paymentIntentId = data.payment_intent;
+  private async handleChargeRefunded(data: Record<string, unknown>): Promise<void> {
+    const paymentIntentId = data.payment_intent as string;
 
     this.logger.log(`Charge refunded for payment intent: ${paymentIntentId}`);
 
     // Emit refund event for Order Service
     this.orderClient.emit(EVENT_PATTERNS.PAYMENT.REFUNDED, {
       paymentIntentId,
-      chargeId: data.id,
-      amount: data.amount_refunded,
+      chargeId: data.id as string,
+      amount: data.amount_refunded as number,
     });
   }
 }

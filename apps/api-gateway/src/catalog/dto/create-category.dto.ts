@@ -17,7 +17,7 @@ export class CreateCategoryDto {
   @IsNotEmpty()
   @IsString()
   @MaxLength(100)
-  @Matches(/^[a-z0-9\-]+$/)
+  @Matches(/^[a-z0-9-]+$/)
   @Transform(({ value }) => value?.toLowerCase().trim())
   slug: string;
 

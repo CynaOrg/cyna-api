@@ -66,7 +66,7 @@ export class PaymentService {
     const toEnrich = subscriptions.filter((s) => !s.productName);
     if (toEnrich.length > 0) {
       const productIds = [...new Set(toEnrich.map((s) => s.productId))];
-      const products = new Map<string, any>();
+      const products = new Map<string, Record<string, unknown>>();
 
       for (const productId of productIds) {
         try {
@@ -86,7 +86,7 @@ export class PaymentService {
 
       for (const sub of toEnrich) {
         const product = products.get(sub.productId);
-        const name = product?.nameFr || product?.nameEn;
+        const name = (product?.nameFr as string) || (product?.nameEn as string);
         if (name) {
           sub.productName = name;
           // Fire-and-forget DB update
@@ -207,11 +207,16 @@ export class PaymentService {
       stripeSubscriptionId: stripeSubscription.id,
       stripeCustomerId,
       stripePriceId,
-      currentPeriodStart: (stripeSubscription as any).current_period_start
-        ? new Date((stripeSubscription as any).current_period_start * 1000)
+      currentPeriodStart: (stripeSubscription as unknown as Record<string, number>)
+        .current_period_start
+        ? new Date(
+            (stripeSubscription as unknown as Record<string, number>).current_period_start * 1000,
+          )
         : new Date(),
-      currentPeriodEnd: (stripeSubscription as any).current_period_end
-        ? new Date((stripeSubscription as any).current_period_end * 1000)
+      currentPeriodEnd: (stripeSubscription as unknown as Record<string, number>).current_period_end
+        ? new Date(
+            (stripeSubscription as unknown as Record<string, number>).current_period_end * 1000,
+          )
         : new Date(),
     });
 

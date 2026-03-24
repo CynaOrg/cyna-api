@@ -59,7 +59,7 @@ export class CreateProductDto {
   @IsNotEmpty()
   @IsString()
   @MaxLength(150)
-  @Matches(/^[a-z0-9\-]+$/)
+  @Matches(/^[a-z0-9-]+$/)
   @Transform(({ value }) => value?.toLowerCase().trim())
   slug: string;
 

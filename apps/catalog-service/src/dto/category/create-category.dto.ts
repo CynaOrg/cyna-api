@@ -15,7 +15,7 @@ export class CreateCategoryDto {
   @IsNotEmpty({ message: 'validation.slug.required' })
   @IsString()
   @MaxLength(100, { message: 'validation.slug.maxLength' })
-  @Matches(/^[a-z0-9\-]+$/, { message: 'validation.slug.invalid' })
+  @Matches(/^[a-z0-9-]+$/, { message: 'validation.slug.invalid' })
   @Transform(({ value }) => value?.toLowerCase().trim())
   slug: string;
 

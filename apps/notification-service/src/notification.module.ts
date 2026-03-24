@@ -5,12 +5,7 @@ import { HandlersModule } from './handlers/handlers.module';
 import { HealthController } from './health/health.controller';
 
 @Module({
-  imports: [
-    CynaConfigModule,
-    LoggerModule,
-    EmailModule,
-    HandlersModule,
-  ],
+  imports: [CynaConfigModule, LoggerModule, EmailModule, HandlersModule],
   controllers: [HealthController],
 })
 export class NotificationModule {}

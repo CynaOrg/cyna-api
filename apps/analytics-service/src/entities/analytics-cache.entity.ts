@@ -8,7 +8,7 @@ export class AnalyticsCache extends BaseEntity {
   metricKey: string;
 
   @Column({ name: 'metric_value', type: 'jsonb' })
-  metricValue: Record<string, any>;
+  metricValue: Record<string, unknown>;
 
   @Column({ name: 'calculated_at', type: 'timestamptz' })
   calculatedAt: Date;

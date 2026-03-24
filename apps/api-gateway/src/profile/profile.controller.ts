@@ -11,7 +11,12 @@ import {
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { ProfileService } from './profile.service';
-import { UpdateProfileDto, UpdatePasswordDto, UpdateLanguageDto, DeleteAccountDto } from '@cyna-api/common';
+import {
+  UpdateProfileDto,
+  UpdatePasswordDto,
+  UpdateLanguageDto,
+  DeleteAccountDto,
+} from '@cyna-api/common';
 import { JwtAuthGuard } from '../auth/guards';
 import { CurrentUser } from '../auth/decorators';
 

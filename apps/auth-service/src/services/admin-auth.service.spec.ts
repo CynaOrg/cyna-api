@@ -8,6 +8,7 @@ import { TokenService } from './token.service';
 import { TwoFactorService } from './two-factor.service';
 import { AuthEventsPublisher } from '../events/auth-events.publisher';
 import { Admin } from '../entities/admin.entity';
+import { User } from '../entities/user.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
 import { CynaLoggerService, AdminRole } from '@cyna-api/common';
 
@@ -82,6 +83,15 @@ describe('AdminAuthService', () => {
         {
           provide: getRepositoryToken(Admin),
           useValue: adminRepository,
+        },
+        {
+          provide: getRepositoryToken(User),
+          useValue: {
+            findOne: jest.fn(),
+            save: jest.fn(),
+            createQueryBuilder: jest.fn(),
+            update: jest.fn(),
+          },
         },
         {
           provide: getRepositoryToken(RefreshToken),

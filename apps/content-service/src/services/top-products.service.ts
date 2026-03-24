@@ -13,7 +13,6 @@ import {
   SERVICE_NAMES,
   MESSAGE_PATTERNS,
 } from '@cyna-api/common';
-import { RpcException } from '@nestjs/microservices';
 import { TopProductConfig } from '../entities';
 import { UpdateTopProductsDto } from '../dto';
 
@@ -73,13 +72,19 @@ export class TopProductsService {
     );
   }
 
-  async getTopServicesWithDetails(): Promise<{ config: TopProductConfig; products: any[] }> {
+  async getTopServicesWithDetails(): Promise<{
+    config: TopProductConfig;
+    products: Record<string, unknown>[];
+  }> {
     const config = await this.getTopServices();
     const products = await this.resolveProductDetails(config.productIds);
     return { config, products };
   }
 
-  async getTopProductsWithDetails(): Promise<{ config: TopProductConfig; products: any[] }> {
+  async getTopProductsWithDetails(): Promise<{
+    config: TopProductConfig;
+    products: Record<string, unknown>[];
+  }> {
     const config = await this.getTopProducts();
     const products = await this.resolveProductDetails(config.productIds);
     return { config, products };
@@ -129,12 +134,12 @@ export class TopProductsService {
     return config;
   }
 
-  private async resolveProductDetails(productIds: string[]): Promise<any[]> {
+  private async resolveProductDetails(productIds: string[]): Promise<Record<string, unknown>[]> {
     if (!productIds || productIds.length === 0) {
       return [];
     }
 
-    const products: any[] = [];
+    const products: Record<string, unknown>[] = [];
 
     for (const productId of productIds) {
       try {

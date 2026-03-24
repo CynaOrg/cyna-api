@@ -94,8 +94,7 @@ export class AdminAuthController {
     if (result.refreshToken) {
       res.cookie('admin_refresh_token', result.refreshToken, ADMIN_REFRESH_TOKEN_COOKIE_OPTIONS);
       // Return response without refreshToken in body
-      const { refreshToken, ...responseWithoutToken } = result;
-      return responseWithoutToken;
+      delete result.refreshToken;
     }
 
     return result;
@@ -150,8 +149,7 @@ export class AdminAuthController {
     if (result.refreshToken) {
       res.cookie('admin_refresh_token', result.refreshToken, ADMIN_REFRESH_TOKEN_COOKIE_OPTIONS);
       // Return response without refreshToken in body
-      const { refreshToken: _, ...responseWithoutToken } = result;
-      return responseWithoutToken;
+      delete result.refreshToken;
     }
 
     return result;

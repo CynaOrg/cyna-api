@@ -76,7 +76,8 @@ export class AnalyticsAdminController {
   @ApiResponse({ status: 200, description: 'CSV file' })
   async exportSales(@Query() query: ExportQueryDto, @Res() res: Response) {
     const result = await this.analyticsService.exportSales(query);
-    const csv = (result as any)?.csv || (result as any)?.data || '';
+    const csv =
+      (result as Record<string, unknown>)?.csv || (result as Record<string, unknown>)?.data || '';
     const filename = `sales-export-${new Date().toISOString().split('T')[0]}.csv`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -88,7 +89,8 @@ export class AnalyticsAdminController {
   @ApiResponse({ status: 200, description: 'CSV file' })
   async exportOrders(@Query() query: ExportQueryDto, @Res() res: Response) {
     const result = await this.analyticsService.exportOrders(query);
-    const csv = (result as any)?.csv || (result as any)?.data || '';
+    const csv =
+      (result as Record<string, unknown>)?.csv || (result as Record<string, unknown>)?.data || '';
     const filename = `orders-export-${new Date().toISOString().split('T')[0]}.csv`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -100,7 +102,8 @@ export class AnalyticsAdminController {
   @ApiResponse({ status: 200, description: 'CSV file' })
   async exportSubscriptions(@Query() query: ExportQueryDto, @Res() res: Response) {
     const result = await this.analyticsService.exportSubscriptions(query);
-    const csv = (result as any)?.csv || (result as any)?.data || '';
+    const csv =
+      (result as Record<string, unknown>)?.csv || (result as Record<string, unknown>)?.data || '';
     const filename = `subscriptions-export-${new Date().toISOString().split('T')[0]}.csv`;
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

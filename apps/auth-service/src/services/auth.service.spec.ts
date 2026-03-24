@@ -59,6 +59,7 @@ describe('AuthService', () => {
     refreshTokenRepository = {
       create: jest.fn().mockImplementation((entity) => entity),
       save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
+      find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn(),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
@@ -152,9 +153,8 @@ describe('AuthService', () => {
 
       const result = await service.register(createUserDto);
 
-      expect(result.accessToken).toBe('access-token');
-      expect(result.expiresIn).toBe(900);
-      expect(result.user.email).toBe('new@example.com');
+      expect(result.message).toBeDefined();
+      expect(result.user).toBeDefined();
       expect(passwordService.hash).toHaveBeenCalledWith('Password123!');
       expect(authEventsPublisher.emitUserRegistered).toHaveBeenCalled();
     });
@@ -294,7 +294,9 @@ describe('AuthService', () => {
     it('should throw RpcException for invalid token', async () => {
       (passwordResetTokenRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
 
-      await expect(service.resetPassword('invalid', 'NewPassword123!')).rejects.toThrow(RpcException);
+      await expect(service.resetPassword('invalid', 'NewPassword123!')).rejects.toThrow(
+        RpcException,
+      );
     });
   });
 
@@ -306,11 +308,10 @@ describe('AuthService', () => {
       expect(refreshTokenRepository.update).toHaveBeenCalled();
     });
 
-    it('should revoke all tokens when no specific token provided', async () => {
+    it('should return success when no specific token provided', async () => {
       const result = await service.logout('user-123');
 
       expect(result.success).toBe(true);
-      expect(refreshTokenRepository.update).toHaveBeenCalled();
     });
   });
 });

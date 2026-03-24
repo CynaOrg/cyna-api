@@ -6,6 +6,7 @@ import { SubscriptionService } from './subscription.service';
 import { StripeService } from './stripe.service';
 import { Subscription } from '../entities/subscription.entity';
 import { SubscriptionStatus, BillingPeriod } from '@cyna-api/common';
+import Stripe from 'stripe';
 
 describe('SubscriptionService', () => {
   let service: SubscriptionService;
@@ -194,7 +195,7 @@ describe('SubscriptionService', () => {
         fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(RpcException);
-        const rpcError = (error as RpcException).getError() as any;
+        const rpcError = (error as RpcException).getError() as Record<string, unknown>;
         expect(rpcError.code).toBe('SUBSCRIPTION_FORBIDDEN');
         expect(rpcError.statusCode).toBe(403);
       }
@@ -210,7 +211,7 @@ describe('SubscriptionService', () => {
       ended_at: null,
       current_period_start: Math.floor(Date.now() / 1000),
       current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 3600,
-    } as any;
+    } as unknown as Stripe.Subscription;
 
     it('should sync subscription status from Stripe', async () => {
       (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({ ...mockSubscription });
@@ -230,7 +231,7 @@ describe('SubscriptionService', () => {
         canceled_at: Math.floor(Date.now() / 1000),
       };
 
-      const result = await service.syncFromStripe(canceledSub as any);
+      const result = await service.syncFromStripe(canceledSub as unknown as Stripe.Subscription);
 
       expect(result.status).toBe(SubscriptionStatus.CANCELLED);
       expect(result.cancelledAt).toBeInstanceOf(Date);
@@ -240,7 +241,7 @@ describe('SubscriptionService', () => {
       (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({ ...mockSubscription });
       const pastDueSub = { ...mockStripeSubscription, status: 'past_due' };
 
-      const result = await service.syncFromStripe(pastDueSub as any);
+      const result = await service.syncFromStripe(pastDueSub as unknown as Stripe.Subscription);
 
       expect(result.status).toBe(SubscriptionStatus.PAST_DUE);
     });
@@ -262,7 +263,7 @@ describe('SubscriptionService', () => {
         ended_at: Math.floor(Date.now() / 1000),
       };
 
-      const result = await service.syncFromStripe(endedSub as any);
+      const result = await service.syncFromStripe(endedSub as unknown as Stripe.Subscription);
 
       expect(result.endedAt).toBeInstanceOf(Date);
     });

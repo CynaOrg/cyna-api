@@ -50,10 +50,10 @@ export class Order extends BaseEntity {
   currency: string;
 
   @Column({ name: 'billing_address_snapshot', type: 'jsonb' })
-  billingAddressSnapshot: Record<string, any>;
+  billingAddressSnapshot: Record<string, unknown>;
 
   @Column({ name: 'shipping_address_snapshot', type: 'jsonb', nullable: true })
-  shippingAddressSnapshot: Record<string, any> | null;
+  shippingAddressSnapshot: Record<string, unknown> | null;
 
   @Column({ name: 'stripe_payment_intent_id', type: 'varchar', length: 255, nullable: true })
   stripePaymentIntentId: string | null;

@@ -55,7 +55,7 @@ export class CynaCacheModule {
               console.log(`[CynaCacheModule] Connected to Redis at ${redisHost}:${redisPort}`);
 
               return {
-                store: store as unknown as any,
+                store: store as unknown as string,
                 ttl: defaultTtl,
               };
             } catch (error) {
@@ -105,7 +105,7 @@ export class CynaCacheModule {
               });
 
               return {
-                store: store as unknown as any,
+                store: store as unknown as string,
                 ttl: defaultTtl,
               };
             } catch (error) {

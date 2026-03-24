@@ -9,9 +9,7 @@ import { I18nContext } from 'nestjs-i18n';
  * @Get('products')
  * getProducts(@CurrentLang() lang: string) { ... }
  */
-export const CurrentLang = createParamDecorator(
-  (data: unknown, ctx: ExecutionContext): string => {
-    const i18nContext = I18nContext.current(ctx);
-    return i18nContext?.lang || 'fr';
-  },
-);
+export const CurrentLang = createParamDecorator((data: unknown, ctx: ExecutionContext): string => {
+  const i18nContext = I18nContext.current(ctx);
+  return i18nContext?.lang || 'fr';
+});

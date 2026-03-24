@@ -60,7 +60,7 @@ export class AdminAuthService {
       });
     }
 
-    const { code, expiresAt } = await this.twoFactorService.createCode(admin.id);
+    const { code } = await this.twoFactorService.createCode(admin.id);
 
     await this.authEventsPublisher.emitAdmin2FACodeRequested({
       adminId: admin.id,

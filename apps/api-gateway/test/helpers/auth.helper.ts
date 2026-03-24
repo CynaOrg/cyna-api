@@ -11,12 +11,18 @@ export const DEFAULT_USER = {
   lastName: 'User',
 };
 
-export const DEFAULT_ADMIN = {
+export const DEFAULT_ADMIN: {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+} = {
   email: 'admin@cyna.it',
   password: 'AdminPass123!',
   firstName: 'Admin',
   lastName: 'Test',
-  role: 'super_admin' as const,
+  role: 'super_admin',
 };
 
 /**

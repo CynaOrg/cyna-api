@@ -24,7 +24,7 @@ describe('Rate Limiting (e2e)', () => {
   let eventsSpy: MockAuthEventsPublisher;
 
   beforeAll(async () => {
-    const testApp = await setupTestApp();
+    const testApp = await setupTestApp({ enableThrottling: true });
     app = testApp.app;
     dataSource = testApp.dataSource;
     eventsSpy = testApp.eventsSpy;

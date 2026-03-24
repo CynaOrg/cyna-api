@@ -1,8 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, INestMicroservice, ValidationPipe } from '@nestjs/common';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { ThrottlerStorage as ThrottlerStorageInterface } from '@nestjs/throttler/dist/throttler-storage.interface';
+import { ThrottlerStorageRecord } from '@nestjs/throttler/dist/throttler-storage-record.interface';
 import * as cookieParser from 'cookie-parser';
 import { DataSource } from 'typeorm';
+import { TransformInterceptor } from '@cyna-api/common';
 import { GatewayModule } from '../src/gateway.module';
 import { AuthModule } from '../../auth-service/src/auth.module';
 import { AuthEventsPublisher } from '../../auth-service/src/events/auth-events.publisher';
@@ -11,6 +14,21 @@ import {
   PasswordResetRequestedEventData,
   Admin2FACodeRequestedEventData,
 } from '../../auth-service/src/events/auth-events.publisher';
+
+/**
+ * A mock storage that never reports enough hits to trigger throttling.
+ */
+class NoopThrottlerStorage implements ThrottlerStorageInterface {
+  async increment(
+    _key: string,
+    _ttl: number,
+    _limit: number,
+    _blockDuration: number,
+    _throttlerName: string,
+  ): Promise<ThrottlerStorageRecord> {
+    return { totalHits: 0, timeToExpire: 0, isBlocked: false, timeToBlockExpire: 0 };
+  }
+}
 
 /**
  * Captured event data from the AuthEventsPublisher spy.
@@ -128,11 +146,17 @@ let authMicroservice: INestMicroservice;
 let dataSource: DataSource;
 let eventsSpy: MockAuthEventsPublisher;
 
-export async function setupTestApp(): Promise<{
+export interface SetupOptions {
+  /** When true, keeps the real ThrottlerModule limits. Defaults to false (throttling disabled). */
+  enableThrottling?: boolean;
+}
+
+export async function setupTestApp(options?: SetupOptions): Promise<{
   app: INestApplication;
   dataSource: DataSource;
   eventsSpy: MockAuthEventsPublisher;
 }> {
+  const { enableThrottling = false } = options || {};
   const mockEventsPublisher = new MockAuthEventsPublisher();
 
   // 1. Bootstrap Auth Service microservice
@@ -157,9 +181,17 @@ export async function setupTestApp(): Promise<{
   await authMicroservice.listen();
 
   // 2. Bootstrap API Gateway HTTP app
-  const gatewayModule: TestingModule = await Test.createTestingModule({
+  const gatewayBuilder = Test.createTestingModule({
     imports: [GatewayModule],
-  }).compile();
+  });
+
+  // Disable throttling for all tests except rate-limiting tests
+  // by replacing the storage with a no-op implementation.
+  if (!enableThrottling) {
+    gatewayBuilder.overrideProvider(ThrottlerStorageInterface).useClass(NoopThrottlerStorage);
+  }
+
+  const gatewayModule: TestingModule = await gatewayBuilder.compile();
 
   app = gatewayModule.createNestApplication();
 
@@ -175,6 +207,7 @@ export async function setupTestApp(): Promise<{
       },
     }),
   );
+  app.useGlobalInterceptors(new TransformInterceptor());
 
   await app.init();
 

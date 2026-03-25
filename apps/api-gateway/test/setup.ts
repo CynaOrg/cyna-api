@@ -423,10 +423,7 @@ export async function setupTestApp(options?: SetupOptions): Promise<{
   // -----------------------------------------------------------------------
   const orderModule: TestingModule = await Test.createTestingModule({
     imports: [OrderModule],
-  })
-    .overrideProvider(SERVICE_NAMES.CATALOG)
-    .useValue(mockClientProxy)
-    .compile();
+  }).compile();
 
   orderMicroservice = orderModule.createNestMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
@@ -452,10 +449,6 @@ export async function setupTestApp(options?: SetupOptions): Promise<{
     .overrideProvider(SERVICE_NAMES.ORDER)
     .useValue(mockClientProxy)
     .overrideProvider(SERVICE_NAMES.NOTIFICATION)
-    .useValue(mockClientProxy)
-    .overrideProvider(SERVICE_NAMES.CATALOG)
-    .useValue(mockClientProxy)
-    .overrideProvider(SERVICE_NAMES.AUTH)
     .useValue(mockClientProxy)
     .compile();
 

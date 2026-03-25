@@ -1,11 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, INestMicroservice, ValidationPipe } from '@nestjs/common';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { MicroserviceOptions, Transport, ClientProxy } from '@nestjs/microservices';
 import { ThrottlerStorage as ThrottlerStorageInterface } from '@nestjs/throttler/dist/throttler-storage.interface';
 import { ThrottlerStorageRecord } from '@nestjs/throttler/dist/throttler-storage-record.interface';
 import * as cookieParser from 'cookie-parser';
 import { DataSource } from 'typeorm';
-import { TransformInterceptor } from '@cyna-api/common';
+import { of } from 'rxjs';
+import Stripe from 'stripe';
+import { TransformInterceptor, SERVICE_NAMES } from '@cyna-api/common';
+import { S3Service } from '@cyna-api/s3';
 import { GatewayModule } from '../src/gateway.module';
 import { AuthModule } from '../../auth-service/src/auth.module';
 import { AuthEventsPublisher } from '../../auth-service/src/events/auth-events.publisher';
@@ -14,6 +17,198 @@ import {
   PasswordResetRequestedEventData,
   Admin2FACodeRequestedEventData,
 } from '../../auth-service/src/events/auth-events.publisher';
+import { CatalogModule } from '../../catalog-service/src/catalog.module';
+import { CatalogEventsPublisher } from '../../catalog-service/src/events';
+import { OrderModule } from '../../order-service/src/order.module';
+import { PaymentModule } from '../../payment-service/src/payment.module';
+import { StripeService } from '../../payment-service/src/services/stripe.service';
+
+// ---------------------------------------------------------------------------
+// Mock ClientProxy – absorbs send() / emit() without connecting to RabbitMQ
+// ---------------------------------------------------------------------------
+
+class MockClientProxy {
+  emit(): ReturnType<ClientProxy['emit']> {
+    return of(undefined);
+  }
+
+  send(): ReturnType<ClientProxy['send']> {
+    return of(undefined);
+  }
+
+  async connect(): Promise<void> {
+    /* noop */
+  }
+
+  async close(): Promise<void> {
+    /* noop */
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mock S3Service – no real S3/R2 calls in E2E tests
+// ---------------------------------------------------------------------------
+
+class MockS3Service {
+  async generatePresignedPutUrl(
+    _key: string,
+    _contentType: string,
+    _expiresIn?: number,
+  ): Promise<{ url: string; expiresAt: Date }> {
+    return { url: 'https://mock-s3.test/presigned', expiresAt: new Date(Date.now() + 900_000) };
+  }
+
+  async deleteObject(_key: string): Promise<void> {
+    /* noop */
+  }
+
+  getPublicUrl(key: string): string {
+    return `https://mock-s3.test/${key}`;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mock CatalogEventsPublisher – captures catalog events without RabbitMQ
+// ---------------------------------------------------------------------------
+
+class MockCatalogEventsPublisher {
+  async emitProductCreated(): Promise<void> {
+    /* noop */
+  }
+  async emitProductUpdated(): Promise<void> {
+    /* noop */
+  }
+  async emitProductDeleted(): Promise<void> {
+    /* noop */
+  }
+  async emitStockReserved(): Promise<void> {
+    /* noop */
+  }
+  async emitStockReleased(): Promise<void> {
+    /* noop */
+  }
+  async emitStockConfirmed(): Promise<void> {
+    /* noop */
+  }
+  async emitStockLow(): Promise<void> {
+    /* noop */
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Mock StripeService – no real Stripe API calls in E2E tests
+// ---------------------------------------------------------------------------
+
+export class MockStripeService {
+  async createPaymentIntent(
+    amount: number,
+    currency: string,
+    metadata: Record<string, string>,
+  ): Promise<Stripe.PaymentIntent> {
+    return {
+      id: `pi_mock_${Date.now()}`,
+      object: 'payment_intent',
+      amount,
+      currency,
+      metadata,
+      status: 'requires_payment_method',
+      client_secret: `pi_mock_${Date.now()}_secret_test`,
+      payment_method_types: ['card'],
+    } as unknown as Stripe.PaymentIntent;
+  }
+
+  async createCustomer(
+    email: string,
+    name: string,
+    metadata?: Record<string, string>,
+  ): Promise<Stripe.Customer> {
+    return {
+      id: `cus_mock_${Date.now()}`,
+      object: 'customer',
+      email,
+      name,
+      metadata: metadata || {},
+    } as unknown as Stripe.Customer;
+  }
+
+  async createSubscription(
+    customerId: string,
+    priceId: string,
+    metadata: Record<string, string>,
+  ): Promise<Stripe.Subscription> {
+    return {
+      id: `sub_mock_${Date.now()}`,
+      object: 'subscription',
+      customer: customerId,
+      items: { data: [{ price: { id: priceId } }] },
+      status: 'incomplete',
+      metadata,
+      latest_invoice: {
+        confirmation_secret: { client_secret: `seti_mock_secret_${Date.now()}` },
+      },
+    } as unknown as Stripe.Subscription;
+  }
+
+  async cancelSubscription(
+    subscriptionId: string,
+    cancelAtPeriodEnd: boolean,
+  ): Promise<Stripe.Subscription> {
+    return {
+      id: subscriptionId,
+      object: 'subscription',
+      status: cancelAtPeriodEnd ? 'active' : 'canceled',
+      cancel_at_period_end: cancelAtPeriodEnd,
+    } as unknown as Stripe.Subscription;
+  }
+
+  async updateSubscription(
+    subscriptionId: string,
+    _params: Stripe.SubscriptionUpdateParams,
+  ): Promise<Stripe.Subscription> {
+    return {
+      id: subscriptionId,
+      object: 'subscription',
+      status: 'active',
+    } as unknown as Stripe.Subscription;
+  }
+
+  constructWebhookEvent(_rawBody: Buffer, _signature: string, _secret: string): Stripe.Event {
+    return {
+      id: `evt_mock_${Date.now()}`,
+      object: 'event',
+      type: 'payment_intent.succeeded',
+      data: { object: {} },
+    } as unknown as Stripe.Event;
+  }
+
+  async getSubscription(subscriptionId: string): Promise<Stripe.Subscription> {
+    return {
+      id: subscriptionId,
+      object: 'subscription',
+      status: 'active',
+    } as unknown as Stripe.Subscription;
+  }
+
+  async getInvoice(invoiceId: string): Promise<Stripe.Invoice> {
+    return {
+      id: invoiceId,
+      object: 'invoice',
+      status: 'paid',
+    } as unknown as Stripe.Invoice;
+  }
+
+  async getPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
+    return {
+      id: paymentIntentId,
+      object: 'payment_intent',
+      status: 'succeeded',
+    } as unknown as Stripe.PaymentIntent;
+  }
+
+  async listActiveSubscriptions(_customerId: string): Promise<Stripe.Subscription[]> {
+    return [];
+  }
+}
 
 /**
  * A mock storage that never reports enough hits to trigger throttling.
@@ -143,7 +338,13 @@ export class MockAuthEventsPublisher {
 
 let app: INestApplication;
 let authMicroservice: INestMicroservice;
+let catalogMicroservice: INestMicroservice;
+let orderMicroservice: INestMicroservice;
+let paymentMicroservice: INestMicroservice;
 let dataSource: DataSource;
+let catalogDataSource: DataSource;
+let orderDataSource: DataSource;
+let paymentDataSource: DataSource;
 let eventsSpy: MockAuthEventsPublisher;
 
 export interface SetupOptions {
@@ -151,15 +352,23 @@ export interface SetupOptions {
   enableThrottling?: boolean;
 }
 
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
+
 export async function setupTestApp(options?: SetupOptions): Promise<{
   app: INestApplication;
   dataSource: DataSource;
+  catalogDataSource: DataSource;
+  orderDataSource: DataSource;
+  paymentDataSource: DataSource;
   eventsSpy: MockAuthEventsPublisher;
 }> {
   const { enableThrottling = false } = options || {};
   const mockEventsPublisher = new MockAuthEventsPublisher();
+  const mockClientProxy = new MockClientProxy();
 
+  // -----------------------------------------------------------------------
   // 1. Bootstrap Auth Service microservice
+  // -----------------------------------------------------------------------
   const authModule: TestingModule = await Test.createTestingModule({
     imports: [AuthModule],
   })
@@ -170,7 +379,7 @@ export async function setupTestApp(options?: SetupOptions): Promise<{
   authMicroservice = authModule.createNestMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
-      urls: [process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672'],
+      urls: [RABBITMQ_URL],
       queue: 'auth.queue',
       queueOptions: { durable: true },
       noAck: true,
@@ -180,7 +389,85 @@ export async function setupTestApp(options?: SetupOptions): Promise<{
 
   await authMicroservice.listen();
 
-  // 2. Bootstrap API Gateway HTTP app
+  // -----------------------------------------------------------------------
+  // 2. Bootstrap Catalog Service microservice
+  // -----------------------------------------------------------------------
+  const catalogModule: TestingModule = await Test.createTestingModule({
+    imports: [CatalogModule],
+  })
+    .overrideProvider(CatalogEventsPublisher)
+    .useValue(new MockCatalogEventsPublisher())
+    .overrideProvider(S3Service)
+    .useValue(new MockS3Service())
+    .overrideProvider(SERVICE_NAMES.NOTIFICATION)
+    .useValue(mockClientProxy)
+    .overrideProvider(SERVICE_NAMES.ANALYTICS)
+    .useValue(mockClientProxy)
+    .compile();
+
+  catalogMicroservice = catalogModule.createNestMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [RABBITMQ_URL],
+      queue: 'catalog.queue',
+      queueOptions: { durable: true },
+      noAck: true,
+      prefetchCount: 10,
+    },
+  });
+
+  await catalogMicroservice.listen();
+
+  // -----------------------------------------------------------------------
+  // 3. Bootstrap Order Service microservice
+  // -----------------------------------------------------------------------
+  const orderModule: TestingModule = await Test.createTestingModule({
+    imports: [OrderModule],
+  }).compile();
+
+  orderMicroservice = orderModule.createNestMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [RABBITMQ_URL],
+      queue: 'order.queue',
+      queueOptions: { durable: true },
+      noAck: true,
+      prefetchCount: 10,
+    },
+  });
+
+  await orderMicroservice.listen();
+
+  // -----------------------------------------------------------------------
+  // 4. Bootstrap Payment Service microservice
+  // -----------------------------------------------------------------------
+  const paymentModule: TestingModule = await Test.createTestingModule({
+    imports: [PaymentModule],
+  })
+    .overrideProvider(StripeService)
+    .useValue(new MockStripeService())
+    .overrideProvider(SERVICE_NAMES.ORDER)
+    .useValue(mockClientProxy)
+    .overrideProvider(SERVICE_NAMES.NOTIFICATION)
+    .useValue(mockClientProxy)
+    .compile();
+
+  paymentMicroservice = paymentModule.createNestMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [RABBITMQ_URL],
+      queue: 'payment.queue',
+      queueOptions: { durable: true },
+      noAck: true,
+      prefetchCount: 10,
+    },
+  });
+
+  await paymentMicroservice.listen();
+
+  // -----------------------------------------------------------------------
+  // 5. Bootstrap API Gateway HTTP app
+  // -----------------------------------------------------------------------
   const gatewayBuilder = Test.createTestingModule({
     imports: [GatewayModule],
   });
@@ -211,14 +498,22 @@ export async function setupTestApp(options?: SetupOptions): Promise<{
 
   await app.init();
 
-  // 3. Get DataSource for direct DB access in tests
+  // -----------------------------------------------------------------------
+  // 6. Get DataSources for direct DB access in tests
+  // -----------------------------------------------------------------------
   dataSource = authModule.get<DataSource>(DataSource);
+  catalogDataSource = catalogModule.get<DataSource>(DataSource);
+  orderDataSource = orderModule.get<DataSource>(DataSource);
+  paymentDataSource = paymentModule.get<DataSource>(DataSource);
   eventsSpy = mockEventsPublisher;
 
-  return { app, dataSource, eventsSpy };
+  return { app, dataSource, catalogDataSource, orderDataSource, paymentDataSource, eventsSpy };
 }
 
 export async function teardownTestApp(): Promise<void> {
   if (app) await app.close();
+  if (paymentMicroservice) await paymentMicroservice.close();
+  if (orderMicroservice) await orderMicroservice.close();
+  if (catalogMicroservice) await catalogMicroservice.close();
   if (authMicroservice) await authMicroservice.close();
 }

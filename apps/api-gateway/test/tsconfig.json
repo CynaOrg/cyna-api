@@ -8,6 +8,9 @@
     "./**/*.ts",
     "../src/**/*.ts",
     "../../../apps/auth-service/src/**/*.ts",
+    "../../../apps/catalog-service/src/**/*.ts",
+    "../../../apps/order-service/src/**/*.ts",
+    "../../../apps/payment-service/src/**/*.ts",
     "../../../libs/common/src/**/*.ts",
     "../../../libs/s3/src/**/*.ts"
   ]

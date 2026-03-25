@@ -10,6 +10,7 @@
     "^@cyna-api/common(.*)$": "<rootDir>/../../../libs/common/src$1",
     "^@cyna-api/s3(.*)$": "<rootDir>/../../../libs/s3/src$1"
   },
+  "setupFiles": ["./set-env.ts"],
   "testTimeout": 30000,
   "maxWorkers": 1
 }

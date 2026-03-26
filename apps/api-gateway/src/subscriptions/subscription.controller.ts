@@ -67,7 +67,7 @@ export class SubscriptionController {
           billingAddress: body.billingAddress,
         })
         .pipe(
-          timeout(10000),
+          timeout(15000),
           retry(1),
           catchError((err) => rpcToHttpError(err)),
         ),

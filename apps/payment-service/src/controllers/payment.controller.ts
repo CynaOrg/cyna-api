@@ -1,12 +1,5 @@
 import { Controller, Logger } from '@nestjs/common';
-import {
-  MessagePattern,
-  EventPattern,
-  Payload,
-  Ctx,
-  RmqContext,
-  RpcException,
-} from '@nestjs/microservices';
+import { MessagePattern, EventPattern, Payload, RpcException } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS, EVENT_PATTERNS } from '@cyna-api/common';
 import { PaymentService } from '../services/payment.service';
 import { SubscriptionService } from '../services/subscription.service';
@@ -92,11 +85,7 @@ export class PaymentController {
   @EventPattern(EVENT_PATTERNS.AUTH.ACCOUNT_DELETED)
   async handleAccountDeleted(
     @Payload() data: { userId: string; stripeCustomerId?: string },
-    @Ctx() context: RmqContext,
   ): Promise<void> {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
     this.logger.log(
       `Processing account_deleted event for user: ${data.userId}`,
       'PaymentController',
@@ -117,15 +106,12 @@ export class PaymentController {
           'PaymentController',
         );
       }
-      channel.ack(originalMsg);
     } catch (error) {
       this.logger.error(
         `Failed to handle account_deleted event: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
         'PaymentController',
       );
-      // Requeue the message for retry
-      channel.nack(originalMsg, false, true);
     }
   }
 }

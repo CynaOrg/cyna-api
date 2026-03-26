@@ -2,6 +2,14 @@ import { IsString, IsNotEmpty, IsOptional, Length } from 'class-validator';
 
 export class AddressDto {
   @IsString()
+  @IsOptional()
+  firstName?: string;
+
+  @IsString()
+  @IsOptional()
+  lastName?: string;
+
+  @IsString()
   @IsNotEmpty()
   street: string;
 

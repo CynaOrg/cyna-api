@@ -44,9 +44,11 @@ export class StripeService {
     priceId: string,
     metadata: Record<string, string>,
   ): Promise<Stripe.Subscription> {
+    const taxRateId = await this.getOrCreateTaxRate();
     return this.stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
+      default_tax_rates: [taxRateId],
       payment_behavior: 'default_incomplete',
       payment_settings: {
         save_default_payment_method: 'on_subscription',
@@ -54,6 +56,35 @@ export class StripeService {
       expand: ['latest_invoice.confirmation_secret'],
       metadata,
     });
+  }
+
+  private cachedTaxRateId: string | null = null;
+
+  private async getOrCreateTaxRate(): Promise<string> {
+    if (this.cachedTaxRateId) return this.cachedTaxRateId;
+
+    // Look for an existing active 20% VAT tax rate
+    const existing = await this.stripe.taxRates.list({ active: true, limit: 100 });
+    const found = existing.data.find(
+      (tr) => tr.percentage === 20 && tr.inclusive === false && tr.display_name === 'TVA',
+    );
+
+    if (found) {
+      this.cachedTaxRateId = found.id;
+      return found.id;
+    }
+
+    // Create a new one
+    const taxRate = await this.stripe.taxRates.create({
+      display_name: 'TVA',
+      description: 'TVA France 20%',
+      percentage: 20,
+      inclusive: false,
+      jurisdiction: 'FR',
+    });
+
+    this.cachedTaxRateId = taxRate.id;
+    return taxRate.id;
   }
 
   async cancelSubscription(

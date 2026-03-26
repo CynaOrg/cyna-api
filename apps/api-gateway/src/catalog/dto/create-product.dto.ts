@@ -106,6 +106,7 @@ export class CreateProductDto {
 
   @ApiProperty({ description: 'Product type', enum: ProductType })
   @IsNotEmpty()
+  @Transform(({ value }) => value?.toLowerCase?.())
   @IsEnum(ProductType)
   productType: ProductType;
 

@@ -129,13 +129,17 @@ export class PaymentService {
         }
       }
 
-      const primaryImage = (product as Record<string, unknown>)?.primaryImageUrl as
-        | string
-        | undefined;
+      const productData = product as Record<string, unknown> | undefined;
+      const images = productData?.images as Array<Record<string, unknown>> | undefined;
+      const primaryImage =
+        (productData?.primaryImageUrl as string) ||
+        (images?.find((img) => img.isPrimary)?.imageUrl as string) ||
+        (images?.[0]?.imageUrl as string) ||
+        null;
 
       enriched.push({
         ...sub,
-        productImageUrl: primaryImage || null,
+        productImageUrl: primaryImage,
       });
     }
 

@@ -63,7 +63,6 @@ export class StripeService {
   private async getOrCreateTaxRate(): Promise<string> {
     if (this.cachedTaxRateId) return this.cachedTaxRateId;
 
-    // Look for an existing active 20% VAT tax rate
     const existing = await this.stripe.taxRates.list({ active: true, limit: 100 });
     const found = existing.data.find(
       (tr) => tr.percentage === 20 && tr.inclusive === false && tr.display_name === 'TVA',
@@ -74,7 +73,6 @@ export class StripeService {
       return found.id;
     }
 
-    // Create a new one
     const taxRate = await this.stripe.taxRates.create({
       display_name: 'TVA',
       description: 'TVA France 20%',

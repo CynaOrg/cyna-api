@@ -88,15 +88,25 @@ export class PaymentService {
       // Sync with Stripe to get real status and dates
       try {
         const stripeSub = await this.stripeService.getSubscription(sub.stripeSubscriptionId);
+        const raw = stripeSub as unknown as Record<string, unknown>;
         const stripeStatus = this.mapStripeStatus(stripeSub.status);
-        const periodEnd = (stripeSub as unknown as Record<string, number>).current_period_end
-          ? new Date((stripeSub as unknown as Record<string, number>).current_period_end * 1000)
-          : sub.currentPeriodEnd;
-        const periodStart = (stripeSub as unknown as Record<string, number>).current_period_start
-          ? new Date((stripeSub as unknown as Record<string, number>).current_period_start * 1000)
-          : sub.currentPeriodStart;
-        const cancelAtPeriodEnd = !!(stripeSub as unknown as Record<string, boolean>)
-          .cancel_at_period_end;
+        const cancelAtPeriodEnd = !!raw.cancel_at_period_end;
+
+        // Stripe API 2026-01-28: uses start_date and cancel_at instead of current_period_start/end
+        const startTs = raw.current_period_start ?? raw.start_date;
+        const endTs = raw.current_period_end ?? raw.cancel_at;
+        const periodStart =
+          typeof startTs === 'number' ? new Date(startTs * 1000) : sub.currentPeriodStart;
+        let periodEnd = typeof endTs === 'number' ? new Date(endTs * 1000) : sub.currentPeriodEnd;
+
+        // If no end date from Stripe, compute from start + billing period
+        if (!endTs && typeof startTs === 'number') {
+          const start = new Date(startTs * 1000);
+          periodEnd =
+            sub.billingPeriod === 'yearly'
+              ? new Date(start.setFullYear(start.getFullYear() + 1))
+              : new Date(start.setMonth(start.getMonth() + 1));
+        }
 
         // Update DB if changed
         if (
@@ -277,17 +287,22 @@ export class PaymentService {
       stripeSubscriptionId: stripeSubscription.id,
       stripeCustomerId,
       stripePriceId,
-      currentPeriodStart: (stripeSubscription as unknown as Record<string, number>)
-        .current_period_start
-        ? new Date(
-            (stripeSubscription as unknown as Record<string, number>).current_period_start * 1000,
-          )
-        : new Date(),
-      currentPeriodEnd: (stripeSubscription as unknown as Record<string, number>).current_period_end
-        ? new Date(
-            (stripeSubscription as unknown as Record<string, number>).current_period_end * 1000,
-          )
-        : new Date(),
+      currentPeriodStart: (() => {
+        const raw = stripeSubscription as unknown as Record<string, unknown>;
+        const ts = raw.current_period_start ?? raw.start_date;
+        return typeof ts === 'number' ? new Date(ts * 1000) : new Date();
+      })(),
+      currentPeriodEnd: (() => {
+        const raw = stripeSubscription as unknown as Record<string, unknown>;
+        const ts = raw.current_period_end ?? raw.cancel_at;
+        if (typeof ts === 'number') return new Date(ts * 1000);
+        // Compute from start + billing period
+        const startTs = raw.current_period_start ?? raw.start_date;
+        const start = typeof startTs === 'number' ? new Date(startTs * 1000) : new Date();
+        return dto.billingPeriod === 'yearly'
+          ? new Date(new Date(start).setFullYear(start.getFullYear() + 1))
+          : new Date(new Date(start).setMonth(start.getMonth() + 1));
+      })(),
     });
 
     // 7. Get clientSecret via latest_invoice.confirmation_secret (Stripe API 2026-01-28.clover)

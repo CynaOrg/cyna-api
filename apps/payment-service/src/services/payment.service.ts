@@ -59,43 +59,109 @@ export class PaymentService {
     };
   }
 
-  async getSubscriptionsForUser(userId: string): Promise<Subscription[]> {
+  async getSubscriptionsForUser(userId: string): Promise<Record<string, unknown>[]> {
     const subscriptions = await this.subscriptionService.findByUserId(userId);
 
-    // Enrich subscriptions missing productName
-    const toEnrich = subscriptions.filter((s) => !s.productName);
-    if (toEnrich.length > 0) {
-      const productIds = [...new Set(toEnrich.map((s) => s.productId))];
-      const products = new Map<string, Record<string, unknown>>();
+    // Sync status with Stripe and enrich with product data
+    const productIds = [...new Set(subscriptions.map((s) => s.productId))];
+    const products = new Map<string, Record<string, unknown>>();
 
-      for (const productId of productIds) {
-        try {
-          const product = await firstValueFrom(
-            this.catalogClient
-              .send(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID, { id: productId })
-              .pipe(
-                timeout(3000),
-                catchError(() => throwError(() => null)),
-              ),
-          );
-          if (product) products.set(productId, product);
-        } catch {
-          // Skip if catalog is unavailable
-        }
-      }
-
-      for (const sub of toEnrich) {
-        const product = products.get(sub.productId);
-        const name = (product?.nameFr as string) || (product?.nameEn as string);
-        if (name) {
-          sub.productName = name;
-          // Fire-and-forget DB update
-          this.subscriptionService.update(sub.id, { productName: name });
-        }
+    for (const productId of productIds) {
+      try {
+        const product = await firstValueFrom(
+          this.catalogClient
+            .send(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID, { id: productId })
+            .pipe(
+              timeout(3000),
+              catchError(() => throwError(() => null)),
+            ),
+        );
+        if (product) products.set(productId, product);
+      } catch {
+        // Skip if catalog is unavailable
       }
     }
 
-    return subscriptions;
+    const enriched: Record<string, unknown>[] = [];
+
+    for (const sub of subscriptions) {
+      // Sync with Stripe to get real status and dates
+      try {
+        const stripeSub = await this.stripeService.getSubscription(sub.stripeSubscriptionId);
+        const stripeStatus = this.mapStripeStatus(stripeSub.status);
+        const periodEnd = (stripeSub as unknown as Record<string, number>).current_period_end
+          ? new Date((stripeSub as unknown as Record<string, number>).current_period_end * 1000)
+          : sub.currentPeriodEnd;
+        const periodStart = (stripeSub as unknown as Record<string, number>).current_period_start
+          ? new Date((stripeSub as unknown as Record<string, number>).current_period_start * 1000)
+          : sub.currentPeriodStart;
+        const cancelAtPeriodEnd = !!(stripeSub as unknown as Record<string, boolean>)
+          .cancel_at_period_end;
+
+        // Update DB if changed
+        if (
+          sub.status !== stripeStatus ||
+          sub.cancelAtPeriodEnd !== cancelAtPeriodEnd ||
+          sub.currentPeriodEnd?.getTime() !== periodEnd?.getTime()
+        ) {
+          this.subscriptionService.update(sub.id, {
+            status: stripeStatus,
+            cancelAtPeriodEnd,
+            currentPeriodStart: periodStart,
+            currentPeriodEnd: periodEnd,
+          });
+          sub.status = stripeStatus;
+          sub.cancelAtPeriodEnd = cancelAtPeriodEnd;
+          sub.currentPeriodStart = periodStart;
+          sub.currentPeriodEnd = periodEnd;
+        }
+      } catch {
+        this.logger.warn(`Failed to sync subscription ${sub.id} with Stripe`);
+      }
+
+      // Enrich with product data
+      const product = products.get(sub.productId);
+      if (product && !sub.productName) {
+        const name = (product.nameFr as string) || (product.nameEn as string);
+        if (name) {
+          sub.productName = name;
+          this.subscriptionService.update(sub.id, { productName: name });
+        }
+      }
+
+      const primaryImage = (product as Record<string, unknown>)?.primaryImageUrl as
+        | string
+        | undefined;
+
+      enriched.push({
+        ...sub,
+        productImageUrl: primaryImage || null,
+      });
+    }
+
+    return enriched;
+  }
+
+  private mapStripeStatus(stripeStatus: string): SubscriptionStatus {
+    switch (stripeStatus) {
+      case 'active':
+      case 'trialing':
+        return SubscriptionStatus.ACTIVE;
+      case 'past_due':
+        return SubscriptionStatus.PAST_DUE;
+      case 'canceled':
+      case 'cancelled':
+        return SubscriptionStatus.CANCELLED;
+      case 'unpaid':
+        return SubscriptionStatus.UNPAID;
+      case 'paused':
+        return SubscriptionStatus.PAUSED;
+      case 'incomplete':
+      case 'incomplete_expired':
+        return SubscriptionStatus.CANCELLED;
+      default:
+        return SubscriptionStatus.ACTIVE;
+    }
   }
 
   async createSubscription(dto: CreateSubscriptionDto): Promise<{

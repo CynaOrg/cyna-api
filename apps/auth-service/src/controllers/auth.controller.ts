@@ -1,12 +1,5 @@
 import { Controller, Logger } from '@nestjs/common';
-import {
-  MessagePattern,
-  EventPattern,
-  Payload,
-  RpcException,
-  Ctx,
-  RmqContext,
-} from '@nestjs/microservices';
+import { MessagePattern, EventPattern, Payload, RpcException } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS } from '@cyna-api/common';
 import { AuthService } from '../services';
 import { CreateUserDto } from '../dto';
@@ -84,94 +77,32 @@ export class AuthController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.USER.GET_PROFILE)
-  async getProfile(@Payload() data: { userId: string }, @Ctx() context: RmqContext) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const result = await this.authService.getProfile(data.userId);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async getProfile(@Payload() data: { userId: string }) {
+    return this.authService.getProfile(data.userId);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_PROFILE)
-  async updateProfile(
-    @Payload() data: { userId: string } & UpdateProfileDto,
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const { userId, ...profileData } = data;
-      const result = await this.authService.updateProfile(userId, profileData);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async updateProfile(@Payload() data: { userId: string } & UpdateProfileDto) {
+    const { userId, ...profileData } = data;
+    return this.authService.updateProfile(userId, profileData);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_PASSWORD)
-  async updatePassword(
-    @Payload() data: { userId: string } & UpdatePasswordDto,
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const { userId, ...passwordData } = data;
-      const result = await this.authService.updatePassword(userId, passwordData);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async updatePassword(@Payload() data: { userId: string } & UpdatePasswordDto) {
+    const { userId, ...passwordData } = data;
+    return this.authService.updatePassword(userId, passwordData);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_LANGUAGE)
-  async updateLanguage(
-    @Payload() data: { userId: string } & UpdateLanguageDto,
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const { userId, ...languageData } = data;
-      const result = await this.authService.updateLanguage(userId, languageData);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async updateLanguage(@Payload() data: { userId: string } & UpdateLanguageDto) {
+    const { userId, ...languageData } = data;
+    return this.authService.updateLanguage(userId, languageData);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.USER.DELETE_ACCOUNT)
-  async deleteAccount(
-    @Payload() data: { userId: string } & DeleteAccountDto,
-    @Ctx() context: RmqContext,
-  ) {
-    const channel = context.getChannelRef();
-    const originalMsg = context.getMessage();
-
-    try {
-      const { userId, ...deleteData } = data;
-      const result = await this.authService.deleteAccount(userId, deleteData);
-      channel.ack(originalMsg);
-      return result;
-    } catch (error) {
-      channel.ack(originalMsg);
-      throw error;
-    }
+  async deleteAccount(@Payload() data: { userId: string } & DeleteAccountDto) {
+    const { userId, ...deleteData } = data;
+    return this.authService.deleteAccount(userId, deleteData);
   }
 
   @EventPattern('auth.update_stripe_customer_id')

@@ -1,6 +1,6 @@
 import { Controller, Logger } from '@nestjs/common';
 import { MessagePattern, EventPattern, Payload, RpcException } from '@nestjs/microservices';
-import { MESSAGE_PATTERNS, EVENT_PATTERNS, BillingPeriod } from '@cyna-api/common';
+import { MESSAGE_PATTERNS, EVENT_PATTERNS, BillingPeriod, Language } from '@cyna-api/common';
 import { CartService, OrderService } from '../services';
 import { AddCartItemDto, UpdateCartItemDto } from '../dto';
 
@@ -127,6 +127,7 @@ export class OrderController {
       billingAddress: Record<string, unknown>;
       shippingAddress?: Record<string, unknown>;
       email: string;
+      preferredLanguage?: Language;
       stripePaymentIntentId: string;
     },
   ) {

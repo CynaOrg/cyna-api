@@ -7,6 +7,7 @@ import {
   SERVICE_NAMES,
   MESSAGE_PATTERNS,
   EVENT_PATTERNS,
+  Language,
   OrderStatus,
   OrderType,
   ProductType,
@@ -57,6 +58,7 @@ export class OrderService {
     billingAddress: Record<string, unknown>;
     shippingAddress?: Record<string, unknown>;
     email: string;
+    preferredLanguage?: Language;
     stripePaymentIntentId: string;
   }): Promise<Order> {
     // 1. Get the cart by its database ID
@@ -187,6 +189,8 @@ export class OrderService {
       orderNumber,
       userId: data.userId || null,
       guestEmail: data.userId ? null : data.email,
+      notificationEmail: data.email,
+      notificationLanguage: data.preferredLanguage ?? Language.FR,
       status: OrderStatus.PENDING,
       orderType,
       subtotal,

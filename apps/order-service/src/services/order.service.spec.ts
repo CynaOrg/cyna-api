@@ -10,6 +10,7 @@ import { OrderItem } from '../entities/order-item.entity';
 import {
   SERVICE_NAMES,
   EVENT_PATTERNS,
+  Language,
   OrderStatus,
   OrderType,
   ProductType,
@@ -498,6 +499,54 @@ describe('OrderService', () => {
       const result = await service.getOrderByPaymentIntentId('pi_nonexistent');
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('createOrderFromCart notification snapshot', () => {
+    beforeEach(() => {
+      catalogClient.send
+        .mockReturnValueOnce(of(mockProducts[0]))
+        .mockReturnValueOnce(of(mockProducts[1]));
+      (orderRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 'order-new',
+        items: [],
+        orderNumber: 'CYN-2026-00001',
+      });
+    });
+
+    it('persists notificationEmail and notificationLanguage from the input data', async () => {
+      await service.createOrderFromCart({
+        userId: 'user-1',
+        cartId: 'cart-1',
+        billingAddress: { street: '1 Rue', city: 'Paris' },
+        email: 'user@test.com',
+        preferredLanguage: Language.EN,
+        stripePaymentIntentId: 'pi_123',
+      });
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notificationEmail: 'user@test.com',
+          notificationLanguage: Language.EN,
+        }),
+      );
+    });
+
+    it("defaults notificationLanguage to 'fr' when preferredLanguage is undefined", async () => {
+      await service.createOrderFromCart({
+        userId: 'user-1',
+        cartId: 'cart-1',
+        billingAddress: { street: '1 Rue', city: 'Paris' },
+        email: 'user@test.com',
+        stripePaymentIntentId: 'pi_123',
+      });
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notificationEmail: 'user@test.com',
+          notificationLanguage: Language.FR,
+        }),
+      );
     });
   });
 });

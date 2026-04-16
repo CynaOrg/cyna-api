@@ -4,13 +4,7 @@ import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } 
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import { OptionalJwtAuthGuard } from '../auth/guards';
 import { Request } from 'express';
-
-interface CheckoutBody {
-  cartId: string;
-  billingAddress: Record<string, unknown>;
-  shippingAddress?: Record<string, unknown>;
-  email: string;
-}
+import { CheckoutPaymentIntentDto } from './dto/checkout-payment-intent.dto';
 
 interface AuthenticatedRequest extends Request {
   user?: { id: string; email: string; type: string; role?: string };
@@ -27,14 +21,14 @@ export class CheckoutController {
 
   @UseGuards(OptionalJwtAuthGuard)
   @Post('payment-intent')
-  async createPaymentIntent(@Body() body: CheckoutBody, @Req() req: AuthenticatedRequest) {
+  async createPaymentIntent(
+    @Body() body: CheckoutPaymentIntentDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const userId = req.user?.id;
-    this.logger.debug(
-      `createPaymentIntent called with body: ${JSON.stringify(body)}, userId: ${userId}`,
-    );
+    this.logger.debug(`createPaymentIntent userId=${userId ?? 'guest'} cartId=${body.cartId}`);
 
     try {
-      // 1. Create order from cart
       const order = await firstValueFrom(
         this.orderClient
           .send(MESSAGE_PATTERNS.ORDER.CREATE_ORDER, {
@@ -43,7 +37,8 @@ export class CheckoutController {
             billingAddress: body.billingAddress,
             shippingAddress: body.shippingAddress,
             email: body.email,
-            stripePaymentIntentId: '', // Will be updated after PI creation
+            preferredLanguage: body.preferredLanguage,
+            stripePaymentIntentId: '',
           })
           .pipe(
             timeout(10000),
@@ -57,7 +52,6 @@ export class CheckoutController {
           ),
       );
 
-      // 2. Create payment intent using the order's server-calculated total
       const paymentIntent = await firstValueFrom(
         this.paymentClient
           .send(MESSAGE_PATTERNS.PAYMENT.CREATE_PAYMENT_INTENT, {
@@ -79,7 +73,6 @@ export class CheckoutController {
           ),
       );
 
-      // 3. Update order with payment intent ID
       this.orderClient.emit(MESSAGE_PATTERNS.ORDER.UPDATE_ORDER_STATUS.cmd, {
         orderId: order.id,
         stripePaymentIntentId: paymentIntent.paymentIntentId,
@@ -94,8 +87,9 @@ export class CheckoutController {
         currency: paymentIntent.currency,
       };
     } catch (error) {
-      this.logger.error(`createPaymentIntent FAILED: ${JSON.stringify(error)}`);
-      this.logger.error(`Error stack: ${error?.stack || 'no stack'}`);
+      this.logger.error(
+        `createPaymentIntent FAILED userId=${userId ?? 'guest'} cartId=${body.cartId}: ${error instanceof Error ? error.message : 'unknown error'}`,
+      );
       throw error;
     }
   }

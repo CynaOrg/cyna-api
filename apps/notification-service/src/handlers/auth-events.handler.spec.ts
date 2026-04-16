@@ -76,7 +76,7 @@ describe('AuthEventsHandler', () => {
       firstName: 'John',
       lastName: 'Doe',
       verificationToken: 'verification-token-123',
-      language: 'fr' as const,
+      language: Language.FR,
     };
 
     it('should send verification email', async () => {
@@ -102,7 +102,7 @@ describe('AuthEventsHandler', () => {
     });
 
     it('should use English subject for English language', async () => {
-      const englishEvent = { ...userRegisteredEvent, language: 'en' as const };
+      const englishEvent = { ...userRegisteredEvent, language: Language.EN };
 
       await handler.handleUserRegistered(englishEvent);
 
@@ -128,7 +128,7 @@ describe('AuthEventsHandler', () => {
       email: 'test@example.com',
       firstName: 'John',
       resetToken: 'reset-token-123',
-      language: 'fr' as const,
+      language: Language.FR,
     };
 
     it('should send password reset email', async () => {
@@ -155,7 +155,7 @@ describe('AuthEventsHandler', () => {
       firstName: 'Admin',
       code: '123456',
       expiresInMinutes: 5,
-      language: 'fr' as const,
+      language: Language.FR,
     };
 
     it('should send 2FA code email', async () => {
@@ -176,7 +176,7 @@ describe('AuthEventsHandler', () => {
     });
 
     it('should use English subject for English language', async () => {
-      const englishEvent = { ...admin2FAEvent, language: 'en' as const };
+      const englishEvent = { ...admin2FAEvent, language: Language.EN };
 
       await handler.handleAdmin2FACodeRequested(englishEvent);
 

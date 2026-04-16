@@ -68,11 +68,7 @@ export class EmailTemplateService implements OnModuleInit {
     }
   }
 
-  render(
-    templateName: string,
-    language: 'fr' | 'en' | Language,
-    variables: Record<string, string | number>,
-  ): string {
+  render(templateName: string, language: Language, variables: Record<string, unknown>): string {
     // Defense-in-depth: reject any non-enum value at the trust boundary even
     // though today's template loader keys against an in-memory map. A future
     // refactor that touches the filesystem would otherwise become a path

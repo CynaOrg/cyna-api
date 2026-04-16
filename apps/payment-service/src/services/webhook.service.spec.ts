@@ -207,10 +207,10 @@ describe('WebhookService', () => {
     });
 
     describe('payment_intent.payment_failed', () => {
-      it('emits FAILED to order and enriched PaymentFailedEvent to notification', async () => {
+      it('forwards raw Stripe message internally and curated bilingual message to customer', async () => {
         const data = {
           id: 'pi_456',
-          last_payment_error: { message: 'Insufficient funds' },
+          last_payment_error: { message: 'Insufficient funds', decline_code: 'insufficient_funds' },
         };
 
         await service.handleWebhookEvent({
@@ -220,17 +220,40 @@ describe('WebhookService', () => {
           created: Date.now(),
         });
 
+        // Internal consumers (order service) keep the raw Stripe message.
         expect(orderClient.emit).toHaveBeenCalledWith(EVENT_PATTERNS.PAYMENT.FAILED, {
           paymentIntentId: 'pi_456',
           error: 'Insufficient funds',
         });
+        // Customer gets the curated English message (order snapshot language is EN).
         expect(notificationClient.emit).toHaveBeenCalledWith(
           EVENT_PATTERNS.PAYMENT.FAILED,
           expect.objectContaining({
             orderId: 'order-1',
             email: 'user@example.com',
             language: Language.EN,
-            error: 'Insufficient funds',
+            error: 'Your card has insufficient funds.',
+          }),
+        );
+      });
+
+      it('falls back to generic bilingual message when decline_code is unknown', async () => {
+        const data = {
+          id: 'pi_456b',
+          last_payment_error: { message: 'some_obscure_issuer_text' },
+        };
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_2b',
+          eventType: 'payment_intent.payment_failed',
+          data,
+          created: Date.now(),
+        });
+
+        expect(notificationClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.FAILED,
+          expect.objectContaining({
+            error: expect.stringMatching(/Your payment was declined/),
           }),
         );
       });

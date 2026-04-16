@@ -9,6 +9,7 @@ import {
   EVENT_PATTERNS,
   Language,
   coerceLanguage,
+  translateStripeDecline,
   SubscriptionStatus,
   PaymentConfirmedEvent,
   PaymentFailedEvent,
@@ -194,14 +195,16 @@ export class WebhookService {
   private async handlePaymentIntentFailed(data: Record<string, unknown>): Promise<void> {
     const paymentIntentId = data.id as string;
     const lastPaymentError = data.last_payment_error as Record<string, unknown> | undefined;
-    const errorMessage = (lastPaymentError?.message as string) || 'Payment failed';
+    const rawMessage = (lastPaymentError?.message as string) || 'Payment failed';
+    const declineCode = (lastPaymentError?.decline_code as string | undefined) ?? null;
 
-    this.logger.warn(`Payment Intent failed: ${paymentIntentId}`);
+    this.logger.warn(`Payment Intent failed: ${paymentIntentId} (decline_code=${declineCode})`);
 
-    // Emit event for Order Service to cancel the order and release stock
+    // Emit event for Order Service to cancel the order and release stock.
+    // Internal consumers keep the raw Stripe message for diagnostics.
     this.orderClient.emit(EVENT_PATTERNS.PAYMENT.FAILED, {
       paymentIntentId,
-      error: errorMessage,
+      error: rawMessage,
     });
 
     // Enrich and emit to Notification Service
@@ -211,13 +214,18 @@ export class WebhookService {
       return;
     }
 
+    // Send a curated bilingual message to the customer instead of the raw
+    // Stripe/issuer-controlled string, which can leak metadata or contain
+    // arbitrary text from the card issuer.
+    const customerMessage = translateStripeDecline(declineCode, ctx.language);
+
     const event: PaymentFailedEvent = {
       orderId: ctx.orderId,
       orderNumber: ctx.orderNumber,
       userId: ctx.userId,
       email: ctx.email,
       language: ctx.language,
-      error: errorMessage,
+      error: customerMessage,
     };
     this.notificationClient.emit(EVENT_PATTERNS.PAYMENT.FAILED, event);
   }

@@ -24,6 +24,13 @@ export class AuthEventsHandler {
     private readonly logger: CynaLoggerService,
   ) {}
 
+  private baseVars(): { frontendUrl: string; year: number } {
+    return {
+      frontendUrl: this.configService.get<string>('FRONTEND_URL', 'http://localhost:4200'),
+      year: new Date().getFullYear(),
+    };
+  }
+
   @EventPattern(EVENT_PATTERNS.AUTH.USER_REGISTERED)
   async handleUserRegistered(@Payload() data: UserRegisteredEvent): Promise<void> {
     this.logger.log(
@@ -152,15 +159,11 @@ export class AuthEventsHandler {
       'AuthEventsHandler',
     );
     try {
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:4200');
       const subjects: Record<Language, string> = {
         [Language.FR]: 'Bienvenue chez CYNA',
         [Language.EN]: 'Welcome to CYNA',
       };
-      const html = this.emailTemplateService.render('welcome', data.language, {
-        frontendUrl,
-        year: new Date().getFullYear(),
-      });
+      const html = this.emailTemplateService.render('welcome', data.language, this.baseVars());
       await this.emailService.sendEmail({
         to: data.email,
         subject: subjects[data.language] ?? subjects[Language.FR],
@@ -182,15 +185,15 @@ export class AuthEventsHandler {
       'AuthEventsHandler',
     );
     try {
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:4200');
       const subjects: Record<Language, string> = {
         [Language.FR]: 'Votre mot de passe a ete modifie',
         [Language.EN]: 'Your password has been changed',
       };
-      const html = this.emailTemplateService.render('password-changed', data.language, {
-        frontendUrl,
-        year: new Date().getFullYear(),
-      });
+      const html = this.emailTemplateService.render(
+        'password-changed',
+        data.language,
+        this.baseVars(),
+      );
       await this.emailService.sendEmail({
         to: data.email,
         subject: subjects[data.language] ?? subjects[Language.FR],
@@ -212,15 +215,15 @@ export class AuthEventsHandler {
       'AuthEventsHandler',
     );
     try {
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:4200');
       const subjects: Record<Language, string> = {
         [Language.FR]: 'Mot de passe reinitialise',
         [Language.EN]: 'Password reset successful',
       };
-      const html = this.emailTemplateService.render('password-reset-success', data.language, {
-        frontendUrl,
-        year: new Date().getFullYear(),
-      });
+      const html = this.emailTemplateService.render(
+        'password-reset-success',
+        data.language,
+        this.baseVars(),
+      );
       await this.emailService.sendEmail({
         to: data.email,
         subject: subjects[data.language] ?? subjects[Language.FR],

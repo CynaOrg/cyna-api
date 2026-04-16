@@ -1,19 +1,32 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { of, throwError } from 'rxjs';
 import { WebhookService } from './webhook.service';
 import { SubscriptionService } from './subscription.service';
 import { LicenseService } from './license.service';
 import { ProcessedWebhook } from '../entities/processed-webhook.entity';
-import { SERVICE_NAMES, EVENT_PATTERNS, SubscriptionStatus } from '@cyna-api/common';
+import { SERVICE_NAMES, EVENT_PATTERNS, Language, SubscriptionStatus } from '@cyna-api/common';
 
 describe('WebhookService', () => {
   let service: WebhookService;
   let processedWebhookRepository: Partial<Repository<ProcessedWebhook>>;
   let subscriptionService: Partial<SubscriptionService>;
   let licenseService: Partial<LicenseService>;
-  let orderClient: { emit: jest.Mock };
+  let orderClient: { emit: jest.Mock; send: jest.Mock };
   let notificationClient: { emit: jest.Mock };
+
+  const mockOrderSnapshot = {
+    id: 'order-1',
+    orderNumber: 'CYN-2026-00001',
+    userId: 'user-1',
+    notificationEmail: 'user@example.com',
+    notificationLanguage: Language.EN,
+    guestEmail: null,
+    total: 100,
+    currency: 'EUR',
+    items: [{ productSnapshot: { name: 'SOC Pro' }, quantity: 1 }],
+  };
 
   beforeEach(async () => {
     processedWebhookRepository = {
@@ -34,7 +47,10 @@ describe('WebhookService', () => {
       revokeByOrderId: jest.fn().mockResolvedValue(undefined),
     };
 
-    orderClient = { emit: jest.fn() };
+    orderClient = {
+      emit: jest.fn(),
+      send: jest.fn().mockReturnValue(of(mockOrderSnapshot)),
+    };
     notificationClient = { emit: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -132,7 +148,7 @@ describe('WebhookService', () => {
     });
 
     describe('payment_intent.succeeded', () => {
-      it('should emit CONFIRMED events to order and notification clients', async () => {
+      it('emits legacy CONFIRMED to order and enriched PaymentConfirmedEvent to notification', async () => {
         const data = { id: 'pi_123', amount: 5000, metadata: { cartId: 'cart-1' } };
 
         await service.handleWebhookEvent({
@@ -147,16 +163,51 @@ describe('WebhookService', () => {
           amount: 5000,
           metadata: { cartId: 'cart-1' },
         });
-        expect(notificationClient.emit).toHaveBeenCalledWith(EVENT_PATTERNS.PAYMENT.CONFIRMED, {
-          paymentIntentId: 'pi_123',
-          amount: 5000,
-          metadata: { cartId: 'cart-1' },
+        expect(notificationClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.CONFIRMED,
+          expect.objectContaining({
+            orderId: 'order-1',
+            orderNumber: 'CYN-2026-00001',
+            email: 'user@example.com',
+            language: Language.EN,
+            total: 100,
+            itemsSummary: 'SOC Pro x1',
+          }),
+        );
+      });
+
+      it('skips notification when order cannot be resolved', async () => {
+        orderClient.send.mockReturnValueOnce(of(null));
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_1b',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_orphan', amount: 5000, metadata: {} },
+          created: Date.now(),
         });
+
+        expect(orderClient.emit).toHaveBeenCalled();
+        expect(notificationClient.emit).not.toHaveBeenCalled();
+      });
+
+      it('swallows order lookup errors without crashing the webhook', async () => {
+        orderClient.send.mockReturnValueOnce(throwError(() => new Error('order service down')));
+
+        await expect(
+          service.handleWebhookEvent({
+            eventId: 'evt_1c',
+            eventType: 'payment_intent.succeeded',
+            data: { id: 'pi_err', amount: 5000, metadata: {} },
+            created: Date.now(),
+          }),
+        ).resolves.toBeUndefined();
+
+        expect(notificationClient.emit).not.toHaveBeenCalled();
       });
     });
 
     describe('payment_intent.payment_failed', () => {
-      it('should emit FAILED event to order client', async () => {
+      it('emits FAILED to order and enriched PaymentFailedEvent to notification', async () => {
         const data = {
           id: 'pi_456',
           last_payment_error: { message: 'Insufficient funds' },
@@ -173,9 +224,18 @@ describe('WebhookService', () => {
           paymentIntentId: 'pi_456',
           error: 'Insufficient funds',
         });
+        expect(notificationClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.FAILED,
+          expect.objectContaining({
+            orderId: 'order-1',
+            email: 'user@example.com',
+            language: Language.EN,
+            error: 'Insufficient funds',
+          }),
+        );
       });
 
-      it('should use default message when last_payment_error is absent', async () => {
+      it('uses default message when last_payment_error is absent', async () => {
         const data = { id: 'pi_789' };
 
         await service.handleWebhookEvent({
@@ -193,11 +253,15 @@ describe('WebhookService', () => {
     });
 
     describe('invoice.paid', () => {
-      it('should update subscription period and emit renewal event', async () => {
+      it('updates subscription period and emits enriched SubscriptionRenewedEvent', async () => {
         const mockSub = {
           id: 'local-sub-1',
           userId: 'user-1',
           productId: 'prod-1',
+          productName: 'SOC Pro',
+          notificationEmail: 'user@example.com',
+          notificationLanguage: Language.EN,
+          currentPeriodEnd: null,
         };
         (subscriptionService.findByStripeId as jest.Mock).mockResolvedValueOnce(mockSub);
 
@@ -223,11 +287,14 @@ describe('WebhookService', () => {
           expect.objectContaining({
             subscriptionId: 'local-sub-1',
             userId: 'user-1',
+            email: 'user@example.com',
+            language: Language.EN,
+            productName: 'SOC Pro',
           }),
         );
       });
 
-      it('should skip when no subscription ID in data', async () => {
+      it('skips when no subscription ID in data', async () => {
         const data = { subscription: null };
 
         await service.handleWebhookEvent({
@@ -239,14 +306,34 @@ describe('WebhookService', () => {
 
         expect(subscriptionService.findByStripeId).not.toHaveBeenCalled();
       });
+
+      it('skips notification when notificationEmail missing on subscription', async () => {
+        const mockSub = {
+          id: 'local-sub-legacy',
+          userId: 'user-legacy',
+          notificationEmail: null,
+        };
+        (subscriptionService.findByStripeId as jest.Mock).mockResolvedValueOnce(mockSub);
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_4b',
+          eventType: 'invoice.paid',
+          data: { subscription: 'sub_stripe_legacy', lines: { data: [] } },
+          created: Date.now(),
+        });
+
+        expect(notificationClient.emit).not.toHaveBeenCalled();
+      });
     });
 
     describe('invoice.payment_failed', () => {
-      it('should update subscription to PAST_DUE and emit event', async () => {
+      it('updates to PAST_DUE and emits enriched SubscriptionPastDueEvent', async () => {
         const mockSub = {
           id: 'local-sub-2',
           userId: 'user-2',
-          productId: 'prod-2',
+          productName: 'SOC Pro',
+          notificationEmail: 'user@example.com',
+          notificationLanguage: Language.FR,
         };
         (subscriptionService.findByStripeId as jest.Mock).mockResolvedValueOnce(mockSub);
 
@@ -267,14 +354,40 @@ describe('WebhookService', () => {
           EVENT_PATTERNS.PAYMENT.SUBSCRIPTION_PAST_DUE,
           expect.objectContaining({
             subscriptionId: 'local-sub-2',
+            email: 'user@example.com',
+            language: Language.FR,
+            productName: 'SOC Pro',
           }),
         );
       });
     });
 
     describe('customer.subscription.created', () => {
-      it('should emit SUBSCRIPTION_CREATED event', async () => {
-        const data = { id: 'sub_stripe_new', customer: 'cus_123' };
+      it('emits enriched SubscriptionCreatedEvent when snapshot is available', async () => {
+        const mockSub = {
+          id: 'local-sub-new',
+          userId: 'user-new',
+          productName: 'SOC Pro',
+          notificationEmail: 'user@example.com',
+          notificationLanguage: Language.FR,
+        };
+        (subscriptionService.findByStripeId as jest.Mock).mockResolvedValueOnce(mockSub);
+
+        const data = {
+          id: 'sub_stripe_new',
+          customer: 'cus_123',
+          items: {
+            data: [
+              {
+                price: {
+                  unit_amount: 4900,
+                  currency: 'eur',
+                  recurring: { interval: 'month' },
+                },
+              },
+            ],
+          },
+        };
 
         await service.handleWebhookEvent({
           eventId: 'evt_7',
@@ -285,16 +398,34 @@ describe('WebhookService', () => {
 
         expect(notificationClient.emit).toHaveBeenCalledWith(
           EVENT_PATTERNS.PAYMENT.SUBSCRIPTION_CREATED,
-          {
-            stripeSubscriptionId: 'sub_stripe_new',
-            customerId: 'cus_123',
-          },
+          expect.objectContaining({
+            subscriptionId: 'local-sub-new',
+            userId: 'user-new',
+            email: 'user@example.com',
+            language: Language.FR,
+            billingPeriod: 'monthly',
+            price: 49,
+            currency: 'EUR',
+          }),
         );
+      });
+
+      it('skips emit when local subscription cannot be found (Stripe race)', async () => {
+        (subscriptionService.findByStripeId as jest.Mock).mockResolvedValueOnce(null);
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_7b',
+          eventType: 'customer.subscription.created',
+          data: { id: 'sub_unknown', customer: 'cus_123', items: { data: [] } },
+          created: Date.now(),
+        });
+
+        expect(notificationClient.emit).not.toHaveBeenCalled();
       });
     });
 
     describe('customer.subscription.updated', () => {
-      it('should sync subscription from Stripe', async () => {
+      it('syncs subscription from Stripe', async () => {
         const data = { id: 'sub_stripe_updated', status: 'active' };
 
         await service.handleWebhookEvent({
@@ -307,7 +438,7 @@ describe('WebhookService', () => {
         expect(subscriptionService.syncFromStripe).toHaveBeenCalledWith(data);
       });
 
-      it('should not throw if syncFromStripe fails', async () => {
+      it('does not throw if syncFromStripe fails', async () => {
         (subscriptionService.syncFromStripe as jest.Mock).mockRejectedValueOnce(
           new Error('Not found'),
         );
@@ -325,12 +456,15 @@ describe('WebhookService', () => {
     });
 
     describe('customer.subscription.deleted', () => {
-      it('should set subscription to CANCELLED and emit event', async () => {
+      it('sets to CANCELLED and emits enriched SubscriptionCancelledEvent', async () => {
         const mockSub = {
           id: 'local-sub-3',
           userId: 'user-3',
           productId: 'prod-3',
+          productName: 'SOC Pro',
           status: SubscriptionStatus.ACTIVE,
+          notificationEmail: 'user@example.com',
+          notificationLanguage: Language.EN,
         };
         (subscriptionService.findByStripeId as jest.Mock).mockResolvedValueOnce(mockSub);
 
@@ -353,17 +487,21 @@ describe('WebhookService', () => {
           EVENT_PATTERNS.PAYMENT.SUBSCRIPTION_CANCELLED,
           expect.objectContaining({
             subscriptionId: 'local-sub-3',
+            email: 'user@example.com',
+            language: Language.EN,
+            productName: 'SOC Pro',
           }),
         );
       });
     });
 
     describe('charge.refunded', () => {
-      it('should emit REFUNDED event to order client', async () => {
+      it('emits REFUNDED to order and enriched RefundedEvent to notification', async () => {
         const data = {
           id: 'ch_123',
           payment_intent: 'pi_refund',
           amount_refunded: 5000,
+          currency: 'eur',
         };
 
         await service.handleWebhookEvent({
@@ -378,11 +516,20 @@ describe('WebhookService', () => {
           chargeId: 'ch_123',
           amount: 5000,
         });
+        expect(notificationClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.REFUNDED,
+          expect.objectContaining({
+            orderId: 'order-1',
+            email: 'user@example.com',
+            refundAmount: 50,
+            currency: 'EUR',
+          }),
+        );
       });
     });
 
     describe('unhandled event type', () => {
-      it('should mark as processed without errors', async () => {
+      it('marks as processed without errors', async () => {
         await service.handleWebhookEvent({
           eventId: 'evt_12',
           eventType: 'some.unknown.event',

@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { CynaLoggerService } from '@cyna-api/common';
+import { CynaLoggerService, Language, coerceLanguage } from '@cyna-api/common';
 import * as Handlebars from 'handlebars';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -70,10 +70,14 @@ export class EmailTemplateService implements OnModuleInit {
 
   render(
     templateName: string,
-    language: 'fr' | 'en',
+    language: 'fr' | 'en' | Language,
     variables: Record<string, string | number>,
   ): string {
-    const lang = this.templates[language] ? language : 'fr';
+    // Defense-in-depth: reject any non-enum value at the trust boundary even
+    // though today's template loader keys against an in-memory map. A future
+    // refactor that touches the filesystem would otherwise become a path
+    // traversal surface.
+    const lang = coerceLanguage(language);
     const template = this.templates[lang]?.[templateName];
 
     if (!template) {

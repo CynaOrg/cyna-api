@@ -8,6 +8,7 @@ import {
   MESSAGE_PATTERNS,
   EVENT_PATTERNS,
   Language,
+  coerceLanguage,
   SubscriptionStatus,
   PaymentConfirmedEvent,
   PaymentFailedEvent,
@@ -137,7 +138,7 @@ export class WebhookService {
         })
         .join(', ');
       const email = order.notificationEmail ?? order.guestEmail ?? '';
-      const language = (order.notificationLanguage as Language) ?? Language.FR;
+      const language = coerceLanguage(order.notificationLanguage);
       return {
         orderId: order.id,
         orderNumber: order.orderNumber,

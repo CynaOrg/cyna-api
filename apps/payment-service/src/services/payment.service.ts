@@ -1,7 +1,12 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } from 'rxjs';
-import { SERVICE_NAMES, MESSAGE_PATTERNS, Language, SubscriptionStatus } from '@cyna-api/common';
+import {
+  SERVICE_NAMES,
+  MESSAGE_PATTERNS,
+  coerceLanguage,
+  SubscriptionStatus,
+} from '@cyna-api/common';
 import { StripeService } from './stripe.service';
 import { SubscriptionService } from './subscription.service';
 import { Subscription } from '../entities/subscription.entity';
@@ -287,7 +292,7 @@ export class PaymentService {
       stripeCustomerId,
       stripePriceId,
       notificationEmail: user.email,
-      notificationLanguage: (user.preferredLanguage as Language) ?? Language.FR,
+      notificationLanguage: coerceLanguage(user.preferredLanguage),
       currentPeriodStart: (() => {
         const raw = stripeSubscription as unknown as Record<string, unknown>;
         const ts = raw.current_period_start ?? raw.start_date;

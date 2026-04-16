@@ -1,5 +1,5 @@
 import { Entity, Column, OneToMany, Index } from 'typeorm';
-import { BaseEntity, OrderStatus, OrderType } from '@cyna-api/common';
+import { BaseEntity, Language, OrderStatus, OrderType } from '@cyna-api/common';
 import { OrderItem } from './order-item.entity';
 
 @Entity('orders')
@@ -16,6 +16,17 @@ export class Order extends BaseEntity {
 
   @Column({ name: 'guest_email', type: 'varchar', length: 255, nullable: true })
   guestEmail: string | null;
+
+  @Column({ name: 'notification_email', type: 'varchar', length: 255, nullable: true })
+  notificationEmail: string | null;
+
+  @Column({
+    name: 'notification_language',
+    type: 'enum',
+    enum: Language,
+    nullable: true,
+  })
+  notificationLanguage: Language | null;
 
   @Column({
     type: 'enum',

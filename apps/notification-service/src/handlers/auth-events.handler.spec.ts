@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthEventsHandler } from './auth-events.handler';
 import { EmailService } from '../email/email.service';
 import { EmailTemplateService } from '../email/email-template.service';
-import { CynaLoggerService } from '@cyna-api/common';
+import { CynaLoggerService, Language } from '@cyna-api/common';
 
 describe('AuthEventsHandler', () => {
   let handler: AuthEventsHandler;
@@ -183,6 +183,108 @@ describe('AuthEventsHandler', () => {
       expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
         expect.objectContaining({
           subject: 'Your verification code - CYNA Admin',
+        }),
+      );
+    });
+  });
+
+  describe('handleUserVerified', () => {
+    it('renders welcome template in the payload language', async () => {
+      await handler.handleUserVerified({
+        userId: 'user-123',
+        email: 'user@example.com',
+        language: Language.EN,
+      });
+
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
+        'welcome',
+        Language.EN,
+        expect.objectContaining({ frontendUrl: 'http://localhost:4200' }),
+      );
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ to: 'user@example.com', subject: 'Welcome to CYNA' }),
+      );
+    });
+
+    it('falls back to French subject when language is not fr/en', async () => {
+      await handler.handleUserVerified({
+        userId: 'user-123',
+        email: 'user@example.com',
+        language: 'de' as unknown as Language,
+      });
+
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ subject: 'Bienvenue chez CYNA' }),
+      );
+    });
+
+    it('swallows EmailService failures without throwing', async () => {
+      mockEmailService.sendEmail.mockRejectedValueOnce(new Error('SMTP down'));
+      await expect(
+        handler.handleUserVerified({
+          userId: 'user-123',
+          email: 'user@example.com',
+          language: Language.FR,
+        }),
+      ).resolves.toBeUndefined();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
+
+  describe('handlePasswordChanged', () => {
+    it('renders password-changed template in the payload language', async () => {
+      await handler.handlePasswordChanged({
+        userId: 'user-123',
+        email: 'user@example.com',
+        language: Language.FR,
+        timestamp: new Date(),
+      });
+
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
+        'password-changed',
+        Language.FR,
+        expect.anything(),
+      );
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'user@example.com',
+          subject: 'Votre mot de passe a ete modifie',
+        }),
+      );
+    });
+
+    it('uses English subject for English payload', async () => {
+      await handler.handlePasswordChanged({
+        userId: 'user-123',
+        email: 'user@example.com',
+        language: Language.EN,
+        timestamp: new Date(),
+      });
+
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ subject: 'Your password has been changed' }),
+      );
+    });
+  });
+
+  describe('handlePasswordResetCompleted', () => {
+    it('renders password-reset-success template', async () => {
+      await handler.handlePasswordResetCompleted({
+        userId: 'user-123',
+        email: 'user@example.com',
+        language: Language.EN,
+        timestamp: new Date(),
+      });
+
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
+        'password-reset-success',
+        Language.EN,
+        expect.anything(),
+      );
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'user@example.com',
+          subject: 'Password reset successful',
         }),
       );
     });

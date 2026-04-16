@@ -28,6 +28,9 @@ export * from './enums';
 // RabbitMQ
 export * from './rabbitmq';
 
+// Events
+export * from './events';
+
 // Database
 export * from './database';
 

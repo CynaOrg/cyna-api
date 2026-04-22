@@ -14,8 +14,8 @@ export class Order extends BaseEntity {
   @Column({ name: 'user_id', type: 'uuid', nullable: true })
   userId: string | null;
 
-  @Column({ name: 'guest_email', type: 'varchar', length: 255, nullable: true })
-  guestEmail: string | null;
+  @Column({ name: 'customer_email', type: 'varchar', length: 255 })
+  customerEmail: string;
 
   @Column({
     type: 'enum',

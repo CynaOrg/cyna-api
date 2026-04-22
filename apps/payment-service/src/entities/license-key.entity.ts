@@ -1,6 +1,12 @@
 import { Entity, Column, Index } from 'typeorm';
 import { BaseEntity, LicenseKeyStatus } from '@cyna-api/common';
 
+export interface ProductSnapshot {
+  nameFr: string;
+  nameEn: string;
+  slug: string;
+}
+
 @Entity('license_keys')
 @Index('idx_license_keys_order_id', ['orderId'])
 @Index('idx_license_keys_user_id', ['userId'])
@@ -18,6 +24,9 @@ export class LicenseKey extends BaseEntity {
 
   @Column({ name: 'license_key', type: 'varchar', length: 29, unique: true })
   licenseKey: string;
+
+  @Column({ name: 'product_snapshot', type: 'jsonb' })
+  productSnapshot: ProductSnapshot;
 
   @Column({ type: 'varchar', length: 255 })
   email: string;

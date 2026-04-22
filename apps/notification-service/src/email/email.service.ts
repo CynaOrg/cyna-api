@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { randomUUID } from 'crypto';
 import { CynaLoggerService } from '@cyna-api/common';
 import * as nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
@@ -41,14 +42,34 @@ export class EmailService implements OnModuleInit {
   async sendEmail(dto: SendEmailDto): Promise<boolean> {
     const fromName = this.configService.get<string>('SMTP_FROM_NAME', 'CYNA');
     const fromEmail = this.configService.get<string>('SMTP_FROM_EMAIL', 'noreply@cyna.io');
+    const replyTo = this.configService.get<string>('SMTP_REPLY_TO', 'contact@cyna.it');
+    const unsubscribeMailto = this.configService.get<string>(
+      'SMTP_UNSUBSCRIBE_MAILTO',
+      'unsubscribe@cyna.it',
+    );
+    const unsubscribeUrl = this.configService.get<string>(
+      'SMTP_UNSUBSCRIBE_URL',
+      'https://www.cyna.it/unsubscribe',
+    );
 
     try {
       const result = await this.transporter.sendMail({
         from: `"${fromName}" <${fromEmail}>`,
         to: dto.to,
+        replyTo,
         subject: dto.subject,
         html: dto.html,
         text: dto.text,
+        headers: {
+          // RFC 2369: lets mail clients show an "Unsubscribe" button — major
+          // positive signal for iCloud/Gmail reputation engines.
+          'List-Unsubscribe': `<mailto:${unsubscribeMailto}>, <${unsubscribeUrl}>`,
+          // RFC 8058: one-click unsubscribe, required by Gmail bulk sender
+          // requirements since Feb 2024 and valued by iCloud.
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          'X-Mailer': 'CYNA Notifications',
+          'X-Entity-Ref-ID': randomUUID(),
+        },
       });
 
       this.logger.log(

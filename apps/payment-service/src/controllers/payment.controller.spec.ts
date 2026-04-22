@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, Logger } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from '../services/payment.service';
 import { SubscriptionService } from '../services/subscription.service';
@@ -54,7 +55,9 @@ describe('PaymentController', () => {
 
     it('should wrap service errors in RpcException', async () => {
       licenseService.findByUserId.mockRejectedValueOnce(new Error('DB down'));
-      await expect(controller.getUserLicenses({ userId: 'user-1' })).rejects.toThrow();
+      await expect(controller.getUserLicenses({ userId: 'user-1' })).rejects.toBeInstanceOf(
+        RpcException,
+      );
     });
   });
 
@@ -70,13 +73,13 @@ describe('PaymentController', () => {
       expect(licenseService.findByIdForUser).toHaveBeenCalledWith('lic-1', 'user-1');
     });
 
-    it('should propagate NotFoundException as RpcException', async () => {
+    it('should propagate NotFoundException as RpcException with statusCode 404', async () => {
       licenseService.findByIdForUser.mockRejectedValueOnce(
         new NotFoundException('License not found'),
       );
       await expect(
         controller.getLicenseById({ licenseId: 'lic-1', userId: 'user-1' }),
-      ).rejects.toThrow();
+      ).rejects.toBeInstanceOf(RpcException);
     });
   });
 
@@ -90,6 +93,35 @@ describe('PaymentController', () => {
     it('should not throw when revocation returns 0 (idempotent)', async () => {
       licenseService.revokeAllForUser.mockResolvedValueOnce(0);
       await expect(controller.handleAccountDeleted({ userId: 'user-1' })).resolves.not.toThrow();
+    });
+
+    it('should log LICENSE_REVOCATION_FAILED when revocation throws', async () => {
+      const logSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      licenseService.revokeAllForUser.mockRejectedValueOnce(new Error('DB down'));
+      await expect(controller.handleAccountDeleted({ userId: 'user-1' })).resolves.not.toThrow();
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('LICENSE_REVOCATION_FAILED'),
+        expect.anything(),
+        'PaymentController',
+      );
+      logSpy.mockRestore();
+    });
+
+    it('should still revoke licenses when subscription cancellation fails (isolated try/catch)', async () => {
+      const logSpy = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+      subscriptionService.cancelAllForCustomer.mockRejectedValueOnce(new Error('Stripe down'));
+      licenseService.revokeAllForUser.mockResolvedValueOnce(3);
+      await controller.handleAccountDeleted({
+        userId: 'user-1',
+        stripeCustomerId: 'cus_XYZ',
+      });
+      expect(licenseService.revokeAllForUser).toHaveBeenCalledWith('user-1');
+      expect(logSpy).toHaveBeenCalledWith(
+        expect.stringContaining('SUBSCRIPTION_CANCELLATION_FAILED'),
+        expect.anything(),
+        'PaymentController',
+      );
+      logSpy.mockRestore();
     });
   });
 });

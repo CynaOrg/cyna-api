@@ -4,7 +4,6 @@ import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } 
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import { StripeService } from './stripe.service';
 import { SubscriptionService } from './subscription.service';
-import { Subscription } from '../entities/subscription.entity';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
 import { SubscriptionStatus } from '@cyna-api/common';

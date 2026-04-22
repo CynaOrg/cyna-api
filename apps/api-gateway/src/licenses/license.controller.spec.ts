@@ -16,6 +16,25 @@ function buildRequest(userId: string): AuthenticatedRequest {
   } as AuthenticatedRequest;
 }
 
+function buildRawLicense(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    id: 'lic-1',
+    licenseKey: 'CYNA-XXXX-YYYY-ZZZZ-WWWW',
+    productSnapshot: { nameFr: 'EDR', nameEn: 'EDR', slug: 'edr' },
+    orderId: 'order-1',
+    productId: 'prod-1',
+    status: 'active',
+    activatedAt: new Date('2026-01-01'),
+    expiresAt: null,
+    email: 'user@test.cyna',
+    createdAt: new Date('2026-01-01'),
+    // Internal fields that MUST NOT appear in the public response:
+    userId: 'user-1',
+    updatedAt: new Date('2026-01-01'),
+    ...overrides,
+  };
+}
+
 describe('LicenseController', () => {
   let controller: LicenseController;
   let paymentClient: { send: jest.Mock };
@@ -34,17 +53,24 @@ describe('LicenseController', () => {
   });
 
   describe('getMyLicenses', () => {
-    it('forwards userId from req.user to the payment service', async () => {
-      const licenses = [{ id: 'lic-1', licenseKey: 'CYNA-XXXX' }];
-      paymentClient.send.mockReturnValueOnce(of(licenses));
+    it('forwards userId from req.user to the payment service and strips internal fields', async () => {
+      const rawLicense = buildRawLicense();
+      paymentClient.send.mockReturnValueOnce(of([rawLicense]));
 
       const req = buildRequest('user-1');
       const result = await controller.getMyLicenses(req);
 
-      expect(result).toEqual(licenses);
       expect(paymentClient.send).toHaveBeenCalledWith(expect.any(Object), {
         userId: 'user-1',
       });
+      expect(result).toHaveLength(1);
+      // Whitelisted public fields present
+      expect(result[0].id).toBe('lic-1');
+      expect(result[0].licenseKey).toBe('CYNA-XXXX-YYYY-ZZZZ-WWWW');
+      expect(result[0].productSnapshot).toEqual({ nameFr: 'EDR', nameEn: 'EDR', slug: 'edr' });
+      // Internal fields stripped (defense-in-depth)
+      expect(result[0]).not.toHaveProperty('userId');
+      expect(result[0]).not.toHaveProperty('updatedAt');
     });
 
     it('maps RPC error to HttpException with the original statusCode', async () => {
@@ -67,18 +93,21 @@ describe('LicenseController', () => {
   });
 
   describe('getLicenseById', () => {
-    it('forwards licenseId and userId to the payment service', async () => {
-      const license = { id: 'lic-1', licenseKey: 'CYNA-XXXX' };
-      paymentClient.send.mockReturnValueOnce(of(license));
+    it('forwards licenseId and userId and strips internal fields from the response', async () => {
+      const rawLicense = buildRawLicense();
+      paymentClient.send.mockReturnValueOnce(of(rawLicense));
 
       const req = buildRequest('user-1');
       const result = await controller.getLicenseById('lic-1', req);
 
-      expect(result).toEqual(license);
       expect(paymentClient.send).toHaveBeenCalledWith(expect.any(Object), {
         licenseId: 'lic-1',
         userId: 'user-1',
       });
+      expect(result.id).toBe('lic-1');
+      expect(result.licenseKey).toBe('CYNA-XXXX-YYYY-ZZZZ-WWWW');
+      expect(result).not.toHaveProperty('userId');
+      expect(result).not.toHaveProperty('updatedAt');
     });
 
     it('maps an RPC 404 error to an HttpException with status 404', async () => {

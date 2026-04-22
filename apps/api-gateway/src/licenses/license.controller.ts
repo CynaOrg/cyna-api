@@ -29,6 +29,45 @@ interface AuthenticatedRequest extends Request {
 }
 
 /**
+ * Raw license shape as returned by the payment-service (TypeORM entity).
+ * Intentionally NOT the same as LicenseResponseDto: internal fields like
+ * userId must be stripped before returning to the client.
+ */
+interface RawLicense {
+  id: string;
+  licenseKey: string;
+  productSnapshot: { nameFr: string; nameEn: string; slug: string };
+  orderId: string;
+  productId: string;
+  status: string;
+  activatedAt: string | Date | null;
+  expiresAt: string | Date | null;
+  email: string;
+  createdAt: string | Date;
+  [key: string]: unknown;
+}
+
+/**
+ * Map the raw license entity to the public DTO, stripping internal fields
+ * (userId and any future BaseEntity columns) before returning to the client.
+ * Defense-in-depth against accidental field leakage.
+ */
+function toLicenseResponseDto(raw: RawLicense): LicenseResponseDto {
+  return {
+    id: raw.id,
+    licenseKey: raw.licenseKey,
+    productSnapshot: raw.productSnapshot,
+    orderId: raw.orderId,
+    productId: raw.productId,
+    status: raw.status as LicenseResponseDto['status'],
+    activatedAt: raw.activatedAt as Date | null,
+    expiresAt: raw.expiresAt as Date | null,
+    email: raw.email,
+    createdAt: raw.createdAt as Date,
+  };
+}
+
+/**
  * Convert an RPC error to an HttpException Observable so the
  * GlobalExceptionFilter can return the proper status code and message.
  */
@@ -57,9 +96,9 @@ export class LicenseController {
   @ApiOperation({ summary: 'List authenticated user licenses' })
   @ApiResponse({ status: 200, type: [LicenseResponseDto] })
   async getMyLicenses(@Req() req: AuthenticatedRequest): Promise<LicenseResponseDto[]> {
-    return firstValueFrom(
+    const raw = await firstValueFrom(
       this.paymentClient
-        .send<LicenseResponseDto[]>(MESSAGE_PATTERNS.PAYMENT.GET_USER_LICENSES, {
+        .send<RawLicense[]>(MESSAGE_PATTERNS.PAYMENT.GET_USER_LICENSES, {
           userId: req.user.id,
         })
         .pipe(
@@ -68,6 +107,7 @@ export class LicenseController {
           catchError((err) => rpcToHttpError(err)),
         ),
     );
+    return raw.map(toLicenseResponseDto);
   }
 
   @Get(':id')
@@ -78,9 +118,9 @@ export class LicenseController {
     @Param('id', ParseUUIDPipe) id: string,
     @Req() req: AuthenticatedRequest,
   ): Promise<LicenseResponseDto> {
-    return firstValueFrom(
+    const raw = await firstValueFrom(
       this.paymentClient
-        .send<LicenseResponseDto>(MESSAGE_PATTERNS.PAYMENT.GET_LICENSE_BY_ID, {
+        .send<RawLicense>(MESSAGE_PATTERNS.PAYMENT.GET_LICENSE_BY_ID, {
           licenseId: id,
           userId: req.user.id,
         })
@@ -90,5 +130,6 @@ export class LicenseController {
           catchError((err) => rpcToHttpError(err)),
         ),
     );
+    return toLicenseResponseDto(raw);
   }
 }

@@ -1,4 +1,13 @@
-import { Controller, Post, Body, Req, Inject, Logger, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Req,
+  Inject,
+  Logger,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
@@ -9,7 +18,8 @@ interface CheckoutBody {
   cartId: string;
   billingAddress: Record<string, unknown>;
   shippingAddress?: Record<string, unknown>;
-  email: string;
+  email?: string;
+  guestEmail?: string;
 }
 
 interface AuthenticatedRequest extends Request {
@@ -29,9 +39,16 @@ export class CheckoutController {
   @Post('payment-intent')
   async createPaymentIntent(@Body() body: CheckoutBody, @Req() req: AuthenticatedRequest) {
     const userId = req.user?.id;
+    // Prefer JWT email (authoritative for authenticated users), then body variants
+    // for guests or when the cookie did not travel to the gateway.
+    const email = req.user?.email ?? body.email ?? body.guestEmail;
     this.logger.debug(
-      `createPaymentIntent called with body: ${JSON.stringify(body)}, userId: ${userId}`,
+      `createPaymentIntent called with body: ${JSON.stringify(body)}, userId: ${userId}, email: ${email ?? 'none'}`,
     );
+
+    if (!email) {
+      throw new BadRequestException('Customer email is required');
+    }
 
     try {
       // 1. Create order from cart
@@ -42,7 +59,7 @@ export class CheckoutController {
             cartId: body.cartId,
             billingAddress: body.billingAddress,
             shippingAddress: body.shippingAddress,
-            email: body.email,
+            email,
             stripePaymentIntentId: '', // Will be updated after PI creation
           })
           .pipe(
@@ -65,7 +82,7 @@ export class CheckoutController {
             amount: order.total,
             currency: order.currency || 'EUR',
             userId,
-            guestEmail: body.email,
+            guestEmail: email,
           })
           .pipe(
             timeout(10000),

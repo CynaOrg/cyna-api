@@ -1,18 +1,24 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { of, throwError, TimeoutError } from 'rxjs';
 import { WebhookService } from './webhook.service';
 import { SubscriptionService } from './subscription.service';
 import { LicenseService } from './license.service';
 import { ProcessedWebhook } from '../entities/processed-webhook.entity';
-import { SERVICE_NAMES, EVENT_PATTERNS, SubscriptionStatus } from '@cyna-api/common';
+import {
+  SERVICE_NAMES,
+  EVENT_PATTERNS,
+  MESSAGE_PATTERNS,
+  SubscriptionStatus,
+} from '@cyna-api/common';
 
 describe('WebhookService', () => {
   let service: WebhookService;
   let processedWebhookRepository: Partial<Repository<ProcessedWebhook>>;
   let subscriptionService: Partial<SubscriptionService>;
   let licenseService: Partial<LicenseService>;
-  let orderClient: { emit: jest.Mock };
+  let orderClient: { emit: jest.Mock; send: jest.Mock };
   let notificationClient: { emit: jest.Mock };
 
   beforeEach(async () => {
@@ -31,10 +37,13 @@ describe('WebhookService', () => {
 
     licenseService = {
       generateForOrder: jest.fn().mockResolvedValue([]),
+      findByOrderId: jest.fn().mockResolvedValue([]),
       revokeByOrderId: jest.fn().mockResolvedValue(undefined),
     };
 
-    orderClient = { emit: jest.fn() };
+    // Default: no order resolved (keeps legacy tests behaving the same).
+    // Tests that exercise license generation override this below.
+    orderClient = { emit: jest.fn(), send: jest.fn().mockReturnValue(of(null)) };
     notificationClient = { emit: jest.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -132,6 +141,24 @@ describe('WebhookService', () => {
     });
 
     describe('payment_intent.succeeded', () => {
+      const licenseOrder = {
+        id: 'order-1',
+        userId: 'user-1',
+        customerEmail: 'user@example.com',
+        items: [
+          {
+            productId: 'prod-1',
+            quantity: 2,
+            productSnapshot: {
+              productType: 'license',
+              nameFr: 'Antivirus',
+              nameEn: 'Antivirus EN',
+              slug: 'antivirus',
+            },
+          },
+        ],
+      };
+
       it('should emit CONFIRMED events to order and notification clients', async () => {
         const data = { id: 'pi_123', amount: 5000, metadata: { cartId: 'cart-1' } };
 
@@ -152,6 +179,178 @@ describe('WebhookService', () => {
           amount: 5000,
           metadata: { cartId: 'cart-1' },
         });
+      });
+
+      it('should resolve the order via RPC using paymentIntentId', async () => {
+        orderClient.send.mockReturnValueOnce(of(licenseOrder));
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_rpc',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_rpc', amount: 100, metadata: {} },
+          created: Date.now(),
+        });
+
+        expect(orderClient.send).toHaveBeenCalledWith(
+          MESSAGE_PATTERNS.ORDER.GET_ORDER_BY_PAYMENT_INTENT,
+          { paymentIntentId: 'pi_rpc' },
+        );
+      });
+
+      it('should generate licenses for a logged-in user order', async () => {
+        orderClient.send.mockReturnValueOnce(of(licenseOrder));
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_user_license',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_user', amount: 100, metadata: {} },
+          created: Date.now(),
+        });
+
+        expect(licenseService.generateForOrder).toHaveBeenCalledWith('order-1', [
+          {
+            productId: 'prod-1',
+            productType: 'license',
+            quantity: 2,
+            email: 'user@example.com',
+            userId: 'user-1',
+            productSnapshot: {
+              nameFr: 'Antivirus',
+              nameEn: 'Antivirus EN',
+              slug: 'antivirus',
+            },
+          },
+        ]);
+      });
+
+      it('should generate licenses for a guest order (userId null)', async () => {
+        orderClient.send.mockReturnValueOnce(
+          of({ ...licenseOrder, userId: null, customerEmail: 'guest@example.com' }),
+        );
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_guest_license',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_guest', amount: 100, metadata: {} },
+          created: Date.now(),
+        });
+
+        expect(licenseService.generateForOrder).toHaveBeenCalledWith(
+          'order-1',
+          expect.arrayContaining([
+            expect.objectContaining({
+              email: 'guest@example.com',
+              userId: undefined,
+            }),
+          ]),
+        );
+      });
+
+      it('should pass all items through (license filtering happens inside LicenseService)', async () => {
+        const mixedOrder = {
+          ...licenseOrder,
+          items: [
+            licenseOrder.items[0],
+            {
+              productId: 'prod-physical',
+              quantity: 1,
+              productSnapshot: {
+                productType: 'physical',
+                nameFr: 'Boite',
+                nameEn: 'Box',
+                slug: 'box',
+              },
+            },
+          ],
+        };
+        orderClient.send.mockReturnValueOnce(of(mixedOrder));
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_mixed',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_mixed', amount: 100, metadata: {} },
+          created: Date.now(),
+        });
+
+        const call = (licenseService.generateForOrder as jest.Mock).mock.calls[0];
+        expect(call[0]).toBe('order-1');
+        expect(call[1]).toHaveLength(2);
+        expect(call[1][0].productType).toBe('license');
+        expect(call[1][1].productType).toBe('physical');
+      });
+
+      it('should skip license generation when licenses already exist (idempotence)', async () => {
+        orderClient.send.mockReturnValueOnce(of(licenseOrder));
+        (licenseService.findByOrderId as jest.Mock).mockResolvedValueOnce([
+          { id: 'existing-license' },
+        ]);
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_idempotent',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_idempotent', amount: 100, metadata: {} },
+          created: Date.now(),
+        });
+
+        expect(licenseService.generateForOrder).not.toHaveBeenCalled();
+        expect(orderClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.CONFIRMED,
+          expect.objectContaining({ paymentIntentId: 'pi_idempotent' }),
+        );
+      });
+
+      it('should still emit CONFIRMED events when no order is found', async () => {
+        orderClient.send.mockReturnValueOnce(of(null));
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_orphan',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_orphan', amount: 100, metadata: {} },
+          created: Date.now(),
+        });
+
+        expect(licenseService.generateForOrder).not.toHaveBeenCalled();
+        expect(orderClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.CONFIRMED,
+          expect.objectContaining({ paymentIntentId: 'pi_orphan' }),
+        );
+        expect(notificationClient.emit).toHaveBeenCalled();
+      });
+
+      it('should rethrow RPC timeout so Stripe retries the webhook', async () => {
+        orderClient.send.mockReturnValueOnce(throwError(() => new TimeoutError()));
+
+        await expect(
+          service.handleWebhookEvent({
+            eventId: 'evt_timeout',
+            eventType: 'payment_intent.succeeded',
+            data: { id: 'pi_timeout', amount: 100, metadata: {} },
+            created: Date.now(),
+          }),
+        ).rejects.toBeInstanceOf(TimeoutError);
+
+        expect(licenseService.generateForOrder).not.toHaveBeenCalled();
+        expect(orderClient.emit).not.toHaveBeenCalled();
+        expect(processedWebhookRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('should rethrow license service failure so Stripe retries the webhook', async () => {
+        orderClient.send.mockReturnValueOnce(of(licenseOrder));
+        (licenseService.generateForOrder as jest.Mock).mockRejectedValueOnce(
+          new Error('DB unique constraint violation'),
+        );
+
+        await expect(
+          service.handleWebhookEvent({
+            eventId: 'evt_license_fail',
+            eventType: 'payment_intent.succeeded',
+            data: { id: 'pi_license_fail', amount: 100, metadata: {} },
+            created: Date.now(),
+          }),
+        ).rejects.toThrow('DB unique constraint violation');
+
+        expect(orderClient.emit).not.toHaveBeenCalled();
+        expect(processedWebhookRepository.save).not.toHaveBeenCalled();
       });
     });
 

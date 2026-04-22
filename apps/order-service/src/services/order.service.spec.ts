@@ -92,8 +92,9 @@ describe('OrderService', () => {
       findOne: jest.fn().mockResolvedValue(null),
       find: jest.fn().mockResolvedValue([]),
       createQueryBuilder: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(0),
+        getRawOne: jest.fn().mockResolvedValue({ max_seq: 0 }),
       }),
     };
 
@@ -140,16 +141,31 @@ describe('OrderService', () => {
       expect(orderNumber).toBe(`CYN-${year}-00001`);
     });
 
-    it('should increment sequence based on existing orders', async () => {
+    it('should increment sequence based on max existing order number', async () => {
       (orderRepository.createQueryBuilder as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(42),
+        getRawOne: jest.fn().mockResolvedValue({ max_seq: 42 }),
       });
 
       const orderNumber = await service.generateOrderNumber();
 
       const year = new Date().getFullYear();
       expect(orderNumber).toBe(`CYN-${year}-00043`);
+    });
+
+    it('should not reuse deleted sequence numbers (gap in MAX)', async () => {
+      // Simulates orders 1..10 deleted but orders 11..24 kept; next must be 25.
+      (orderRepository.createQueryBuilder as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ max_seq: '24' }),
+      });
+
+      const orderNumber = await service.generateOrderNumber();
+
+      const year = new Date().getFullYear();
+      expect(orderNumber).toBe(`CYN-${year}-00025`);
     });
   });
 

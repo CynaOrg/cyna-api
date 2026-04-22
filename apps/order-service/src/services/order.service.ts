@@ -186,7 +186,7 @@ export class OrderService {
     const order = this.orderRepository.create({
       orderNumber,
       userId: data.userId || null,
-      guestEmail: data.userId ? null : data.email,
+      customerEmail: data.email,
       status: OrderStatus.PENDING,
       orderType,
       subtotal,
@@ -338,7 +338,7 @@ export class OrderService {
     }
 
     if (search) {
-      qb.andWhere('(order.orderNumber ILIKE :search OR order.guestEmail ILIKE :search)', {
+      qb.andWhere('(order.orderNumber ILIKE :search OR order.customerEmail ILIKE :search)', {
         search: `%${search}%`,
       });
     }

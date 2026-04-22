@@ -26,7 +26,7 @@ describe('OrderService', () => {
     id: 'order-123',
     orderNumber: 'CYN-2026-00001',
     userId: 'user-123',
-    guestEmail: null,
+    customerEmail: 'user@test.com',
     status: OrderStatus.PENDING,
     orderType: OrderType.LICENSE,
     subtotal: 49.99,
@@ -307,7 +307,7 @@ describe('OrderService', () => {
       ).rejects.toThrow(RpcException);
     });
 
-    it('should set guestEmail for guest orders (no userId)', async () => {
+    it('should set customerEmail for guest orders (no userId)', async () => {
       catalogClient.send.mockReset();
       catalogClient.send
         .mockReturnValueOnce(of(mockProducts[0]))
@@ -328,7 +328,34 @@ describe('OrderService', () => {
       expect(orderRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: null,
-          guestEmail: 'guest@test.com',
+          customerEmail: 'guest@test.com',
+        }),
+      );
+    });
+
+    it('should set customerEmail for logged-in user orders', async () => {
+      catalogClient.send.mockReset();
+      catalogClient.send
+        .mockReturnValueOnce(of(mockProducts[0]))
+        .mockReturnValueOnce(of(mockProducts[1]));
+      (orderRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 'order-new',
+        items: [],
+        orderNumber: 'CYN-2026-00001',
+      });
+
+      await service.createOrderFromCart({
+        userId: 'user-1',
+        cartId: 'cart-1',
+        billingAddress: { street: '1 Rue', city: 'Paris' },
+        email: 'user@test.com',
+        stripePaymentIntentId: 'pi_123',
+      });
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          customerEmail: 'user@test.com',
         }),
       );
     });

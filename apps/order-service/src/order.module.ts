@@ -5,6 +5,7 @@ import { CynaConfigModule, LoggerModule, SERVICE_NAMES, CynaCacheModule } from '
 import { Cart, CartItem, Order, OrderItem } from './entities';
 import { CartService, OrderService } from './services';
 import { OrderController } from './controllers';
+import { RenameGuestEmailToCustomerEmail1776900000000 } from './migrations/1776900000000-RenameGuestEmailToCustomerEmail';
 
 @Module({
   imports: [
@@ -19,6 +20,8 @@ import { OrderController } from './controllers';
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
       entities: [Cart, CartItem, Order, OrderItem],
+      migrations: [RenameGuestEmailToCustomerEmail1776900000000],
+      migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
       synchronize: process.env.DATABASE_SYNC === 'true',
       logging: process.env.DATABASE_LOGGING === 'true',
     }),

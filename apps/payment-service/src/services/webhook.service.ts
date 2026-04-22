@@ -2,7 +2,7 @@ import { Injectable, Inject, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
+import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } from 'rxjs';
 import {
   SERVICE_NAMES,
   MESSAGE_PATTERNS,
@@ -21,7 +21,7 @@ import {
 } from '@cyna-api/common';
 import { ProcessedWebhook } from '../entities/processed-webhook.entity';
 import { SubscriptionService } from './subscription.service';
-import { LicenseService } from './license.service';
+import { LicenseService, OrderItemWithProduct } from './license.service';
 import { WebhookPayloadDto } from '../dto/webhook-payload.dto';
 import Stripe from 'stripe';
 
@@ -34,6 +34,17 @@ interface OrderNotificationContext {
   total: number;
   currency: string;
   itemsSummary: string;
+}
+
+interface OrderForLicenseGeneration {
+  id: string;
+  userId: string | null;
+  customerEmail: string;
+  items: Array<{
+    productId: string;
+    productSnapshot: Record<string, unknown>;
+    quantity: number;
+  }>;
 }
 
 @Injectable()
@@ -52,9 +63,13 @@ export class WebhookService {
   async handleWebhookEvent(payload: WebhookPayloadDto): Promise<void> {
     const { eventId, eventType, data } = payload;
 
-    // 1. Check idempotence
-    if (await this.isProcessed(eventId)) {
-      this.logger.log(`Webhook ${eventId} already processed, skipping`);
+    // 1. Claim the event atomically. Two concurrent deliveries of the same
+    //    Stripe eventId (possible when the first delivery is slow and Stripe
+    //    retries before markProcessed runs) race on the same PK insert; one
+    //    wins, the loser short-circuits.
+    const claimed = await this.tryClaimEvent(eventId, eventType);
+    if (!claimed) {
+      this.logger.log(`Webhook ${eventId} already claimed, skipping`);
       return;
     }
 
@@ -90,16 +105,39 @@ export class WebhookService {
         default:
           this.logger.log(`Unhandled webhook event type: ${eventType}`);
       }
-
-      // 3. Mark as processed
-      await this.markProcessed(eventId, eventType);
     } catch (error) {
+      // Release the claim so Stripe's retry can reprocess this eventId.
+      await this.releaseClaim(eventId);
       this.logger.error(
         `Error processing webhook ${eventId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
       );
       throw error;
     }
+  }
+
+  /**
+   * Attempt to atomically claim an event for processing.
+   * Returns true if we won the race, false if another consumer already claimed it.
+   */
+  private async tryClaimEvent(eventId: string, eventType: string): Promise<boolean> {
+    try {
+      await this.processedWebhookRepository.insert({
+        eventId,
+        eventType,
+        processedAt: new Date(),
+      });
+      return true;
+    } catch (err) {
+      // Postgres unique_violation (23505) on the eventId PK means someone else claimed first.
+      const code = (err as { code?: string }).code;
+      if (code === '23505') return false;
+      throw err;
+    }
+  }
+
+  private async releaseClaim(eventId: string): Promise<void> {
+    await this.processedWebhookRepository.delete({ eventId });
   }
 
   async isProcessed(eventId: string): Promise<boolean> {
@@ -138,7 +176,7 @@ export class WebhookService {
           return `${name} x${it.quantity ?? 1}`;
         })
         .join(', ');
-      const email = order.notificationEmail ?? order.guestEmail ?? '';
+      const email = order.notificationEmail ?? order.customerEmail ?? '';
       const language = coerceLanguage(order.notificationLanguage);
       return {
         orderId: order.id,
@@ -165,14 +203,32 @@ export class WebhookService {
 
     this.logger.log(`Payment Intent succeeded: ${paymentIntentId}`);
 
-    // Emit event for Order Service to confirm the order
+    // 1. Resolve order via order-service RPC so we can generate licenses.
+    //    Runs BEFORE emitting PAYMENT.CONFIRMED: if license generation fails we want
+    //    Stripe to retry the whole webhook, leaving the order status un-flipped until
+    //    the system is fully consistent.
+    const order = await this.fetchOrderByPaymentIntent(paymentIntentId);
+
+    if (!order) {
+      // The order may not have been persisted yet (eventual-consistency window on
+      // the async UPDATE_ORDER_STATUS event that attaches stripePaymentIntentId).
+      // Throw so Stripe retries the webhook — much safer than silently marking it
+      // PAID with no license rows attached.
+      throw new Error(
+        `Order not found for payment intent ${paymentIntentId} — webhook will be retried`,
+      );
+    }
+
+    await this.generateLicensesForOrder(order);
+
+    // 2. Emit event for Order Service to confirm the order
     this.orderClient.emit(EVENT_PATTERNS.PAYMENT.CONFIRMED, {
       paymentIntentId,
       amount,
       metadata,
     });
 
-    // Enrich and emit to Notification Service
+    // 3. Enrich and emit to Notification Service with full order context
     const ctx = await this.resolveOrderByPaymentIntent(paymentIntentId);
     if (!ctx || !ctx.email) {
       this.logger.warn(`Skipping notification for paymentIntent: order or email missing`);
@@ -190,6 +246,84 @@ export class WebhookService {
       itemsSummary: ctx.itemsSummary,
     };
     this.notificationClient.emit(EVENT_PATTERNS.PAYMENT.CONFIRMED, event);
+  }
+
+  private async fetchOrderByPaymentIntent(
+    paymentIntentId: string,
+  ): Promise<OrderForLicenseGeneration | null> {
+    return firstValueFrom(
+      this.orderClient
+        .send<OrderForLicenseGeneration | null>(
+          MESSAGE_PATTERNS.ORDER.GET_ORDER_BY_PAYMENT_INTENT,
+          { paymentIntentId },
+        )
+        .pipe(
+          timeout(5000),
+          retry(2),
+          catchError((err: unknown) => {
+            if (err instanceof TimeoutError) {
+              this.logger.error(
+                `Order service timeout resolving payment intent ${paymentIntentId}`,
+              );
+            } else {
+              this.logger.error(
+                `Order service error resolving payment intent ${paymentIntentId}: ${
+                  err instanceof Error ? err.message : 'Unknown error'
+                }`,
+              );
+            }
+            return throwError(() => err);
+          }),
+        ),
+    );
+  }
+
+  private async generateLicensesForOrder(order: OrderForLicenseGeneration): Promise<void> {
+    const licenseItems: OrderItemWithProduct[] = order.items
+      .filter((item) => {
+        const snapshot = item.productSnapshot as { productType?: string };
+        return snapshot.productType === 'license';
+      })
+      .map((item) => {
+        const snapshot = item.productSnapshot as {
+          nameFr?: string;
+          nameEn?: string;
+          slug?: string;
+        };
+        return {
+          productId: item.productId,
+          productType: 'license',
+          quantity: item.quantity,
+          email: order.customerEmail,
+          userId: order.userId ?? undefined,
+          productSnapshot: {
+            nameFr: snapshot.nameFr ?? 'Licence',
+            nameEn: snapshot.nameEn ?? 'License',
+            slug: snapshot.slug ?? 'unknown',
+          },
+        };
+      });
+
+    if (licenseItems.length === 0) {
+      this.logger.log(`Order ${order.id} has no license items — skipping generation`);
+      return;
+    }
+
+    // Idempotence guard: processed_webhooks dedupes same-eventId concurrent
+    // deliveries, but a legitimate Stripe retry after markProcessed would still
+    // reach here if we ever loosened that claim. Belt-and-suspenders.
+    const existing = await this.licenseService.findByOrderId(order.id);
+    if (existing.length > 0) {
+      this.logger.log(
+        `Licenses already generated for order ${order.id} (${existing.length} existing) — skipping`,
+      );
+      return;
+    }
+
+    const generated = await this.licenseService.generateForOrder(order.id, licenseItems);
+    this.logger.log(
+      `Generated ${generated.length} license(s) for order ${order.id} (userId=${order.userId ?? 'guest'})`,
+    );
   }
 
   private async handlePaymentIntentFailed(data: Record<string, unknown>): Promise<void> {

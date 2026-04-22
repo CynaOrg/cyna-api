@@ -27,7 +27,7 @@ describe('OrderService', () => {
     id: 'order-123',
     orderNumber: 'CYN-2026-00001',
     userId: 'user-123',
-    guestEmail: null,
+    customerEmail: 'user@test.com',
     status: OrderStatus.PENDING,
     orderType: OrderType.LICENSE,
     subtotal: 49.99,
@@ -93,8 +93,9 @@ describe('OrderService', () => {
       findOne: jest.fn().mockResolvedValue(null),
       find: jest.fn().mockResolvedValue([]),
       createQueryBuilder: jest.fn().mockReturnValue({
+        select: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(0),
+        getRawOne: jest.fn().mockResolvedValue({ max_seq: 0 }),
       }),
     };
 
@@ -141,16 +142,31 @@ describe('OrderService', () => {
       expect(orderNumber).toBe(`CYN-${year}-00001`);
     });
 
-    it('should increment sequence based on existing orders', async () => {
+    it('should increment sequence based on max existing order number', async () => {
       (orderRepository.createQueryBuilder as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnThis(),
         where: jest.fn().mockReturnThis(),
-        getCount: jest.fn().mockResolvedValue(42),
+        getRawOne: jest.fn().mockResolvedValue({ max_seq: 42 }),
       });
 
       const orderNumber = await service.generateOrderNumber();
 
       const year = new Date().getFullYear();
       expect(orderNumber).toBe(`CYN-${year}-00043`);
+    });
+
+    it('should not reuse deleted sequence numbers (gap in MAX)', async () => {
+      // Simulates orders 1..10 deleted but orders 11..24 kept; next must be 25.
+      (orderRepository.createQueryBuilder as jest.Mock).mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn().mockResolvedValue({ max_seq: '24' }),
+      });
+
+      const orderNumber = await service.generateOrderNumber();
+
+      const year = new Date().getFullYear();
+      expect(orderNumber).toBe(`CYN-${year}-00025`);
     });
   });
 
@@ -308,7 +324,7 @@ describe('OrderService', () => {
       ).rejects.toThrow(RpcException);
     });
 
-    it('should set guestEmail for guest orders (no userId)', async () => {
+    it('should set customerEmail for guest orders (no userId)', async () => {
       catalogClient.send.mockReset();
       catalogClient.send
         .mockReturnValueOnce(of(mockProducts[0]))
@@ -329,7 +345,34 @@ describe('OrderService', () => {
       expect(orderRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: null,
-          guestEmail: 'guest@test.com',
+          customerEmail: 'guest@test.com',
+        }),
+      );
+    });
+
+    it('should set customerEmail for logged-in user orders', async () => {
+      catalogClient.send.mockReset();
+      catalogClient.send
+        .mockReturnValueOnce(of(mockProducts[0]))
+        .mockReturnValueOnce(of(mockProducts[1]));
+      (orderRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 'order-new',
+        items: [],
+        orderNumber: 'CYN-2026-00001',
+      });
+
+      await service.createOrderFromCart({
+        userId: 'user-1',
+        cartId: 'cart-1',
+        billingAddress: { street: '1 Rue', city: 'Paris' },
+        email: 'user@test.com',
+        stripePaymentIntentId: 'pi_123',
+      });
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          customerEmail: 'user@test.com',
         }),
       );
     });

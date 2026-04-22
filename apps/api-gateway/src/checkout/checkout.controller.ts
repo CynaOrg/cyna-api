@@ -1,4 +1,13 @@
-import { Controller, Post, Body, Req, Inject, Logger, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Req,
+  Inject,
+  Logger,
+  UseGuards,
+  BadRequestException,
+} from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
@@ -26,7 +35,16 @@ export class CheckoutController {
     @Req() req: AuthenticatedRequest,
   ) {
     const userId = req.user?.id;
-    this.logger.debug(`createPaymentIntent userId=${userId ?? 'guest'} cartId=${body.cartId}`);
+    // Prefer JWT email (authoritative for authenticated users), then body variants
+    // for guests or when the cookie did not travel to the gateway.
+    const email = req.user?.email ?? body.email ?? body.guestEmail;
+    this.logger.debug(
+      `createPaymentIntent userId=${userId ?? 'guest'} cartId=${body.cartId} email=${email ?? 'none'}`,
+    );
+
+    if (!email) {
+      throw new BadRequestException('Customer email is required');
+    }
 
     try {
       const order = await firstValueFrom(
@@ -36,7 +54,7 @@ export class CheckoutController {
             cartId: body.cartId,
             billingAddress: body.billingAddress,
             shippingAddress: body.shippingAddress,
-            email: body.email,
+            email,
             preferredLanguage: body.preferredLanguage,
             stripePaymentIntentId: '',
           })
@@ -59,7 +77,7 @@ export class CheckoutController {
             amount: order.total,
             currency: order.currency || 'EUR',
             userId,
-            guestEmail: body.email,
+            guestEmail: email,
           })
           .pipe(
             timeout(10000),

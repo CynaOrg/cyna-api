@@ -11,6 +11,7 @@ import { WebhookModule } from './webhooks/webhook.module';
 import { CheckoutModule } from './checkout/checkout.module';
 import { OrderModule } from './orders/order.module';
 import { SubscriptionModule } from './subscriptions/subscription.module';
+import { LicenseModule } from './licenses/license.module';
 import { UserModule } from './users/user.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { ContentModule } from './content/content.module';
@@ -45,6 +46,7 @@ import { ContentModule } from './content/content.module';
     CheckoutModule,
     OrderModule,
     SubscriptionModule,
+    LicenseModule,
     UserModule,
     ContentModule,
     AnalyticsModule,

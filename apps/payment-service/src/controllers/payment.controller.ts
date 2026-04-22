@@ -1,8 +1,10 @@
-import { Controller, Logger } from '@nestjs/common';
+import { Controller, Logger, HttpException } from '@nestjs/common';
 import { MessagePattern, EventPattern, Payload, RpcException } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS, EVENT_PATTERNS } from '@cyna-api/common';
 import { PaymentService } from '../services/payment.service';
 import { SubscriptionService } from '../services/subscription.service';
+import { LicenseService } from '../services/license.service';
+import { LicenseKey } from '../entities/license-key.entity';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
 import { CancelSubscriptionDto } from '../dto/cancel-subscription.dto';
@@ -14,10 +16,20 @@ export class PaymentController {
   constructor(
     private readonly paymentService: PaymentService,
     private readonly subscriptionService: SubscriptionService,
+    private readonly licenseService: LicenseService,
   ) {}
 
   private wrapError(error: unknown): RpcException {
     if (error instanceof RpcException) return error;
+    // Preserve HttpException status (e.g. NotFoundException → 404) so the
+    // gateway can propagate the correct HTTP status instead of a blanket 500.
+    if (error instanceof HttpException) {
+      return new RpcException({
+        statusCode: error.getStatus(),
+        message: error.message,
+        code: 'PAYMENT_SERVICE_ERROR',
+      });
+    }
     const message = error instanceof Error ? error.message : 'Unknown payment service error';
     this.logger.error(
       `Unhandled error: ${message}`,
@@ -79,8 +91,29 @@ export class PaymentController {
     }
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.PAYMENT.GET_USER_LICENSES)
+  async getUserLicenses(@Payload() data: { userId: string }): Promise<LicenseKey[]> {
+    try {
+      return await this.licenseService.findByUserId(data.userId);
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.PAYMENT.GET_LICENSE_BY_ID)
+  async getLicenseById(
+    @Payload() data: { licenseId: string; userId: string },
+  ): Promise<LicenseKey> {
+    try {
+      return await this.licenseService.findByIdForUser(data.licenseId, data.userId);
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
   /**
    * Handle account deletion event - cancel all active Stripe subscriptions
+   * and revoke all active license keys for the deleted user
    */
   @EventPattern(EVENT_PATTERNS.AUTH.ACCOUNT_DELETED)
   async handleAccountDeleted(
@@ -91,6 +124,11 @@ export class PaymentController {
       'PaymentController',
     );
 
+    // Subscription cancellation and license revocation are handled in
+    // isolated try/catch blocks so a failure in one does not silently
+    // prevent the other. Distinctive log tags (SUBSCRIPTION_CANCELLATION_FAILED /
+    // LICENSE_REVOCATION_FAILED) let alerting pick these up — critical for RGPD
+    // (failure to revoke licenses on account deletion must be noticed).
     try {
       if (data.stripeCustomerId) {
         const cancelledCount = await this.subscriptionService.cancelAllForCustomer(
@@ -108,7 +146,21 @@ export class PaymentController {
       }
     } catch (error) {
       this.logger.error(
-        `Failed to handle account_deleted event: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        `SUBSCRIPTION_CANCELLATION_FAILED userId=${data.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error instanceof Error ? error.stack : undefined,
+        'PaymentController',
+      );
+    }
+
+    try {
+      const revokedCount = await this.licenseService.revokeAllForUser(data.userId);
+      this.logger.log(
+        `Revoked ${revokedCount} licenses for user ${data.userId}`,
+        'PaymentController',
+      );
+    } catch (error) {
+      this.logger.error(
+        `LICENSE_REVOCATION_FAILED userId=${data.userId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
         'PaymentController',
       );

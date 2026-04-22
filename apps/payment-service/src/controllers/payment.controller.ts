@@ -1,4 +1,4 @@
-import { Controller, Logger } from '@nestjs/common';
+import { Controller, Logger, HttpException } from '@nestjs/common';
 import { MessagePattern, EventPattern, Payload, RpcException } from '@nestjs/microservices';
 import { MESSAGE_PATTERNS, EVENT_PATTERNS } from '@cyna-api/common';
 import { PaymentService } from '../services/payment.service';
@@ -21,6 +21,15 @@ export class PaymentController {
 
   private wrapError(error: unknown): RpcException {
     if (error instanceof RpcException) return error;
+    // Preserve HttpException status (e.g. NotFoundException → 404) so the
+    // gateway can propagate the correct HTTP status instead of a blanket 500.
+    if (error instanceof HttpException) {
+      return new RpcException({
+        statusCode: error.getStatus(),
+        message: error.message,
+        code: 'PAYMENT_SERVICE_ERROR',
+      });
+    }
     const message = error instanceof Error ? error.message : 'Unknown payment service error';
     this.logger.error(
       `Unhandled error: ${message}`,

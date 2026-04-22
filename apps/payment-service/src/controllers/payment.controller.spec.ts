@@ -77,9 +77,14 @@ describe('PaymentController', () => {
       licenseService.findByIdForUser.mockRejectedValueOnce(
         new NotFoundException('License not found'),
       );
-      await expect(
-        controller.getLicenseById({ licenseId: 'lic-1', userId: 'user-1' }),
-      ).rejects.toBeInstanceOf(RpcException);
+      try {
+        await controller.getLicenseById({ licenseId: 'lic-1', userId: 'user-1' });
+        fail('expected RpcException');
+      } catch (err) {
+        expect(err).toBeInstanceOf(RpcException);
+        const rpcError = (err as RpcException).getError() as { statusCode: number };
+        expect(rpcError.statusCode).toBe(404);
+      }
     });
   });
 

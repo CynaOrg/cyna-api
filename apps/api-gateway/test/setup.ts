@@ -350,6 +350,13 @@ let eventsSpy: MockAuthEventsPublisher;
 export interface SetupOptions {
   /** When true, keeps the real ThrottlerModule limits. Defaults to false (throttling disabled). */
   enableThrottling?: boolean;
+  /**
+   * When true, does NOT override SERVICE_NAMES.ORDER in payment-service with MockClientProxy,
+   * so payment-service communicates with the real order-service microservice over RabbitMQ.
+   * Required for tests that exercise the webhook → RPC → license generation flow.
+   * Defaults to false.
+   */
+  useRealOrderClientInPayment?: boolean;
 }
 
 const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
@@ -360,9 +367,11 @@ export async function setupTestApp(options?: SetupOptions): Promise<{
   catalogDataSource: DataSource;
   orderDataSource: DataSource;
   paymentDataSource: DataSource;
+  paymentModule: TestingModule;
+  orderModule: TestingModule;
   eventsSpy: MockAuthEventsPublisher;
 }> {
-  const { enableThrottling = false } = options || {};
+  const { enableThrottling = false, useRealOrderClientInPayment = false } = options || {};
   const mockEventsPublisher = new MockAuthEventsPublisher();
   const mockClientProxy = new MockClientProxy();
 
@@ -441,16 +450,19 @@ export async function setupTestApp(options?: SetupOptions): Promise<{
   // -----------------------------------------------------------------------
   // 4. Bootstrap Payment Service microservice
   // -----------------------------------------------------------------------
-  const paymentModule: TestingModule = await Test.createTestingModule({
+  const paymentModuleBuilder = Test.createTestingModule({
     imports: [PaymentModule],
   })
     .overrideProvider(StripeService)
     .useValue(new MockStripeService())
-    .overrideProvider(SERVICE_NAMES.ORDER)
-    .useValue(mockClientProxy)
     .overrideProvider(SERVICE_NAMES.NOTIFICATION)
-    .useValue(mockClientProxy)
-    .compile();
+    .useValue(mockClientProxy);
+
+  if (!useRealOrderClientInPayment) {
+    paymentModuleBuilder.overrideProvider(SERVICE_NAMES.ORDER).useValue(mockClientProxy);
+  }
+
+  const paymentModule: TestingModule = await paymentModuleBuilder.compile();
 
   paymentMicroservice = paymentModule.createNestMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
@@ -507,7 +519,16 @@ export async function setupTestApp(options?: SetupOptions): Promise<{
   paymentDataSource = paymentModule.get<DataSource>(DataSource);
   eventsSpy = mockEventsPublisher;
 
-  return { app, dataSource, catalogDataSource, orderDataSource, paymentDataSource, eventsSpy };
+  return {
+    app,
+    dataSource,
+    catalogDataSource,
+    orderDataSource,
+    paymentDataSource,
+    paymentModule,
+    orderModule,
+    eventsSpy,
+  };
 }
 
 export async function teardownTestApp(): Promise<void> {

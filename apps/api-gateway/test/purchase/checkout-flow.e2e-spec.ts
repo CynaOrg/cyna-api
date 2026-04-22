@@ -202,12 +202,12 @@ describe('Checkout Flow (e2e)', () => {
     expect(body.data.orderId).toBeDefined();
     expect(body.data.clientSecret).toBeDefined();
 
-    // Verify order guest email
+    // Verify order customer email
     const orders = await orderDataSource.query('SELECT * FROM orders WHERE id = $1', [
       body.data.orderId,
     ]);
     expect(orders.length).toBe(1);
-    expect(orders[0].guest_email).toBe('guest-checkout@example.com');
+    expect(orders[0].customer_email).toBe('guest-checkout@example.com');
   });
 
   it('should have order items in the database after checkout', async () => {

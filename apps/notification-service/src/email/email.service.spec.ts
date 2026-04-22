@@ -112,7 +112,7 @@ describe('EmailService', () => {
   });
 
   describe('sendEmail', () => {
-    it('should send email successfully', async () => {
+    it('should send email with deliverability headers and reply-to', async () => {
       const emailDto = {
         to: 'recipient@test.com',
         subject: 'Test Subject',
@@ -123,17 +123,48 @@ describe('EmailService', () => {
       const result = await service.sendEmail(emailDto);
 
       expect(result).toBe(true);
-      expect(mockTransporter.sendMail).toHaveBeenCalledWith({
-        from: '"CYNA Test" <noreply@test.com>',
-        to: 'recipient@test.com',
-        subject: 'Test Subject',
-        html: '<p>Test content</p>',
-        text: 'Test content',
-      });
+      expect(mockTransporter.sendMail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          from: '"CYNA Test" <noreply@test.com>',
+          to: 'recipient@test.com',
+          replyTo: 'contact@cyna.it',
+          subject: 'Test Subject',
+          html: '<p>Test content</p>',
+          text: 'Test content',
+          headers: expect.objectContaining({
+            'List-Unsubscribe': '<mailto:unsubscribe@cyna.it>, <https://www.cyna.it/unsubscribe>',
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+            'X-Mailer': 'CYNA Notifications',
+            'X-Entity-Ref-ID': expect.stringMatching(
+              /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+            ),
+          }),
+        }),
+      );
       expect(mockLogger.log).toHaveBeenCalledWith(
         expect.stringContaining('Email sent successfully'),
         'EmailService',
       );
+    });
+
+    it('should generate a fresh X-Entity-Ref-ID per email', async () => {
+      const emailDto = {
+        to: 'recipient@test.com',
+        subject: 'Test Subject',
+        html: '<p>Test</p>',
+      };
+
+      await service.sendEmail(emailDto);
+      await service.sendEmail(emailDto);
+
+      const firstCallHeaders = (
+        mockTransporter.sendMail.mock.calls[0][0] as { headers: Record<string, string> }
+      ).headers;
+      const secondCallHeaders = (
+        mockTransporter.sendMail.mock.calls[1][0] as { headers: Record<string, string> }
+      ).headers;
+
+      expect(firstCallHeaders['X-Entity-Ref-ID']).not.toBe(secondCallHeaders['X-Entity-Ref-ID']);
     });
 
     it('should return false when email fails to send', async () => {

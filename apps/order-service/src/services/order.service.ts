@@ -42,13 +42,21 @@ export class OrderService {
   ) {}
 
   async generateOrderNumber(): Promise<string> {
+    // MAX on the trailing sequence, not COUNT — deleted rows (e.g. legacy
+    // guest orphans purged in 1776900000000) make COUNT+1 collide with
+    // existing numbers.
     const year = new Date().getFullYear();
-    const count = await this.orderRepository
+    const prefix = `CYN-${year}-`;
+    const result = await this.orderRepository
       .createQueryBuilder('order')
-      .where('EXTRACT(YEAR FROM order.created_at) = :year', { year })
-      .getCount();
-    const sequence = String(count + 1).padStart(5, '0');
-    return `CYN-${year}-${sequence}`;
+      .select(
+        `COALESCE(MAX(CAST(SPLIT_PART(order.order_number, '-', 3) AS INTEGER)), 0)`,
+        'max_seq',
+      )
+      .where('order.order_number LIKE :prefix', { prefix: `${prefix}%` })
+      .getRawOne<{ max_seq: string | number }>();
+    const nextSeq = Number(result?.max_seq ?? 0) + 1;
+    return `${prefix}${String(nextSeq).padStart(5, '0')}`;
   }
 
   async createOrderFromCart(data: {
@@ -175,32 +183,51 @@ export class OrderService {
             : OrderType.SAAS;
     }
 
-    // 4. Generate order number
-    const orderNumber = await this.generateOrderNumber();
-
-    // 5. Calculate tax (simplified: 20% VAT for EU)
+    // 4. Calculate tax (simplified: 20% VAT for EU)
     const taxAmount = Math.round(subtotal * 0.2 * 100) / 100;
     const total = subtotal + taxAmount;
 
-    // 6. Create Order
-    const order = this.orderRepository.create({
-      orderNumber,
-      userId: data.userId || null,
-      customerEmail: data.email,
-      status: OrderStatus.PENDING,
-      orderType,
-      subtotal,
-      taxAmount,
-      shippingAmount: 0,
-      discountAmount: 0,
-      total,
-      currency: 'EUR',
-      billingAddressSnapshot: data.billingAddress,
-      shippingAddressSnapshot: data.shippingAddress || null,
-      stripePaymentIntentId: data.stripePaymentIntentId,
-    });
-
-    const savedOrder = await this.orderRepository.save(order);
+    // 5. Generate order number and save, retrying on concurrent collisions.
+    // MAX+1 is still racy under parallel creates, so we retry up to 5 times
+    // on the unique violation (23505) before giving up.
+    let savedOrder: Order | null = null;
+    let lastError: unknown = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const orderNumber = await this.generateOrderNumber();
+      const order = this.orderRepository.create({
+        orderNumber,
+        userId: data.userId || null,
+        customerEmail: data.email,
+        status: OrderStatus.PENDING,
+        orderType,
+        subtotal,
+        taxAmount,
+        shippingAmount: 0,
+        discountAmount: 0,
+        total,
+        currency: 'EUR',
+        billingAddressSnapshot: data.billingAddress,
+        shippingAddressSnapshot: data.shippingAddress || null,
+        stripePaymentIntentId: data.stripePaymentIntentId,
+      });
+      try {
+        savedOrder = await this.orderRepository.save(order);
+        break;
+      } catch (err) {
+        lastError = err;
+        const code = (err as { code?: string }).code;
+        if (code === '23505') {
+          this.logger.warn(
+            `Order number ${orderNumber} collided, retrying (attempt ${attempt + 1}/5)`,
+          );
+          continue;
+        }
+        throw err;
+      }
+    }
+    if (!savedOrder) {
+      throw lastError ?? new Error('Failed to save order after retries');
+    }
 
     // 7. Create OrderItems
     for (const item of orderItems) {
@@ -217,7 +244,7 @@ export class OrderService {
       sessionId: cartEntity.sessionId ?? undefined,
     });
 
-    this.logger.log(`Order created: ${orderNumber} (${savedOrder.id})`);
+    this.logger.log(`Order created: ${savedOrder.orderNumber} (${savedOrder.id})`);
 
     // Reload with items
     const reloaded = await this.orderRepository.findOne({

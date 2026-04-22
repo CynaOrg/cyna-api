@@ -3,6 +3,7 @@ import { MessagePattern, EventPattern, Payload, RpcException } from '@nestjs/mic
 import { MESSAGE_PATTERNS, EVENT_PATTERNS } from '@cyna-api/common';
 import { PaymentService } from '../services/payment.service';
 import { SubscriptionService } from '../services/subscription.service';
+import { LicenseService } from '../services/license.service';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
 import { CancelSubscriptionDto } from '../dto/cancel-subscription.dto';
@@ -14,6 +15,7 @@ export class PaymentController {
   constructor(
     private readonly paymentService: PaymentService,
     private readonly subscriptionService: SubscriptionService,
+    private readonly licenseService: LicenseService,
   ) {}
 
   private wrapError(error: unknown): RpcException {
@@ -79,8 +81,27 @@ export class PaymentController {
     }
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.PAYMENT.GET_USER_LICENSES)
+  async getUserLicenses(@Payload() data: { userId: string }) {
+    try {
+      return await this.licenseService.findByUserId(data.userId);
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.PAYMENT.GET_LICENSE_BY_ID)
+  async getLicenseById(@Payload() data: { licenseId: string; userId: string }) {
+    try {
+      return await this.licenseService.findByIdForUser(data.licenseId, data.userId);
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
   /**
    * Handle account deletion event - cancel all active Stripe subscriptions
+   * and revoke all active license keys for the deleted user
    */
   @EventPattern(EVENT_PATTERNS.AUTH.ACCOUNT_DELETED)
   async handleAccountDeleted(
@@ -106,6 +127,10 @@ export class PaymentController {
           'PaymentController',
         );
       }
+
+      // Revoke all active licenses for the deleted user
+      const revokedCount = await this.licenseService.revokeAllForUser(data.userId);
+      this.logger.log(`Revoked ${revokedCount} licenses for user ${data.userId}`);
     } catch (error) {
       this.logger.error(
         `Failed to handle account_deleted event: ${error instanceof Error ? error.message : 'Unknown error'}`,

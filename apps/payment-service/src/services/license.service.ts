@@ -1,9 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomBytes } from 'crypto';
 import { LicenseKeyStatus } from '@cyna-api/common';
-import { LicenseKey } from '../entities/license-key.entity';
+import { LicenseKey, ProductSnapshot } from '../entities/license-key.entity';
 
 export interface OrderItemWithProduct {
   productId: string;
@@ -11,6 +11,7 @@ export interface OrderItemWithProduct {
   quantity: number;
   email: string;
   userId?: string;
+  productSnapshot: ProductSnapshot;
 }
 
 @Injectable()
@@ -42,6 +43,7 @@ export class LicenseService {
           userId: item.userId || null,
           licenseKey: this.generateKey(),
           email: item.email,
+          productSnapshot: item.productSnapshot,
           status: LicenseKeyStatus.ACTIVE,
           activatedAt: new Date(),
         });
@@ -73,6 +75,26 @@ export class LicenseService {
       where: { email },
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async findByIdForUser(licenseId: string, userId: string): Promise<LicenseKey> {
+    const license = await this.licenseKeyRepository.findOne({
+      where: { id: licenseId, userId },
+    });
+    if (!license) {
+      throw new NotFoundException('License not found');
+    }
+    return license;
+  }
+
+  async revokeAllForUser(userId: string): Promise<number> {
+    const result = await this.licenseKeyRepository.update(
+      { userId, status: LicenseKeyStatus.ACTIVE },
+      { status: LicenseKeyStatus.REVOKED },
+    );
+    const affected = result.affected ?? 0;
+    this.logger.log(`Revoked ${affected} active licenses for user ${userId}`);
+    return affected;
   }
 
   async revokeByOrderId(orderId: string): Promise<void> {

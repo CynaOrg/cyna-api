@@ -9,11 +9,18 @@ describe('LicenseService', () => {
   let service: LicenseService;
   let licenseKeyRepository: Partial<Repository<LicenseKey>>;
 
+  const TEST_SNAPSHOT = {
+    nameFr: 'Licence Test',
+    nameEn: 'Test License',
+    slug: 'test-license',
+  };
+
   beforeEach(async () => {
     licenseKeyRepository = {
       create: jest.fn().mockImplementation((entity) => ({ id: 'key-123', ...entity })),
       save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
       find: jest.fn().mockResolvedValue([]),
+      findOne: jest.fn().mockResolvedValue(null),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
     };
 
@@ -69,9 +76,27 @@ describe('LicenseService', () => {
 
     it('should generate license keys only for license-type items', async () => {
       const items: OrderItemWithProduct[] = [
-        { productId: 'prod-1', productType: 'license', quantity: 2, email: 'test@example.com' },
-        { productId: 'prod-2', productType: 'physical', quantity: 1, email: 'test@example.com' },
-        { productId: 'prod-3', productType: 'saas', quantity: 1, email: 'test@example.com' },
+        {
+          productId: 'prod-1',
+          productType: 'license',
+          quantity: 2,
+          email: 'test@example.com',
+          productSnapshot: TEST_SNAPSHOT,
+        },
+        {
+          productId: 'prod-2',
+          productType: 'physical',
+          quantity: 1,
+          email: 'test@example.com',
+          productSnapshot: TEST_SNAPSHOT,
+        },
+        {
+          productId: 'prod-3',
+          productType: 'saas',
+          quantity: 1,
+          email: 'test@example.com',
+          productSnapshot: TEST_SNAPSHOT,
+        },
       ];
 
       const result = await service.generateForOrder(orderId, items);
@@ -83,7 +108,13 @@ describe('LicenseService', () => {
 
     it('should generate one key per quantity unit', async () => {
       const items: OrderItemWithProduct[] = [
-        { productId: 'prod-1', productType: 'license', quantity: 5, email: 'test@example.com' },
+        {
+          productId: 'prod-1',
+          productType: 'license',
+          quantity: 5,
+          email: 'test@example.com',
+          productSnapshot: TEST_SNAPSHOT,
+        },
       ];
 
       const result = await service.generateForOrder(orderId, items);
@@ -100,6 +131,7 @@ describe('LicenseService', () => {
           quantity: 1,
           email: 'user@example.com',
           userId: 'user-123',
+          productSnapshot: TEST_SNAPSHOT,
         },
       ];
 
@@ -119,7 +151,13 @@ describe('LicenseService', () => {
 
     it('should set userId to null when not provided', async () => {
       const items: OrderItemWithProduct[] = [
-        { productId: 'prod-1', productType: 'license', quantity: 1, email: 'guest@example.com' },
+        {
+          productId: 'prod-1',
+          productType: 'license',
+          quantity: 1,
+          email: 'guest@example.com',
+          productSnapshot: TEST_SNAPSHOT,
+        },
       ];
 
       await service.generateForOrder(orderId, items);
@@ -133,7 +171,13 @@ describe('LicenseService', () => {
 
     it('should return empty array when no license items exist', async () => {
       const items: OrderItemWithProduct[] = [
-        { productId: 'prod-1', productType: 'physical', quantity: 3, email: 'test@example.com' },
+        {
+          productId: 'prod-1',
+          productType: 'physical',
+          quantity: 3,
+          email: 'test@example.com',
+          productSnapshot: TEST_SNAPSHOT,
+        },
       ];
 
       const result = await service.generateForOrder(orderId, items);
@@ -201,6 +245,83 @@ describe('LicenseService', () => {
       expect(licenseKeyRepository.update).toHaveBeenCalledWith(
         { orderId: 'order-123' },
         { status: LicenseKeyStatus.REVOKED },
+      );
+    });
+  });
+
+  describe('findByIdForUser', () => {
+    it('should return license when found and belongs to user', async () => {
+      const mockLicense = { id: 'lic-1', userId: 'user-1' } as LicenseKey;
+      (licenseKeyRepository.findOne as jest.Mock).mockResolvedValueOnce(mockLicense);
+
+      const result = await service.findByIdForUser('lic-1', 'user-1');
+
+      expect(result).toBe(mockLicense);
+      expect(licenseKeyRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'lic-1', userId: 'user-1' },
+      });
+    });
+
+    it('should throw NotFoundException when license does not exist', async () => {
+      (licenseKeyRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+      await expect(service.findByIdForUser('lic-1', 'user-1')).rejects.toThrow('License not found');
+    });
+
+    it('should throw NotFoundException when license belongs to another user', async () => {
+      // findOne with userId filter returns null if ownership does not match
+      (licenseKeyRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+      await expect(service.findByIdForUser('lic-1', 'user-2')).rejects.toThrow('License not found');
+    });
+  });
+
+  describe('revokeAllForUser', () => {
+    it('should return the number of affected rows', async () => {
+      (licenseKeyRepository.update as jest.Mock).mockResolvedValueOnce({
+        affected: 3,
+      });
+      const result = await service.revokeAllForUser('user-1');
+      expect(result).toBe(3);
+      expect(licenseKeyRepository.update).toHaveBeenCalledWith(
+        { userId: 'user-1', status: LicenseKeyStatus.ACTIVE },
+        { status: LicenseKeyStatus.REVOKED },
+      );
+    });
+
+    it('should return 0 when user has no active licenses (idempotent)', async () => {
+      (licenseKeyRepository.update as jest.Mock).mockResolvedValueOnce({
+        affected: 0,
+      });
+      const result = await service.revokeAllForUser('user-1');
+      expect(result).toBe(0);
+    });
+
+    it('should not touch licenses that are already revoked', async () => {
+      (licenseKeyRepository.update as jest.Mock).mockResolvedValueOnce({
+        affected: 0,
+      });
+      await service.revokeAllForUser('user-1');
+      expect(licenseKeyRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({ status: LicenseKeyStatus.ACTIVE }),
+        expect.anything(),
+      );
+    });
+  });
+
+  describe('generateForOrder - productSnapshot persistence', () => {
+    it('should persist productSnapshot on created license', async () => {
+      const snapshot = { nameFr: 'EDR', nameEn: 'EDR', slug: 'edr' };
+      const items: OrderItemWithProduct[] = [
+        {
+          productId: 'p1',
+          productType: 'license',
+          quantity: 1,
+          email: 'e@x.com',
+          productSnapshot: snapshot,
+        },
+      ];
+      await service.generateForOrder('order-1', items);
+      expect(licenseKeyRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ productSnapshot: snapshot }),
       );
     });
   });

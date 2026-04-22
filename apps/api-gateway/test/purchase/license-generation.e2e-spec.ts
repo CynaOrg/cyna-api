@@ -116,8 +116,25 @@ describe('License Generation via Webhook (e2e)', () => {
     const checkout = checkoutRes.body as CheckoutResponse;
 
     // The gateway emits UPDATE_ORDER_STATUS asynchronously to attach stripePaymentIntentId
-    // to the order. Wait for it to land in the DB before invoking the webhook.
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    // on the order row. Poll the DB (up to 5s) rather than sleeping for a hardcoded slot.
+    const deadline = Date.now() + 5000;
+    let attached = false;
+    while (Date.now() < deadline) {
+      const [row] = await orderDataSource.query(
+        'SELECT stripe_payment_intent_id FROM orders WHERE id = $1',
+        [checkout.data.orderId],
+      );
+      if (row?.stripe_payment_intent_id === checkout.data.paymentIntentId) {
+        attached = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    if (!attached) {
+      throw new Error(
+        `stripePaymentIntentId not attached to order ${checkout.data.orderId} within 5s`,
+      );
+    }
 
     return {
       orderId: checkout.data.orderId,
@@ -222,10 +239,29 @@ describe('License Generation via Webhook (e2e)', () => {
     expect(licenses).toHaveLength(2);
   });
 
-  it('should not create licenses when no order matches the payment intent', async () => {
-    await invokeWebhook('pi_no_such_intent', 100, `evt_orphan_${Date.now()}`);
+  it('should throw and release the claim when no order matches the payment intent', async () => {
+    // Orphan payment intent: webhook must throw so Stripe retries, and the
+    // claim row must be released so the retry actually re-enters the handler.
+    const eventId = `evt_orphan_${Date.now()}`;
 
-    const licenses = await paymentDataSource.query('SELECT COUNT(*)::int AS n FROM license_keys');
-    expect(licenses[0].n).toBe(0);
+    await expect(
+      webhookService.handleWebhookEvent({
+        eventId,
+        eventType: 'payment_intent.succeeded',
+        data: { id: 'pi_no_such_intent', amount: 100, metadata: {} },
+        created: Date.now(),
+      }),
+    ).rejects.toThrow('Order not found for payment intent pi_no_such_intent');
+
+    const [licenseCount] = await paymentDataSource.query(
+      'SELECT COUNT(*)::int AS n FROM license_keys',
+    );
+    expect(licenseCount.n).toBe(0);
+
+    const [claim] = await paymentDataSource.query(
+      'SELECT COUNT(*)::int AS n FROM processed_webhooks WHERE event_id = $1',
+      [eventId],
+    );
+    expect(claim.n).toBe(0);
   });
 });

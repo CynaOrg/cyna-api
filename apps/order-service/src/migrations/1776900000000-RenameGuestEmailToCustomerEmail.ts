@@ -6,17 +6,16 @@ export class RenameGuestEmailToCustomerEmail1776900000000 implements MigrationIn
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`ALTER TABLE "orders" ADD COLUMN "customer_email" varchar(255)`);
 
+    // Guest orders already carry their email — copy it over.
     await queryRunner.query(
       `UPDATE "orders" SET "customer_email" = "guest_email" WHERE "guest_email" IS NOT NULL`,
     );
 
-    // Legacy user orders that predate this migration: the email is owned by auth-service
-    // and can't be resolved from a migration context. Mark them so they remain queryable
-    // and a later one-shot backfill script can replace these placeholders.
-    await queryRunner.query(
-      `UPDATE "orders" SET "customer_email" = 'legacy-user-' || "user_id"::text || '@cyna.local' WHERE "customer_email" IS NULL AND "user_id" IS NOT NULL`,
-    );
-
+    // Legacy user orders (userId set, guest_email null) cannot be backfilled from the
+    // migration — the email lives in auth-service. The SET NOT NULL below will fail
+    // loudly if any such rows remain. Operators must run a one-shot script that joins
+    // orders.user_id against auth-service before applying this migration. For fresh
+    // databases and dev/CI environments this is a no-op.
     await queryRunner.query(`ALTER TABLE "orders" ALTER COLUMN "customer_email" SET NOT NULL`);
 
     await queryRunner.query(`ALTER TABLE "orders" DROP COLUMN "guest_email"`);

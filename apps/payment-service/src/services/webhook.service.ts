@@ -42,9 +42,13 @@ export class WebhookService {
   async handleWebhookEvent(payload: WebhookPayloadDto): Promise<void> {
     const { eventId, eventType, data } = payload;
 
-    // 1. Check idempotence
-    if (await this.isProcessed(eventId)) {
-      this.logger.log(`Webhook ${eventId} already processed, skipping`);
+    // 1. Claim the event atomically. Two concurrent deliveries of the same
+    //    Stripe eventId (possible when the first delivery is slow and Stripe
+    //    retries before markProcessed runs) race on the same PK insert; one
+    //    wins, the loser short-circuits.
+    const claimed = await this.tryClaimEvent(eventId, eventType);
+    if (!claimed) {
+      this.logger.log(`Webhook ${eventId} already claimed, skipping`);
       return;
     }
 
@@ -80,16 +84,39 @@ export class WebhookService {
         default:
           this.logger.log(`Unhandled webhook event type: ${eventType}`);
       }
-
-      // 3. Mark as processed
-      await this.markProcessed(eventId, eventType);
     } catch (error) {
+      // Release the claim so Stripe's retry can reprocess this eventId.
+      await this.releaseClaim(eventId);
       this.logger.error(
         `Error processing webhook ${eventId}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
       );
       throw error;
     }
+  }
+
+  /**
+   * Attempt to atomically claim an event for processing.
+   * Returns true if we won the race, false if another consumer already claimed it.
+   */
+  private async tryClaimEvent(eventId: string, eventType: string): Promise<boolean> {
+    try {
+      await this.processedWebhookRepository.insert({
+        eventId,
+        eventType,
+        processedAt: new Date(),
+      });
+      return true;
+    } catch (err) {
+      // Postgres unique_violation (23505) on the eventId PK means someone else claimed first.
+      const code = (err as { code?: string }).code;
+      if (code === '23505') return false;
+      throw err;
+    }
+  }
+
+  private async releaseClaim(eventId: string): Promise<void> {
+    await this.processedWebhookRepository.delete({ eventId });
   }
 
   async isProcessed(eventId: string): Promise<boolean> {
@@ -121,13 +148,17 @@ export class WebhookService {
     //    the system is fully consistent.
     const order = await this.fetchOrderByPaymentIntent(paymentIntentId);
 
-    if (order) {
-      await this.generateLicensesForOrder(order);
-    } else {
-      this.logger.error(
-        `No order found for payment intent ${paymentIntentId} — skipping license generation`,
+    if (!order) {
+      // The order may not have been persisted yet (eventual-consistency window on
+      // the async UPDATE_ORDER_STATUS event that attaches stripePaymentIntentId).
+      // Throw so Stripe retries the webhook — much safer than silently marking it
+      // PAID with no license rows attached.
+      throw new Error(
+        `Order not found for payment intent ${paymentIntentId} — webhook will be retried`,
       );
     }
+
+    await this.generateLicensesForOrder(order);
 
     // 2. Emit event for Order Service to confirm the order
     this.orderClient.emit(EVENT_PATTERNS.PAYMENT.CONFIRMED, {
@@ -175,9 +206,39 @@ export class WebhookService {
   }
 
   private async generateLicensesForOrder(order: OrderForLicenseGeneration): Promise<void> {
-    // Idempotence: the outer processed_webhooks table dedupes by Stripe eventId,
-    // but a retry of the same eventId re-enters this code path before the row is
-    // saved. Short-circuit if licenses already exist for this order.
+    const licenseItems: OrderItemWithProduct[] = order.items
+      .filter((item) => {
+        const snapshot = item.productSnapshot as { productType?: string };
+        return snapshot.productType === 'license';
+      })
+      .map((item) => {
+        const snapshot = item.productSnapshot as {
+          nameFr?: string;
+          nameEn?: string;
+          slug?: string;
+        };
+        return {
+          productId: item.productId,
+          productType: 'license',
+          quantity: item.quantity,
+          email: order.customerEmail,
+          userId: order.userId ?? undefined,
+          productSnapshot: {
+            nameFr: snapshot.nameFr ?? 'Licence',
+            nameEn: snapshot.nameEn ?? 'License',
+            slug: snapshot.slug ?? 'unknown',
+          },
+        };
+      });
+
+    if (licenseItems.length === 0) {
+      this.logger.log(`Order ${order.id} has no license items — skipping generation`);
+      return;
+    }
+
+    // Idempotence guard: processed_webhooks dedupes same-eventId concurrent
+    // deliveries, but a legitimate Stripe retry after markProcessed would still
+    // reach here if we ever loosened that claim. Belt-and-suspenders.
     const existing = await this.licenseService.findByOrderId(order.id);
     if (existing.length > 0) {
       this.logger.log(
@@ -186,28 +247,7 @@ export class WebhookService {
       return;
     }
 
-    const items: OrderItemWithProduct[] = order.items.map((item) => {
-      const snapshot = item.productSnapshot as {
-        productType?: string;
-        nameFr?: string;
-        nameEn?: string;
-        slug?: string;
-      };
-      return {
-        productId: item.productId,
-        productType: snapshot.productType ?? 'unknown',
-        quantity: item.quantity,
-        email: order.customerEmail,
-        userId: order.userId ?? undefined,
-        productSnapshot: {
-          nameFr: snapshot.nameFr ?? 'Licence',
-          nameEn: snapshot.nameEn ?? 'License',
-          slug: snapshot.slug ?? 'unknown',
-        },
-      };
-    });
-
-    const generated = await this.licenseService.generateForOrder(order.id, items);
+    const generated = await this.licenseService.generateForOrder(order.id, licenseItems);
     this.logger.log(
       `Generated ${generated.length} license(s) for order ${order.id} (userId=${order.userId ?? 'guest'})`,
     );

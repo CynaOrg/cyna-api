@@ -1,0 +1,28 @@
+<h1>Your order is on its way</h1>
+
+<p>Great news — your order <strong>{{orderNumber}}</strong> has just shipped.</p>
+
+{{#if trackingNumber}}
+  <p><strong>Tracking number:</strong> {{trackingNumber}}</p>
+{{/if}}
+
+{{#if trackingUrl}}
+  <p style='text-align: center;'>
+    <a
+      href='{{trackingUrl}}'
+      class='button'
+      style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; margin: 24px 0;'
+    >Track my parcel</a>
+  </p>
+{{else}}
+  <p style='text-align: center;'>
+    <a
+      href='{{frontendUrl}}/dashboard/account?tab=orders'
+      class='button'
+      style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; margin: 24px 0;'
+    >View my order</a>
+  </p>
+{{/if}}
+
+<p class='hint' style='color: #9ca3af; font-size: 13px; line-height: 1.5;'>Delivery usually takes 3
+  to 5 working days depending on your location.</p>

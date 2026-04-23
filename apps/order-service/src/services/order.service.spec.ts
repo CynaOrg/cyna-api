@@ -117,6 +117,9 @@ describe('OrderService', () => {
       emit: jest.fn(),
     };
 
+    const notificationClient = { emit: jest.fn() };
+    const authClient = { send: jest.fn(), emit: jest.fn() };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrderService,
@@ -124,6 +127,8 @@ describe('OrderService', () => {
         { provide: getRepositoryToken(OrderItem), useValue: orderItemRepository },
         { provide: CartService, useValue: cartService },
         { provide: SERVICE_NAMES.CATALOG, useValue: catalogClient },
+        { provide: SERVICE_NAMES.NOTIFICATION, useValue: notificationClient },
+        { provide: SERVICE_NAMES.AUTH, useValue: authClient },
       ],
     }).compile();
 

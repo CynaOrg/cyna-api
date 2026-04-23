@@ -1,0 +1,21 @@
+<h1>Votre panier vous attend</h1>
+
+<p>Il semble que vous ayez laissé
+  {{#if itemCount}}{{itemCount}} article(s){{else}}des articles{{/if}}
+  dans votre panier CYNA. Bonne nouvelle : on l'a gardé pour vous.</p>
+
+{{#if itemsSummary}}
+  <p><strong>Dans votre panier :</strong> {{itemsSummary}}</p>
+{{/if}}
+
+<p style='text-align: center;'>
+  <a
+    href='{{frontendUrl}}/cart'
+    class='button'
+    style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; margin: 24px 0;'
+  >Reprendre ma commande</a>
+</p>
+
+<p class='hint' style='color: #9ca3af; font-size: 13px; line-height: 1.5;'>Votre panier est
+  conservé, vous pouvez finaliser votre achat quand vous voulez. Si vous avez une question, notre
+  équipe est là pour vous aider.</p>

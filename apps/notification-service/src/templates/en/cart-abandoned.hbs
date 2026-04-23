@@ -1,0 +1,20 @@
+<h1>Your cart is still waiting</h1>
+
+<p>It looks like you left
+  {{#if itemCount}}{{itemCount}} item(s){{else}}some items{{/if}}
+  in your CYNA cart. Good news — we saved it for you.</p>
+
+{{#if itemsSummary}}
+  <p><strong>In your cart:</strong> {{itemsSummary}}</p>
+{{/if}}
+
+<p style='text-align: center;'>
+  <a
+    href='{{frontendUrl}}/cart'
+    class='button'
+    style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; margin: 24px 0;'
+  >Resume checkout</a>
+</p>
+
+<p class='hint' style='color: #9ca3af; font-size: 13px; line-height: 1.5;'>Your cart is saved — you
+  can complete your purchase whenever you like. Our team is here if you have any question.</p>

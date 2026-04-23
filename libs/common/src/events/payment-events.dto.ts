@@ -88,3 +88,30 @@ export interface LicensesIssuedEvent {
   language: Language;
   licenses: IssuedLicense[];
 }
+
+export interface OrderShippedEvent {
+  orderId: string;
+  orderNumber: string;
+  userId: string | null;
+  email: string;
+  language: Language;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+}
+
+export interface ContactAutoReplyEvent {
+  messageId: string;
+  name: string;
+  email: string;
+  subject: string;
+  language: Language;
+}
+
+export interface CartAbandonedEvent {
+  cartId: string;
+  userId: string;
+  email: string;
+  language: Language;
+  itemsSummary: string;
+  itemCount: number;
+}

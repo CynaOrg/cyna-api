@@ -40,6 +40,8 @@ export class OrderService {
     private readonly orderItemRepository: Repository<OrderItem>,
     private readonly cartService: CartService,
     @Inject(SERVICE_NAMES.CATALOG) private readonly catalogClient: ClientProxy,
+    @Inject(SERVICE_NAMES.NOTIFICATION) private readonly notificationClient: ClientProxy,
+    @Inject(SERVICE_NAMES.AUTH) private readonly authClient: ClientProxy,
   ) {}
 
   async generateOrderNumber(): Promise<string> {
@@ -413,6 +415,7 @@ export class OrderService {
       });
     }
 
+    const previousStatus = order.status;
     order.status = status as OrderStatus;
 
     if (notes) {
@@ -433,6 +436,23 @@ export class OrderService {
     await this.orderRepository.save(order);
 
     this.logger.log(`Admin updated order ${order.orderNumber} status to ${status}`);
+
+    // Emit ORDER.SHIPPED only on the PAID -> SHIPPED transition to avoid
+    // double-sending when an admin edits an already-shipped order.
+    if (status === OrderStatus.SHIPPED && previousStatus !== OrderStatus.SHIPPED) {
+      const email = order.notificationEmail ?? order.customerEmail;
+      if (email) {
+        this.notificationClient.emit(EVENT_PATTERNS.ORDER.SHIPPED, {
+          orderId: order.id,
+          orderNumber: order.orderNumber,
+          userId: order.userId,
+          email,
+          language: order.notificationLanguage ?? Language.FR,
+          trackingNumber: order.trackingNumber,
+          trackingUrl: order.trackingUrl,
+        });
+      }
+    }
 
     return order;
   }

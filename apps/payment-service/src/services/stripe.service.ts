@@ -152,18 +152,10 @@ export class StripeService {
     const taxRateId = await this.getOrCreateTaxRate();
     const currency = input.currency.toLowerCase();
 
-    for (const item of input.items) {
-      const amountHtCents = Math.round(item.unitPriceHt * item.quantity * 100);
-      await this.stripe.invoiceItems.create({
-        customer: input.customerId,
-        currency,
-        amount: amountHtCents,
-        description: `${item.description} × ${item.quantity}`,
-        tax_rates: [taxRateId],
-        metadata: input.metadata,
-      });
-    }
-
+    // Stripe 2026-01-28.clover no longer sweeps pending invoice items into a
+    // newly-created invoice by default — previously this produced a 0-EUR
+    // draft that auto-settled and orphaned our real line items. We create the
+    // draft FIRST and then attach each item explicitly via `invoice: draft.id`.
     const draft = await this.stripe.invoices.create({
       customer: input.customerId,
       // send_invoice + days_until_due=0 prevents Stripe from auto-charging
@@ -176,9 +168,38 @@ export class StripeService {
       metadata: input.metadata,
     });
     if (!draft.id) throw new Error('Stripe draft invoice missing id');
+
+    for (const item of input.items) {
+      const amountHtCents = Math.round(item.unitPriceHt * item.quantity * 100);
+      await this.stripe.invoiceItems.create({
+        customer: input.customerId,
+        invoice: draft.id,
+        currency,
+        amount: amountHtCents,
+        description: `${item.description} × ${item.quantity}`,
+        tax_rates: [taxRateId],
+        metadata: input.metadata,
+      });
+    }
     const finalized = await this.stripe.invoices.finalizeInvoice(draft.id);
     if (!finalized.id) throw new Error('Stripe finalized invoice missing id');
-    return this.stripe.invoices.pay(finalized.id, { paid_out_of_band: true });
+    // When the customer has a recent payment on file, Stripe can auto-apply
+    // the balance and the invoice transitions straight to "paid" during
+    // finalize — calling .pay() on an already-paid invoice throws
+    // `Invoice is already paid`. Skip the out-of-band pay in that case.
+    if (finalized.status === 'paid') return finalized;
+    try {
+      return await this.stripe.invoices.pay(finalized.id, { paid_out_of_band: true });
+    } catch (err: unknown) {
+      // Defensive: if Stripe flipped the invoice to paid between finalize and
+      // pay (race), re-read it so we still return a paid invoice with URL.
+      const message = err instanceof Error ? err.message : String(err);
+      if (/already.*paid/i.test(message)) {
+        this.logger.log(`Invoice ${finalized.id} was already paid; returning current state`);
+        return this.stripe.invoices.retrieve(finalized.id);
+      }
+      throw err;
+    }
   }
 
   async listActiveSubscriptions(customerId: string): Promise<Stripe.Subscription[]> {

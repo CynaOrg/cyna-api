@@ -19,9 +19,11 @@ const TO = process.env.TO_EMAIL || 'neqoo.mah@gmail.com';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
 const TEMPLATES_DIR = path.resolve(__dirname, '../templates');
 
+type SampleVars = Record<string, unknown> | ((lang: 'fr' | 'en') => Record<string, unknown>);
+
 interface Sample {
   subject: { fr: string; en: string };
-  vars: Record<string, unknown>;
+  vars: SampleVars;
 }
 
 const FOOTER_I18N: Record<'fr' | 'en', { copyright: string; tagline: string }> = {
@@ -147,10 +149,15 @@ const samples: Record<string, Sample> = {
       fr: 'Échec du paiement pour CYN-2026-00042',
       en: 'Payment failed for order CYN-2026-00042',
     },
-    vars: {
+    // The real `error` string is produced by translateStripeDecline(declineCode, lang),
+    // so we mirror that here — a pre-translated string per language.
+    vars: (lang) => ({
       orderNumber: 'CYN-2026-00042',
-      error: 'Votre carte a été refusée par la banque. Merci de réessayer avec un autre moyen.',
-    },
+      error:
+        lang === 'en'
+          ? 'Your card was declined by the bank. Please try again with another payment method.'
+          : 'Votre carte a été refusée par la banque. Merci de réessayer avec un autre moyen.',
+    }),
   },
   'subscription-welcome': {
     subject: {
@@ -251,7 +258,8 @@ async function main() {
     for (const lang of languages) {
       const prefix = `[${lang.toUpperCase()}][${name}]`;
       try {
-        const html = renderTemplate(name, lang, sample.vars);
+        const resolvedVars = typeof sample.vars === 'function' ? sample.vars(lang) : sample.vars;
+        const html = renderTemplate(name, lang, resolvedVars);
         const subject = `${prefix} ${sample.subject[lang]}`;
         await transporter.sendMail({
           from: `"${fromName}" <${fromEmail}>`,

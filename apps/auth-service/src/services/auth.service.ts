@@ -1,17 +1,18 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, LessThan, MoreThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { RpcException } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { firstValueFrom, throwError } from 'rxjs';
+import { timeout, retry, catchError } from 'rxjs/operators';
 import {
   CynaLoggerService,
   Language,
-  UpdateProfileDto,
-  UpdatePasswordDto,
-  UpdateLanguageDto,
-  DeleteAccountDto,
+  SERVICE_NAMES,
+  MESSAGE_PATTERNS,
+  UserCredentialsView,
+  UserProfileView,
 } from '@cyna-api/common';
-import { User } from '../entities/user.entity';
 import { EmailVerificationToken } from '../entities/email-verification-token.entity';
 import { PasswordResetToken } from '../entities/password-reset-token.entity';
 import { RefreshToken } from '../entities/refresh-token.entity';
@@ -28,14 +29,14 @@ export class AuthService {
   private readonly passwordResetExpiryHours: number;
 
   constructor(
-    @InjectRepository(User)
-    private readonly userRepository: Repository<User>,
     @InjectRepository(EmailVerificationToken)
     private readonly emailVerificationTokenRepository: Repository<EmailVerificationToken>,
     @InjectRepository(PasswordResetToken)
     private readonly passwordResetTokenRepository: Repository<PasswordResetToken>,
     @InjectRepository(RefreshToken)
     private readonly refreshTokenRepository: Repository<RefreshToken>,
+    @Inject(SERVICE_NAMES.USER)
+    private readonly userClient: ClientProxy,
     private readonly passwordService: PasswordService,
     private readonly tokenService: TokenService,
     private readonly authEventsPublisher: AuthEventsPublisher,
@@ -52,22 +53,42 @@ export class AuthService {
     );
   }
 
+  /**
+   * Send a request/response message to USER_SERVICE with timeout, retry, and
+   * RpcException translation. When user-service raises a structured RpcException
+   * (e.g. 404 USER_NOT_FOUND), we re-emit the same RpcException so callers see
+   * the original status code. Any other error becomes a 503.
+   */
+  private async callUserService<TResult, TPayload = unknown>(
+    pattern: { cmd: string },
+    payload: TPayload,
+  ): Promise<TResult> {
+    return firstValueFrom(
+      this.userClient.send<TResult, TPayload>(pattern, payload).pipe(
+        timeout(5000),
+        retry({ count: 2, delay: 1000 }),
+        catchError((err) => {
+          if (err && typeof err === 'object' && 'statusCode' in err) {
+            return throwError(() => new RpcException(err as Record<string, unknown>));
+          }
+          return throwError(
+            () =>
+              new RpcException({
+                statusCode: 503,
+                message: 'User service unavailable',
+                code: 'USER_SERVICE_UNAVAILABLE',
+              }),
+          );
+        }),
+      ),
+    );
+  }
+
   async register(dto: CreateUserDto): Promise<{ message: string; user: UserResponseDto }> {
-    const existingUser = await this.userRepository.findOne({
-      where: { email: dto.email },
-    });
-
-    if (existingUser) {
-      throw new RpcException({
-        statusCode: 409,
-        message: 'Email already registered',
-        code: 'EMAIL_EXISTS',
-      });
-    }
-
+    // Hash password first; user-service CreateUserDto requires a pre-computed hash.
     const passwordHash = await this.passwordService.hash(dto.password);
 
-    const user = this.userRepository.create({
+    const user = await this.callUserService<UserProfileView>(MESSAGE_PATTERNS.USER.CREATE, {
       email: dto.email,
       passwordHash,
       firstName: dto.firstName,
@@ -75,11 +96,7 @@ export class AuthService {
       companyName: dto.companyName,
       vatNumber: dto.vatNumber,
       preferredLanguage: dto.preferredLanguage || Language.FR,
-      isVerified: false,
-      isActive: true,
     });
-
-    await this.userRepository.save(user);
 
     const verificationToken = this.tokenService.generateSecureToken();
     const hashedToken = this.tokenService.hashToken(verificationToken);
@@ -105,14 +122,15 @@ export class AuthService {
 
     return {
       message: 'Registration successful. Please check your email to verify your account.',
-      user: UserResponseDto.fromEntity(user),
+      user: UserResponseDto.fromProfileView(user),
     };
   }
 
   async validateUser(dto: LoginUserDto): Promise<AuthResponseDto> {
-    const user = await this.userRepository.findOne({
-      where: { email: dto.email },
-    });
+    const user = await this.callUserService<UserCredentialsView | null>(
+      MESSAGE_PATTERNS.USER.FIND_BY_EMAIL,
+      { email: dto.email },
+    );
 
     if (!user) {
       throw new RpcException({
@@ -163,7 +181,7 @@ export class AuthService {
       accessToken,
       refreshToken,
       expiresIn: this.tokenService.getAccessTokenExpirySeconds(),
-      user: UserResponseDto.fromEntity(user),
+      user: UserResponseDto.fromCredentialsView(user),
     };
   }
 
@@ -175,7 +193,6 @@ export class AuthService {
         token: hashedToken,
         verifiedAt: IsNull(),
       },
-      relations: ['user'],
     });
 
     if (!emailVerificationToken) {
@@ -194,20 +211,13 @@ export class AuthService {
       });
     }
 
-    const user = await this.userRepository.findOne({
-      where: { id: emailVerificationToken.userId },
+    const user = await this.callUserService<UserProfileView>(MESSAGE_PATTERNS.USER.GET_BY_ID, {
+      userId: emailVerificationToken.userId,
     });
 
-    if (!user) {
-      throw new RpcException({
-        statusCode: 404,
-        message: 'User not found',
-        code: 'USER_NOT_FOUND',
-      });
-    }
-
-    user.isVerified = true;
-    await this.userRepository.save(user);
+    await this.callUserService<void>(MESSAGE_PATTERNS.USER.MARK_VERIFIED, {
+      userId: user.id,
+    });
 
     emailVerificationToken.verifiedAt = new Date();
     await this.emailVerificationTokenRepository.save(emailVerificationToken);
@@ -223,18 +233,14 @@ export class AuthService {
   }
 
   async resendVerification(email: string): Promise<{ success: boolean; message: string }> {
-    const user = await this.userRepository.findOne({
-      where: { email },
-    });
+    const user = await this.callUserService<UserCredentialsView | null>(
+      MESSAGE_PATTERNS.USER.FIND_BY_EMAIL,
+      { email },
+    );
 
-    if (!user) {
-      return {
-        success: true,
-        message: 'If the email exists, a verification email has been sent',
-      };
-    }
-
-    if (user.isVerified) {
+    // Anti-enumeration: always return success regardless of whether the user
+    // exists or is already verified.
+    if (!user || user.isVerified) {
       return {
         success: true,
         message: 'If the email exists, a verification email has been sent',
@@ -275,10 +281,12 @@ export class AuthService {
   }
 
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
-    const user = await this.userRepository.findOne({
-      where: { email },
-    });
+    const user = await this.callUserService<UserCredentialsView | null>(
+      MESSAGE_PATTERNS.USER.FIND_BY_EMAIL,
+      { email },
+    );
 
+    // Anti-enumeration: silent success when the email is unknown.
     if (!user) {
       return {
         success: true,
@@ -347,24 +355,21 @@ export class AuthService {
       });
     }
 
-    const user = await this.userRepository.findOne({
-      where: { id: passwordResetToken.userId },
+    const user = await this.callUserService<UserProfileView>(MESSAGE_PATTERNS.USER.GET_BY_ID, {
+      userId: passwordResetToken.userId,
     });
 
-    if (!user) {
-      throw new RpcException({
-        statusCode: 404,
-        message: 'User not found',
-        code: 'USER_NOT_FOUND',
-      });
-    }
+    const newPasswordHash = await this.passwordService.hash(newPassword);
 
-    user.passwordHash = await this.passwordService.hash(newPassword);
-    await this.userRepository.save(user);
+    await this.callUserService<void>(MESSAGE_PATTERNS.USER.UPDATE_PASSWORD_HASH, {
+      userId: user.id,
+      passwordHash: newPasswordHash,
+    });
 
     passwordResetToken.usedAt = new Date();
     await this.passwordResetTokenRepository.save(passwordResetToken);
 
+    // Revoke all refresh tokens locally so every existing session is killed.
     await this.refreshTokenRepository.update(
       { userId: user.id, revokedAt: IsNull() },
       { revokedAt: new Date() },
@@ -395,7 +400,6 @@ export class AuthService {
         token: hashedToken,
         revokedAt: IsNull(),
       },
-      relations: ['user'],
     });
 
     // If not found, check if it was recently revoked (grace period for rapid refreshes)
@@ -406,19 +410,28 @@ export class AuthService {
           token: hashedToken,
           revokedAt: MoreThan(graceCutoff),
         },
-        relations: ['user'],
       });
 
       if (refreshToken) {
         // Token was recently revoked (e.g. page refresh race condition).
         // Issue a fresh token pair so the session is not lost.
-        const user = refreshToken.user;
-
-        if (!user || !user.isActive) {
+        if (!refreshToken.userId) {
           throw new RpcException({
             statusCode: 401,
             message: 'Invalid refresh token',
             code: 'INVALID_REFRESH_TOKEN',
+          });
+        }
+
+        const user = await this.callUserService<UserProfileView>(MESSAGE_PATTERNS.USER.GET_BY_ID, {
+          userId: refreshToken.userId,
+        });
+
+        if (!user.isActive) {
+          throw new RpcException({
+            statusCode: 403,
+            message: 'Account is disabled',
+            code: 'ACCOUNT_DISABLED',
           });
         }
 
@@ -436,7 +449,7 @@ export class AuthService {
           accessToken,
           refreshToken: newRefreshToken,
           expiresIn: this.tokenService.getAccessTokenExpirySeconds(),
-          user: UserResponseDto.fromEntity(user),
+          user: UserResponseDto.fromProfileView(user),
         };
       }
 
@@ -455,7 +468,7 @@ export class AuthService {
       });
     }
 
-    if (!refreshToken.user) {
+    if (!refreshToken.userId) {
       throw new RpcException({
         statusCode: 401,
         message: 'Invalid refresh token',
@@ -463,7 +476,9 @@ export class AuthService {
       });
     }
 
-    const user = refreshToken.user;
+    const user = await this.callUserService<UserProfileView>(MESSAGE_PATTERNS.USER.GET_BY_ID, {
+      userId: refreshToken.userId,
+    });
 
     if (!user.isActive) {
       throw new RpcException({
@@ -490,7 +505,7 @@ export class AuthService {
       accessToken,
       refreshToken: newRefreshToken,
       expiresIn: this.tokenService.getAccessTokenExpirySeconds(),
-      user: UserResponseDto.fromEntity(user),
+      user: UserResponseDto.fromProfileView(user),
     };
   }
 
@@ -509,6 +524,19 @@ export class AuthService {
     this.logger.log(`User logged out: ${userId}`, 'AuthService');
 
     return { success: true };
+  }
+
+  /**
+   * Revoke every non-expired refresh token for a user. Called when user-service
+   * notifies us of a password change or account deletion so all sessions are
+   * killed across devices.
+   */
+  async revokeAllUserRefreshTokens(userId: string): Promise<void> {
+    await this.refreshTokenRepository.update(
+      { userId, revokedAt: IsNull() },
+      { revokedAt: new Date() },
+    );
+    this.logger.log(`All refresh tokens revoked for user: ${userId}`, 'AuthService');
   }
 
   private static readonly MAX_ACTIVE_SESSIONS = 5;
@@ -573,174 +601,6 @@ export class AuthService {
       verificationTokens: verificationResult.affected || 0,
       resetTokens: resetResult.affected || 0,
       refreshTokens: refreshResult.affected || 0,
-    };
-  }
-
-  async updateStripeCustomerId(userId: string, stripeCustomerId: string): Promise<void> {
-    await this.userRepository.update({ id: userId }, { stripeCustomerId });
-  }
-
-  async findUserById(userId: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { id: userId } });
-  }
-
-  private async findActiveUserOrThrow(userId: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
-
-    if (!user) {
-      throw new RpcException({
-        statusCode: 404,
-        message: 'User not found',
-        code: 'USER_NOT_FOUND',
-      });
-    }
-
-    if (!user.isActive) {
-      throw new RpcException({
-        statusCode: 403,
-        message: 'Account is disabled',
-        code: 'ACCOUNT_DISABLED',
-      });
-    }
-
-    return user;
-  }
-
-  async getProfile(userId: string): Promise<UserResponseDto> {
-    const user = await this.findActiveUserOrThrow(userId);
-    return UserResponseDto.fromEntity(user);
-  }
-
-  async updateProfile(
-    userId: string,
-    dto: UpdateProfileDto,
-  ): Promise<{ message: string; user: UserResponseDto }> {
-    const user = await this.findActiveUserOrThrow(userId);
-
-    // Update only provided fields
-    if (dto.firstName !== undefined) {
-      user.firstName = dto.firstName;
-    }
-    if (dto.lastName !== undefined) {
-      user.lastName = dto.lastName;
-    }
-    if (dto.companyName !== undefined) {
-      user.companyName = dto.companyName;
-    }
-    if (dto.vatNumber !== undefined) {
-      user.vatNumber = dto.vatNumber;
-    }
-
-    await this.userRepository.save(user);
-
-    this.logger.log(`Profile updated for user: ${user.email}`, 'AuthService');
-
-    return {
-      message: 'Profile updated successfully',
-      user: UserResponseDto.fromEntity(user),
-    };
-  }
-
-  async updatePassword(userId: string, dto: UpdatePasswordDto): Promise<{ message: string }> {
-    const user = await this.findActiveUserOrThrow(userId);
-
-    // Verify current password
-    const isCurrentPasswordValid = await this.passwordService.compare(
-      dto.currentPassword,
-      user.passwordHash,
-    );
-
-    if (!isCurrentPasswordValid) {
-      throw new RpcException({
-        statusCode: 401,
-        message: 'Current password is incorrect',
-        code: 'INVALID_CURRENT_PASSWORD',
-      });
-    }
-
-    // Ensure new password is different from current password
-    if (dto.currentPassword === dto.newPassword) {
-      throw new RpcException({
-        statusCode: 400,
-        message: 'New password must be different from current password',
-        code: 'SAME_PASSWORD',
-      });
-    }
-
-    // Hash and save new password
-    user.passwordHash = await this.passwordService.hash(dto.newPassword);
-    await this.userRepository.save(user);
-
-    // Revoke all refresh tokens (logout from all devices)
-    await this.refreshTokenRepository.update(
-      { userId: user.id, revokedAt: IsNull() },
-      { revokedAt: new Date() },
-    );
-
-    // Emit password changed event for notification
-    await this.authEventsPublisher.emitPasswordChanged(user.id, user.email, user.preferredLanguage);
-
-    this.logger.log(`Password updated for user: ${user.email}`, 'AuthService');
-
-    return {
-      message: 'Password updated successfully',
-    };
-  }
-
-  async updateLanguage(
-    userId: string,
-    dto: UpdateLanguageDto,
-  ): Promise<{ message: string; user: UserResponseDto }> {
-    const user = await this.findActiveUserOrThrow(userId);
-
-    user.preferredLanguage = dto.preferredLanguage;
-    await this.userRepository.save(user);
-
-    this.logger.log(
-      `Language preference updated for user: ${user.email} to ${dto.preferredLanguage}`,
-      'AuthService',
-    );
-
-    return {
-      message: 'Language preference updated successfully',
-      user: UserResponseDto.fromEntity(user),
-    };
-  }
-
-  async deleteAccount(userId: string, dto: DeleteAccountDto): Promise<{ message: string }> {
-    const user = await this.findActiveUserOrThrow(userId);
-
-    // Verify password
-    const isPasswordValid = await this.passwordService.compare(dto.password, user.passwordHash);
-
-    if (!isPasswordValid) {
-      throw new RpcException({
-        statusCode: 401,
-        message: 'Password is incorrect',
-        code: 'INVALID_PASSWORD',
-      });
-    }
-
-    // Soft delete: deactivate the account
-    user.isActive = false;
-    await this.userRepository.save(user);
-
-    // Revoke all refresh tokens
-    await this.refreshTokenRepository.update(
-      { userId: user.id, revokedAt: IsNull() },
-      { revokedAt: new Date() },
-    );
-
-    // Emit account deleted event (handles Stripe subscription cancellation + notification)
-    await this.authEventsPublisher.emitAccountDeleted({
-      userId: user.id,
-      stripeCustomerId: user.stripeCustomerId,
-    });
-
-    this.logger.log(`Account deleted (soft) for user: ${user.email}`, 'AuthService');
-
-    return {
-      message: 'Account deleted successfully',
     };
   }
 }

@@ -1,6 +1,6 @@
 import { Controller, Logger } from '@nestjs/common';
-import { MessagePattern, EventPattern, Payload, RpcException } from '@nestjs/microservices';
-import { MESSAGE_PATTERNS } from '@cyna-api/common';
+import { MessagePattern, EventPattern, Payload } from '@nestjs/microservices';
+import { MESSAGE_PATTERNS, EVENT_PATTERNS } from '@cyna-api/common';
 import { AuthService } from '../services';
 import { CreateUserDto } from '../dto';
 import { LoginUserDto } from '../dto';
@@ -10,12 +10,6 @@ import { ForgotPasswordDto } from '../dto';
 import { ResetPasswordDto } from '../dto';
 import { RefreshTokenDto } from '../dto';
 import { LogoutDto } from '../dto';
-import {
-  UpdateProfileDto,
-  UpdatePasswordDto,
-  UpdateLanguageDto,
-  DeleteAccountDto,
-} from '@cyna-api/common';
 
 @Controller()
 export class AuthController {
@@ -63,54 +57,31 @@ export class AuthController {
     return this.authService.logout(data.userId, data.refreshToken);
   }
 
-  @MessagePattern(MESSAGE_PATTERNS.AUTH.GET_USER_BY_ID)
-  async getUserById(@Payload() data: { userId: string }) {
-    const user = await this.authService.findUserById(data.userId);
-    if (!user) {
-      throw new RpcException({
-        statusCode: 404,
-        message: 'User not found',
-        code: 'USER_NOT_FOUND',
-      });
-    }
-    return user;
-  }
-
-  @MessagePattern(MESSAGE_PATTERNS.USER.GET_PROFILE)
-  async getProfile(@Payload() data: { userId: string }) {
-    return this.authService.getProfile(data.userId);
-  }
-
-  @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_PROFILE)
-  async updateProfile(@Payload() data: { userId: string } & UpdateProfileDto) {
-    const { userId, ...profileData } = data;
-    return this.authService.updateProfile(userId, profileData);
-  }
-
-  @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_PASSWORD)
-  async updatePassword(@Payload() data: { userId: string } & UpdatePasswordDto) {
-    const { userId, ...passwordData } = data;
-    return this.authService.updatePassword(userId, passwordData);
-  }
-
-  @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_LANGUAGE)
-  async updateLanguage(@Payload() data: { userId: string } & UpdateLanguageDto) {
-    const { userId, ...languageData } = data;
-    return this.authService.updateLanguage(userId, languageData);
-  }
-
-  @MessagePattern(MESSAGE_PATTERNS.USER.DELETE_ACCOUNT)
-  async deleteAccount(@Payload() data: { userId: string } & DeleteAccountDto) {
-    const { userId, ...deleteData } = data;
-    return this.authService.deleteAccount(userId, deleteData);
-  }
-
-  @EventPattern('auth.update_stripe_customer_id')
-  async updateStripeCustomerId(@Payload() data: { userId: string; stripeCustomerId: string }) {
+  /**
+   * Revoke every refresh token for a user when user-service soft-deletes them.
+   * Fire-and-forget: swallow errors so user-service isn't blocked on cleanup.
+   */
+  @EventPattern(EVENT_PATTERNS.USER.DELETED)
+  async handleUserDeleted(@Payload() data: { userId: string }) {
     try {
-      await this.authService.updateStripeCustomerId(data.userId, data.stripeCustomerId);
+      await this.authService.revokeAllUserRefreshTokens(data.userId);
     } catch (error) {
-      this.logger.error(`Failed to update stripeCustomerId for user ${data.userId}: ${error}`);
+      this.logger.error(`Failed to revoke tokens on USER.DELETED for ${data.userId}: ${error}`);
+    }
+  }
+
+  /**
+   * Revoke every refresh token for a user when user-service reports a password
+   * change so existing sessions on other devices are forced to re-authenticate.
+   */
+  @EventPattern(EVENT_PATTERNS.USER.PASSWORD_CHANGED)
+  async handleUserPasswordChanged(@Payload() data: { userId: string }) {
+    try {
+      await this.authService.revokeAllUserRefreshTokens(data.userId);
+    } catch (error) {
+      this.logger.error(
+        `Failed to revoke tokens on USER.PASSWORD_CHANGED for ${data.userId}: ${error}`,
+      );
     }
   }
 }

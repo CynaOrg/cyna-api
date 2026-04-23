@@ -12,37 +12,13 @@ import {
   DeleteAccountDto,
   SERVICE_NAMES,
   EVENT_PATTERNS,
+  UserCredentialsView,
+  UserProfileView,
 } from '@cyna-api/common';
 import { User } from '../entities/user.entity';
 import { CreateUserDto } from '../dto/create-user.dto';
 
 const BCRYPT_COST = 12;
-
-export interface UserCredentialsView {
-  id: string;
-  email: string;
-  passwordHash: string;
-  firstName: string;
-  lastName: string;
-  isActive: boolean;
-  isVerified: boolean;
-  preferredLanguage: Language;
-}
-
-export interface UserProfileView {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  companyName?: string;
-  vatNumber?: string;
-  isActive: boolean;
-  isVerified: boolean;
-  preferredLanguage: Language;
-  stripeCustomerId?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
 
 @Injectable()
 export class UserService {

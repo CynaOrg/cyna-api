@@ -45,12 +45,15 @@ interface OrderNotificationContext {
 
 interface OrderForLicenseGeneration {
   id: string;
+  orderNumber?: string;
   userId: string | null;
   customerEmail: string;
+  currency?: string;
   items: Array<{
     productId: string;
     productSnapshot: Record<string, unknown>;
     quantity: number;
+    unitPrice?: number | string;
   }>;
 }
 
@@ -68,32 +71,70 @@ export class WebhookService {
     @Inject(SERVICE_NAMES.NOTIFICATION) private readonly notificationClient: ClientProxy,
   ) {}
 
-  private async resolveReceiptForPaymentIntent(
+  /**
+   * Generate a real Stripe invoice (TVA-compliant, numbered, downloadable PDF)
+   * for a successful one-shot PaymentIntent purchase. Requires the PI to carry
+   * a `customer` — which PaymentService.createPaymentIntent guarantees since
+   * the "real invoice" feature shipped. Gracefully falls back to the
+   * charge.receipt_url if anything fails, so the confirmation email always
+   * has SOME link to show.
+   */
+  private async resolveInvoiceForPurchase(
     data: Record<string, unknown>,
+    order: OrderForLicenseGeneration,
   ): Promise<{ id: string | null; url: string | null }> {
-    // PaymentIntents do not support invoice_creation — invoices are a
-    // Checkout-session / Subscription feature. For one-shot purchases we
-    // surface the Stripe-hosted charge receipt URL instead, which is
-    // auto-generated on every successful charge and good enough as a
-    // "facture" link for this project's scope.
     const paymentIntentId = data.id as string | undefined;
     if (!paymentIntentId) return { id: null, url: null };
+
     try {
       const pi = await this.stripeService.getPaymentIntentWithCharge(paymentIntentId);
+      const customerId = typeof pi.customer === 'string' ? pi.customer : pi.customer?.id;
+
+      if (customerId && order.items.length > 0) {
+        const items = order.items
+          .filter((it) => typeof it.unitPrice !== 'undefined')
+          .map((it) => {
+            const snapshot = it.productSnapshot as { nameFr?: string; nameEn?: string };
+            return {
+              description: snapshot.nameFr ?? snapshot.nameEn ?? 'Article',
+              unitPriceHt: Number(it.unitPrice),
+              quantity: it.quantity,
+            };
+          });
+        if (items.length > 0) {
+          const invoice = await this.stripeService.generateInvoiceForPurchase({
+            customerId,
+            currency: order.currency ?? 'EUR',
+            items,
+            metadata: {
+              orderId: order.id,
+              orderNumber: order.orderNumber ?? '',
+              paymentIntentId,
+            },
+          });
+          this.logger.log(
+            `Generated Stripe invoice ${invoice.number ?? invoice.id} for order ${order.orderNumber ?? order.id}`,
+          );
+          return {
+            id: invoice.id ?? null,
+            url: invoice.hosted_invoice_url ?? invoice.invoice_pdf ?? null,
+          };
+        }
+      }
+
+      // Fallback: no customer on PI or no usable items — surface the charge
+      // receipt URL so the email still has a link.
       const charge =
         typeof pi.latest_charge === 'object' && pi.latest_charge
           ? (pi.latest_charge as Stripe.Charge)
           : null;
-      return {
-        id: charge?.id ?? null,
-        url: charge?.receipt_url ?? null,
-      };
+      return { id: charge?.id ?? null, url: charge?.receipt_url ?? null };
     } catch (err) {
       this.logger.warn(
-        `Could not fetch charge receipt for ${paymentIntentId}: ${err instanceof Error ? err.message : 'unknown error'}`,
+        `Could not generate/fetch invoice for ${paymentIntentId}: ${err instanceof Error ? err.message : 'unknown error'}`,
       );
-      return { id: null, url: null };
     }
+    return { id: null, url: null };
   }
 
   async handleWebhookEvent(payload: WebhookPayloadDto): Promise<void> {
@@ -257,18 +298,18 @@ export class WebhookService {
 
     const issued = await this.generateLicensesForOrder(order);
 
-    // Fetch Stripe charge receipt once so we can persist it on the Order and
-    // include the download URL in the confirmation email.
-    const receipt = await this.resolveReceiptForPaymentIntent(data);
+    // Generate a proper Stripe invoice (TVA-compliant, PDF downloadable) and
+    // persist its URL on the Order so the detail page + confirmation email
+    // can expose "Télécharger la facture".
+    const invoice = await this.resolveInvoiceForPurchase(data, order);
 
-    // 2. Emit event for Order Service to confirm the order (now also carries
-    // the receipt URL so the order row is fully hydrated for the detail page).
+    // 2. Emit event for Order Service to confirm the order + attach invoice.
     this.orderClient.emit(EVENT_PATTERNS.PAYMENT.CONFIRMED, {
       paymentIntentId,
       amount,
       metadata,
-      stripeInvoiceId: receipt.id,
-      stripeInvoiceUrl: receipt.url,
+      stripeInvoiceId: invoice.id,
+      stripeInvoiceUrl: invoice.url,
     });
 
     // 3. Enrich and emit to Notification Service with full order context
@@ -287,7 +328,7 @@ export class WebhookService {
       total: ctx.total,
       currency: ctx.currency,
       itemsSummary: ctx.itemsSummary,
-      invoiceUrl: receipt.url,
+      invoiceUrl: invoice.url,
     };
     this.notificationClient.emit(EVENT_PATTERNS.PAYMENT.CONFIRMED, event);
 

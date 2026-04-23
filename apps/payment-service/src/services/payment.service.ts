@@ -43,6 +43,12 @@ export class PaymentService {
       });
     }
 
+    // Resolve (or create) a Stripe Customer so the post-charge webhook can
+    // generate a real Stripe invoice (with TVA + downloadable PDF). Falls back
+    // to anonymous PI if resolution fails — checkout must never be blocked by
+    // customer bookkeeping.
+    const customerId = await this.resolveOrCreateCustomer(dto);
+
     const paymentIntent = await this.stripeService.createPaymentIntent(
       amountInCents,
       currency,
@@ -51,11 +57,14 @@ export class PaymentService {
         userId: dto.userId || '',
         guestEmail: dto.guestEmail || '',
       },
-      { receiptEmail: dto.guestEmail || undefined },
+      {
+        receiptEmail: dto.guestEmail || undefined,
+        customerId,
+      },
     );
 
     this.logger.log(
-      `Payment Intent created: ${paymentIntent.id} for amount ${amountInCents} ${currency}`,
+      `Payment Intent created: ${paymentIntent.id} for amount ${amountInCents} ${currency} (customer=${customerId ?? 'none'})`,
     );
 
     return {
@@ -64,6 +73,46 @@ export class PaymentService {
       amount: amountInCents,
       currency,
     };
+  }
+
+  private async resolveOrCreateCustomer(dto: CreatePaymentIntentDto): Promise<string | undefined> {
+    try {
+      if (dto.userId) {
+        const user = await firstValueFrom(
+          this.authClient.send(MESSAGE_PATTERNS.AUTH.GET_USER_BY_ID, { userId: dto.userId }).pipe(
+            timeout(3000),
+            catchError(() => throwError(() => null)),
+          ),
+        );
+        if (user?.stripeCustomerId) return user.stripeCustomerId;
+        if (user?.email) {
+          const customer = await this.stripeService.createCustomer(
+            user.email,
+            user.name || user.email,
+            { userId: dto.userId },
+          );
+          // Persist so subsequent purchases reuse the same Stripe Customer.
+          this.authClient.emit('auth.update_stripe_customer_id', {
+            userId: dto.userId,
+            stripeCustomerId: customer.id,
+          });
+          return customer.id;
+        }
+      }
+
+      if (dto.guestEmail) {
+        const customer = await this.stripeService.createCustomer(dto.guestEmail, dto.guestEmail, {
+          guest: 'true',
+          orderId: dto.orderId,
+        });
+        return customer.id;
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Could not resolve Stripe customer for order ${dto.orderId}: ${err instanceof Error ? err.message : 'unknown error'}`,
+      );
+    }
+    return undefined;
   }
 
   async getSubscriptionsForUser(userId: string): Promise<Record<string, unknown>[]> {

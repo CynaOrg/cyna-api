@@ -18,7 +18,7 @@ export class StripeService {
     amount: number,
     currency: string,
     metadata: Record<string, string>,
-    options: { receiptEmail?: string } = {},
+    options: { receiptEmail?: string; customerId?: string } = {},
   ): Promise<Stripe.PaymentIntent> {
     const params: Stripe.PaymentIntentCreateParams = {
       amount,
@@ -26,10 +26,10 @@ export class StripeService {
       payment_method_types: ['card'],
       metadata,
     };
-    // receipt_email tells Stripe to auto-email a receipt on success. We still
-    // fetch the charge.receipt_url in the webhook so we can surface our own
-    // "Download receipt" link in the confirmation email and on the order page.
     if (options.receiptEmail) params.receipt_email = options.receiptEmail;
+    // Attaching a customer is what allows us to generate a proper Stripe
+    // invoice (with number + TVA breakdown + PDF) in the succeeded webhook.
+    if (options.customerId) params.customer = options.customerId;
     return this.stripe.paymentIntents.create(params);
   }
 
@@ -130,6 +130,55 @@ export class StripeService {
 
   async getPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
     return this.stripe.paymentIntents.retrieve(paymentIntentId);
+  }
+
+  /**
+   * Generate a real, tax-compliant Stripe invoice for a one-shot PaymentIntent
+   * purchase that already succeeded. Pattern:
+   *   1. Create one InvoiceItem per order line (HT amount + 20 % TVA tax rate)
+   *   2. Create the invoice in draft (auto_advance=false to keep control)
+   *   3. Finalize (assigns the Stripe invoice number; locks the invoice)
+   *   4. Mark as paid out_of_band (payment already captured via the PI, so
+   *      Stripe must not attempt to collect again)
+   * Returns the paid invoice — `hosted_invoice_url` is the customer-facing
+   * page with the "Download PDF" button; `invoice_pdf` is the direct PDF URL.
+   */
+  async generateInvoiceForPurchase(input: {
+    customerId: string;
+    currency: string;
+    items: Array<{ description: string; unitPriceHt: number; quantity: number }>;
+    metadata: Record<string, string>;
+  }): Promise<Stripe.Invoice> {
+    const taxRateId = await this.getOrCreateTaxRate();
+    const currency = input.currency.toLowerCase();
+
+    for (const item of input.items) {
+      const amountHtCents = Math.round(item.unitPriceHt * item.quantity * 100);
+      await this.stripe.invoiceItems.create({
+        customer: input.customerId,
+        currency,
+        amount: amountHtCents,
+        description: `${item.description} × ${item.quantity}`,
+        tax_rates: [taxRateId],
+        metadata: input.metadata,
+      });
+    }
+
+    const draft = await this.stripe.invoices.create({
+      customer: input.customerId,
+      // send_invoice + days_until_due=0 prevents Stripe from auto-charging
+      // the customer on finalize; combined with auto_advance=false it stays
+      // paused until we explicitly pay out_of_band.
+      collection_method: 'send_invoice',
+      days_until_due: 0,
+      auto_advance: false,
+      currency,
+      metadata: input.metadata,
+    });
+    if (!draft.id) throw new Error('Stripe draft invoice missing id');
+    const finalized = await this.stripe.invoices.finalizeInvoice(draft.id);
+    if (!finalized.id) throw new Error('Stripe finalized invoice missing id');
+    return this.stripe.invoices.pay(finalized.id, { paid_out_of_band: true });
   }
 
   async listActiveSubscriptions(customerId: string): Promise<Stripe.Subscription[]> {

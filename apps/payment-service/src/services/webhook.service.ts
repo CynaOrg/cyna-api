@@ -28,6 +28,7 @@ import {
   OrderItemWithProduct,
   IssuedLicense as ServiceIssuedLicense,
 } from './license.service';
+import { StripeService } from './stripe.service';
 import { WebhookPayloadDto } from '../dto/webhook-payload.dto';
 import Stripe from 'stripe';
 
@@ -62,9 +63,38 @@ export class WebhookService {
     private readonly processedWebhookRepository: Repository<ProcessedWebhook>,
     private readonly subscriptionService: SubscriptionService,
     private readonly licenseService: LicenseService,
+    private readonly stripeService: StripeService,
     @Inject(SERVICE_NAMES.ORDER) private readonly orderClient: ClientProxy,
     @Inject(SERVICE_NAMES.NOTIFICATION) private readonly notificationClient: ClientProxy,
   ) {}
+
+  private async resolveReceiptForPaymentIntent(
+    data: Record<string, unknown>,
+  ): Promise<{ id: string | null; url: string | null }> {
+    // PaymentIntents do not support invoice_creation — invoices are a
+    // Checkout-session / Subscription feature. For one-shot purchases we
+    // surface the Stripe-hosted charge receipt URL instead, which is
+    // auto-generated on every successful charge and good enough as a
+    // "facture" link for this project's scope.
+    const paymentIntentId = data.id as string | undefined;
+    if (!paymentIntentId) return { id: null, url: null };
+    try {
+      const pi = await this.stripeService.getPaymentIntentWithCharge(paymentIntentId);
+      const charge =
+        typeof pi.latest_charge === 'object' && pi.latest_charge
+          ? (pi.latest_charge as Stripe.Charge)
+          : null;
+      return {
+        id: charge?.id ?? null,
+        url: charge?.receipt_url ?? null,
+      };
+    } catch (err) {
+      this.logger.warn(
+        `Could not fetch charge receipt for ${paymentIntentId}: ${err instanceof Error ? err.message : 'unknown error'}`,
+      );
+      return { id: null, url: null };
+    }
+  }
 
   async handleWebhookEvent(payload: WebhookPayloadDto): Promise<void> {
     const { eventId, eventType, data } = payload;
@@ -227,11 +257,18 @@ export class WebhookService {
 
     const issued = await this.generateLicensesForOrder(order);
 
-    // 2. Emit event for Order Service to confirm the order
+    // Fetch Stripe charge receipt once so we can persist it on the Order and
+    // include the download URL in the confirmation email.
+    const receipt = await this.resolveReceiptForPaymentIntent(data);
+
+    // 2. Emit event for Order Service to confirm the order (now also carries
+    // the receipt URL so the order row is fully hydrated for the detail page).
     this.orderClient.emit(EVENT_PATTERNS.PAYMENT.CONFIRMED, {
       paymentIntentId,
       amount,
       metadata,
+      stripeInvoiceId: receipt.id,
+      stripeInvoiceUrl: receipt.url,
     });
 
     // 3. Enrich and emit to Notification Service with full order context
@@ -250,6 +287,7 @@ export class WebhookService {
       total: ctx.total,
       currency: ctx.currency,
       itemsSummary: ctx.itemsSummary,
+      invoiceUrl: receipt.url,
     };
     this.notificationClient.emit(EVENT_PATTERNS.PAYMENT.CONFIRMED, event);
 
@@ -408,6 +446,19 @@ export class WebhookService {
     const periodEnd = period?.end;
     if (periodEnd) {
       subscription.currentPeriodEnd = new Date(periodEnd * 1000);
+    }
+
+    // Invoice URLs live directly on the invoice webhook payload — no extra
+    // fetch needed.
+    const invoiceUrl =
+      (data.hosted_invoice_url as string | undefined) ??
+      (data.invoice_pdf as string | undefined) ??
+      null;
+    if (invoiceUrl) {
+      subscription.stripeLatestInvoiceUrl = invoiceUrl;
+    }
+
+    if (periodEnd || invoiceUrl) {
       await this.subscriptionService.create(subscription);
     }
 
@@ -425,6 +476,7 @@ export class WebhookService {
       language: subscription.notificationLanguage ?? Language.FR,
       productName: subscription.productName ?? 'Subscription',
       newPeriodEnd: subscription.currentPeriodEnd?.toISOString() ?? '',
+      invoiceUrl,
     };
     this.notificationClient.emit(EVENT_PATTERNS.PAYMENT.SUBSCRIPTION_RENEWED, event);
   }

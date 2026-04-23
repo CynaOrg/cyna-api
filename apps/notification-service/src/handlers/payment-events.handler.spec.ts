@@ -73,6 +73,28 @@ describe('PaymentEventsHandler', () => {
       );
     });
 
+    it('passes invoiceUrl to the template when the event carries one', async () => {
+      await handler.handlePaymentConfirmed({
+        orderId: 'o-1',
+        orderNumber: 'ORD-001',
+        userId: 'u-1',
+        email: 'user@example.com',
+        language: Language.FR,
+        total: 100,
+        currency: 'EUR',
+        itemsSummary: 'SOC Pro x1',
+        invoiceUrl: 'https://stripe.test/receipt/ch_abc',
+      });
+
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
+        'order-confirmation',
+        Language.FR,
+        expect.objectContaining({
+          invoiceUrl: 'https://stripe.test/receipt/ch_abc',
+        }),
+      );
+    });
+
     it('formats total as a localized currency string', async () => {
       await handler.handlePaymentConfirmed({
         orderId: 'o-1',

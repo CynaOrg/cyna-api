@@ -69,6 +69,12 @@ export class Order extends BaseEntity {
   @Column({ name: 'stripe_payment_intent_id', type: 'varchar', length: 255, nullable: true })
   stripePaymentIntentId: string | null;
 
+  @Column({ name: 'stripe_invoice_id', type: 'varchar', length: 255, nullable: true })
+  stripeInvoiceId: string | null;
+
+  @Column({ name: 'stripe_invoice_url', type: 'varchar', length: 2048, nullable: true })
+  stripeInvoiceUrl: string | null;
+
   @Column({ name: 'paid_at', type: 'timestamptz', nullable: true })
   paidAt: Date | null;
 

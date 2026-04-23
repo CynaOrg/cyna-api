@@ -18,12 +18,24 @@ export class StripeService {
     amount: number,
     currency: string,
     metadata: Record<string, string>,
+    options: { receiptEmail?: string } = {},
   ): Promise<Stripe.PaymentIntent> {
-    return this.stripe.paymentIntents.create({
+    const params: Stripe.PaymentIntentCreateParams = {
       amount,
       currency,
       payment_method_types: ['card'],
       metadata,
+    };
+    // receipt_email tells Stripe to auto-email a receipt on success. We still
+    // fetch the charge.receipt_url in the webhook so we can surface our own
+    // "Download receipt" link in the confirmation email and on the order page.
+    if (options.receiptEmail) params.receipt_email = options.receiptEmail;
+    return this.stripe.paymentIntents.create(params);
+  }
+
+  async getPaymentIntentWithCharge(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
+    return this.stripe.paymentIntents.retrieve(paymentIntentId, {
+      expand: ['latest_charge'],
     });
   }
 

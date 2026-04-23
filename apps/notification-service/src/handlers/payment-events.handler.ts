@@ -61,6 +61,7 @@ export class PaymentEventsHandler {
         orderNumber: data.orderNumber,
         total: this.formatAmount(data.total, data.currency, data.language),
         itemsSummary: data.itemsSummary,
+        invoiceUrl: data.invoiceUrl ?? null,
       });
       await this.emailService.sendEmail({
         to: data.email,
@@ -152,6 +153,7 @@ export class PaymentEventsHandler {
         ...this.baseVars(),
         productName: data.productName,
         newPeriodEnd: data.newPeriodEnd,
+        invoiceUrl: data.invoiceUrl ?? null,
       });
       await this.emailService.sendEmail({
         to: data.email,

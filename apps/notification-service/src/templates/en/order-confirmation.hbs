@@ -13,5 +13,14 @@
   >View my order</a>
 </p>
 
+{{#if invoiceUrl}}
+  <p style='text-align: center; margin-top: 8px;'>
+    <a
+      href='{{invoiceUrl}}'
+      style='display: inline-block; color: #4f39f6; text-decoration: underline; font-size: 14px; font-weight: 500;'
+    >Download invoice</a>
+  </p>
+{{/if}}
+
 <p class='hint' style='color: #9ca3af; font-size: 13px; line-height: 1.5;'>A shipping notification
   will follow if your order contains physical products.</p>

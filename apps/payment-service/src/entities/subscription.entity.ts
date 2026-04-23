@@ -70,4 +70,7 @@ export class Subscription extends BaseEntity {
     nullable: true,
   })
   notificationLanguage: Language | null;
+
+  @Column({ name: 'stripe_latest_invoice_url', type: 'varchar', length: 2048, nullable: true })
+  stripeLatestInvoiceUrl: string | null;
 }

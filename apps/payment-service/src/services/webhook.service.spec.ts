@@ -5,6 +5,7 @@ import { of, throwError, TimeoutError } from 'rxjs';
 import { WebhookService } from './webhook.service';
 import { SubscriptionService } from './subscription.service';
 import { LicenseService } from './license.service';
+import { StripeService } from './stripe.service';
 import { ProcessedWebhook } from '../entities/processed-webhook.entity';
 import {
   SERVICE_NAMES,
@@ -19,6 +20,7 @@ describe('WebhookService', () => {
   let processedWebhookRepository: Partial<Repository<ProcessedWebhook>>;
   let subscriptionService: Partial<SubscriptionService>;
   let licenseService: Partial<LicenseService>;
+  let stripeService: Partial<StripeService>;
   let orderClient: { emit: jest.Mock; send: jest.Mock };
   let notificationClient: { emit: jest.Mock };
 
@@ -56,6 +58,14 @@ describe('WebhookService', () => {
       revokeByOrderId: jest.fn().mockResolvedValue(undefined),
     };
 
+    stripeService = {
+      getPaymentIntentWithCharge: jest.fn().mockResolvedValue({
+        id: 'pi_stub',
+        latest_charge: { id: 'ch_stub', receipt_url: 'https://stripe.test/receipt/ch_stub' },
+      }),
+      getInvoice: jest.fn(),
+    };
+
     orderClient = {
       emit: jest.fn(),
       send: jest.fn().mockReturnValue(of(mockOrderSnapshot)),
@@ -76,6 +86,10 @@ describe('WebhookService', () => {
         {
           provide: LicenseService,
           useValue: licenseService,
+        },
+        {
+          provide: StripeService,
+          useValue: stripeService,
         },
         {
           provide: SERVICE_NAMES.ORDER,
@@ -221,11 +235,15 @@ describe('WebhookService', () => {
           created: Date.now(),
         });
 
-        expect(orderClient.emit).toHaveBeenCalledWith(EVENT_PATTERNS.PAYMENT.CONFIRMED, {
-          paymentIntentId: 'pi_123',
-          amount: 5000,
-          metadata: { cartId: 'cart-1' },
-        });
+        expect(orderClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.CONFIRMED,
+          expect.objectContaining({
+            paymentIntentId: 'pi_123',
+            amount: 5000,
+            metadata: { cartId: 'cart-1' },
+            stripeInvoiceUrl: 'https://stripe.test/receipt/ch_stub',
+          }),
+        );
         expect(notificationClient.emit).toHaveBeenCalledWith(
           EVENT_PATTERNS.PAYMENT.CONFIRMED,
           expect.objectContaining({
@@ -319,6 +337,54 @@ describe('WebhookService', () => {
                 activationExpiresAt: expiresAt.toISOString(),
               }),
             ],
+          }),
+        );
+      });
+
+      it('forwards the Stripe charge receipt URL on both order-service and notification events', async () => {
+        orderClient.send.mockReturnValue(of(licenseOrder));
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_receipt',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_receipt', amount: 100, metadata: {} },
+          created: Date.now(),
+        });
+
+        expect(stripeService.getPaymentIntentWithCharge).toHaveBeenCalledWith('pi_receipt');
+        expect(orderClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.CONFIRMED,
+          expect.objectContaining({
+            paymentIntentId: 'pi_receipt',
+            stripeInvoiceId: 'ch_stub',
+            stripeInvoiceUrl: 'https://stripe.test/receipt/ch_stub',
+          }),
+        );
+        expect(notificationClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.CONFIRMED,
+          expect.objectContaining({ invoiceUrl: 'https://stripe.test/receipt/ch_stub' }),
+        );
+      });
+
+      it('falls back to null invoice fields when the charge receipt fetch fails', async () => {
+        orderClient.send.mockReturnValue(of(licenseOrder));
+        (stripeService.getPaymentIntentWithCharge as jest.Mock).mockRejectedValueOnce(
+          new Error('stripe api down'),
+        );
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_receipt_err',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_err', amount: 100, metadata: {} },
+          created: Date.now(),
+        });
+
+        expect(orderClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.CONFIRMED,
+          expect.objectContaining({
+            paymentIntentId: 'pi_err',
+            stripeInvoiceId: null,
+            stripeInvoiceUrl: null,
           }),
         );
       });
@@ -647,6 +713,42 @@ describe('WebhookService', () => {
         });
 
         expect(notificationClient.emit).not.toHaveBeenCalled();
+      });
+
+      it('persists hosted_invoice_url on the subscription and forwards it in the event', async () => {
+        const mockSub = {
+          id: 'local-sub-2',
+          userId: 'user-2',
+          productName: 'XDR',
+          notificationEmail: 'u2@example.com',
+          notificationLanguage: Language.FR,
+          currentPeriodEnd: null,
+          stripeLatestInvoiceUrl: null as string | null,
+        };
+        (subscriptionService.findByStripeId as jest.Mock).mockResolvedValueOnce(mockSub);
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_invoice_url',
+          eventType: 'invoice.paid',
+          data: {
+            subscription: 'sub_stripe_2',
+            lines: { data: [{ period: { end: 1700000000 } }] },
+            hosted_invoice_url: 'https://stripe.test/invoice/xyz',
+          },
+          created: Date.now(),
+        });
+
+        expect(subscriptionService.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            stripeLatestInvoiceUrl: 'https://stripe.test/invoice/xyz',
+          }),
+        );
+        expect(notificationClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.SUBSCRIPTION_RENEWED,
+          expect.objectContaining({
+            invoiceUrl: 'https://stripe.test/invoice/xyz',
+          }),
+        );
       });
     });
 

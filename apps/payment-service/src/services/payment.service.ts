@@ -43,12 +43,16 @@ export class PaymentService {
       });
     }
 
-    // Create Payment Intent via Stripe
-    const paymentIntent = await this.stripeService.createPaymentIntent(amountInCents, currency, {
-      orderId: dto.orderId,
-      userId: dto.userId || '',
-      guestEmail: dto.guestEmail || '',
-    });
+    const paymentIntent = await this.stripeService.createPaymentIntent(
+      amountInCents,
+      currency,
+      {
+        orderId: dto.orderId,
+        userId: dto.userId || '',
+        guestEmail: dto.guestEmail || '',
+      },
+      { receiptEmail: dto.guestEmail || undefined },
+    );
 
     this.logger.log(
       `Payment Intent created: ${paymentIntent.id} for amount ${amountInCents} ${currency}`,

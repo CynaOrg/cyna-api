@@ -258,7 +258,13 @@ export class OrderService {
     return reloaded!;
   }
 
-  async handlePaymentConfirmed(paymentIntentId: string): Promise<void> {
+  async handlePaymentConfirmed(
+    paymentIntentId: string,
+    invoice: { stripeInvoiceId: string | null; stripeInvoiceUrl: string | null } = {
+      stripeInvoiceId: null,
+      stripeInvoiceUrl: null,
+    },
+  ): Promise<void> {
     const order = await this.getOrderByPaymentIntentId(paymentIntentId);
     if (!order) {
       this.logger.error(`Order not found for payment intent: ${paymentIntentId}`);
@@ -267,9 +273,13 @@ export class OrderService {
 
     order.status = OrderStatus.PAID;
     order.paidAt = new Date();
+    if (invoice.stripeInvoiceId) order.stripeInvoiceId = invoice.stripeInvoiceId;
+    if (invoice.stripeInvoiceUrl) order.stripeInvoiceUrl = invoice.stripeInvoiceUrl;
     await this.orderRepository.save(order);
 
-    this.logger.log(`Order ${order.orderNumber} marked as PAID`);
+    this.logger.log(
+      `Order ${order.orderNumber} marked as PAID${invoice.stripeInvoiceUrl ? ' (invoice attached)' : ''}`,
+    );
 
     // Confirm stock
     for (const item of order.items) {

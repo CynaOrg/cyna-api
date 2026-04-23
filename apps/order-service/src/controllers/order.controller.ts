@@ -166,9 +166,19 @@ export class OrderController {
   }
 
   @EventPattern(EVENT_PATTERNS.PAYMENT.CONFIRMED)
-  async onPaymentConfirmed(@Payload() data: { paymentIntentId: string }) {
+  async onPaymentConfirmed(
+    @Payload()
+    data: {
+      paymentIntentId: string;
+      stripeInvoiceId?: string | null;
+      stripeInvoiceUrl?: string | null;
+    },
+  ) {
     try {
-      await this.orderService.handlePaymentConfirmed(data.paymentIntentId);
+      await this.orderService.handlePaymentConfirmed(data.paymentIntentId, {
+        stripeInvoiceId: data.stripeInvoiceId ?? null,
+        stripeInvoiceUrl: data.stripeInvoiceUrl ?? null,
+      });
     } catch (error) {
       this.logger.error(`Failed to handle payment confirmed: ${error}`);
     }

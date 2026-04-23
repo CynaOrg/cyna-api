@@ -9,6 +9,7 @@ export interface PaymentConfirmedEvent {
   total: number;
   currency: string;
   itemsSummary: string;
+  invoiceUrl?: string | null;
 }
 
 export interface PaymentFailedEvent {
@@ -38,6 +39,7 @@ export interface SubscriptionRenewedEvent {
   language: Language;
   productName: string;
   newPeriodEnd: string;
+  invoiceUrl?: string | null;
 }
 
 export interface SubscriptionPastDueEvent {

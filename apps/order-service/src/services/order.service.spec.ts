@@ -436,6 +436,26 @@ describe('OrderService', () => {
 
       await expect(service.handlePaymentConfirmed('pi_nonexistent')).resolves.toBeUndefined();
     });
+
+    it('persists stripeInvoiceId and stripeInvoiceUrl when provided', async () => {
+      (orderRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        ...mockOrder,
+        items: [{ productId: 'prod-1', quantity: 1 }],
+      });
+
+      await service.handlePaymentConfirmed('pi_test_123', {
+        stripeInvoiceId: 'ch_abc',
+        stripeInvoiceUrl: 'https://stripe.test/receipt/ch_abc',
+      });
+
+      expect(orderRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: OrderStatus.PAID,
+          stripeInvoiceId: 'ch_abc',
+          stripeInvoiceUrl: 'https://stripe.test/receipt/ch_abc',
+        }),
+      );
+    });
   });
 
   describe('handlePaymentFailed', () => {

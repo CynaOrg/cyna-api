@@ -115,9 +115,13 @@ export class WebhookService {
           this.logger.log(
             `Generated Stripe invoice ${invoice.number ?? invoice.id} for order ${order.orderNumber ?? order.id}`,
           );
+          // invoice_pdf is the direct PDF download URL (served with
+          // Content-Disposition: attachment by Stripe) — preferred over
+          // hosted_invoice_url so clicking the CTA immediately downloads
+          // the document instead of opening the Stripe-hosted summary page.
           return {
             id: invoice.id ?? null,
-            url: invoice.hosted_invoice_url ?? invoice.invoice_pdf ?? null,
+            url: invoice.invoice_pdf ?? invoice.hosted_invoice_url ?? null,
           };
         }
       }
@@ -490,10 +494,11 @@ export class WebhookService {
     }
 
     // Invoice URLs live directly on the invoice webhook payload — no extra
-    // fetch needed.
+    // fetch needed. Prefer invoice_pdf so clicking "Télécharger la facture"
+    // triggers a direct PDF download.
     const invoiceUrl =
-      (data.hosted_invoice_url as string | undefined) ??
       (data.invoice_pdf as string | undefined) ??
+      (data.hosted_invoice_url as string | undefined) ??
       null;
     if (invoiceUrl) {
       subscription.stripeLatestInvoiceUrl = invoiceUrl;

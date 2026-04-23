@@ -4,7 +4,9 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { CynaConfigModule, LoggerModule, SERVICE_NAMES } from '@cyna-api/common';
 import { User } from './entities/user.entity';
 import { UserController } from './controllers/user.controller';
+import { UserAdminController } from './controllers/user-admin.controller';
 import { UserService } from './services/user.service';
+import { UserAdminService } from './services/user-admin.service';
 
 @Module({
   imports: [
@@ -36,7 +38,7 @@ import { UserService } from './services/user.service';
       },
     ]),
   ],
-  controllers: [UserController],
-  providers: [UserService],
+  controllers: [UserController, UserAdminController],
+  providers: [UserService, UserAdminService],
 })
 export class UserModule {}

@@ -8,6 +8,7 @@ import {
   Inject,
   UseGuards,
   HttpException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
@@ -22,15 +23,10 @@ import {
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import { JwtAuthGuard } from '../auth/guards';
 import { Request } from 'express';
+import { CancelSubscriptionDto, CreateSubscriptionDto } from './dto/create-subscription.dto';
 
 interface AuthenticatedRequest extends Request {
   user: { id: string; email: string; type: string; role?: string };
-}
-
-interface CreateSubscriptionBody {
-  productId: string;
-  billingPeriod: string;
-  billingAddress: Record<string, unknown>;
 }
 
 /**
@@ -57,7 +53,7 @@ export class SubscriptionController {
   constructor(@Inject(SERVICE_NAMES.PAYMENT) private readonly paymentClient: ClientProxy) {}
 
   @Post()
-  async createSubscription(@Body() body: CreateSubscriptionBody, @Req() req: AuthenticatedRequest) {
+  async createSubscription(@Body() body: CreateSubscriptionDto, @Req() req: AuthenticatedRequest) {
     return firstValueFrom(
       this.paymentClient
         .send(MESSAGE_PATTERNS.PAYMENT.CREATE_SUBSCRIPTION, {
@@ -90,7 +86,10 @@ export class SubscriptionController {
   }
 
   @Get(':id')
-  async getSubscription(@Param('id') id: string, @Req() _req: AuthenticatedRequest) {
+  async getSubscription(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() _req: AuthenticatedRequest,
+  ) {
     return firstValueFrom(
       this.paymentClient
         .send(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTION, {
@@ -106,8 +105,8 @@ export class SubscriptionController {
 
   @Post(':id/cancel')
   async cancelSubscription(
-    @Param('id') id: string,
-    @Body() body: { cancelAtPeriodEnd?: boolean },
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() body: CancelSubscriptionDto,
     @Req() req: AuthenticatedRequest,
   ) {
     return firstValueFrom(

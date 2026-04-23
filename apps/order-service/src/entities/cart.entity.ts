@@ -17,6 +17,9 @@ export class Cart extends BaseEntity {
   @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
   expiresAt: Date | null;
 
+  @Column({ name: 'abandoned_notified_at', type: 'timestamptz', nullable: true })
+  abandonedNotifiedAt: Date | null;
+
   @OneToMany(() => CartItem, (item) => item.cart, { cascade: true, eager: true })
   items: CartItem[];
 }

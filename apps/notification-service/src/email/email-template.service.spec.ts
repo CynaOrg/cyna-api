@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { EmailTemplateService } from './email-template.service';
-import { CynaLoggerService } from '@cyna-api/common';
+import { CynaLoggerService, Language } from '@cyna-api/common';
 import * as fs from 'fs';
 
 jest.mock('fs');
@@ -96,7 +96,7 @@ describe('EmailTemplateService', () => {
 
   describe('render', () => {
     it('should render French template with variables', () => {
-      const result = service.render('email-verification', 'fr', {
+      const result = service.render('email-verification', Language.FR, {
         firstName: 'Jean',
         verificationLink: 'https://example.com/verify',
       });
@@ -106,7 +106,7 @@ describe('EmailTemplateService', () => {
     });
 
     it('should render English template with variables', () => {
-      const result = service.render('email-verification', 'en', {
+      const result = service.render('email-verification', Language.EN, {
         firstName: 'John',
         verificationLink: 'https://example.com/verify',
       });
@@ -116,7 +116,7 @@ describe('EmailTemplateService', () => {
     });
 
     it('should fall back to French when language template not found', () => {
-      const result = service.render('email-verification', 'fr', {
+      const result = service.render('email-verification', Language.FR, {
         firstName: 'Test',
         verificationLink: 'https://example.com/verify',
       });
@@ -126,7 +126,7 @@ describe('EmailTemplateService', () => {
 
     it('should throw error when template not found', () => {
       expect(() => {
-        service.render('non-existent-template', 'fr', {});
+        service.render('non-existent-template', Language.FR, {});
       }).toThrow('Template not found: non-existent-template');
 
       expect(mockLogger.error).toHaveBeenCalledWith(
@@ -137,7 +137,7 @@ describe('EmailTemplateService', () => {
     });
 
     it('should wrap content in base layout', () => {
-      const result = service.render('email-verification', 'fr', {
+      const result = service.render('email-verification', Language.FR, {
         firstName: 'Jean',
         verificationLink: 'https://example.com/verify',
       });

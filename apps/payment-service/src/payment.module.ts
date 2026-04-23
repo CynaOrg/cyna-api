@@ -12,6 +12,8 @@ import {
   WebhookService,
 } from './services';
 import { AddProductSnapshotToLicenseKeys1776845407292 } from './migrations/1776845407292-AddProductSnapshotToLicenseKeys';
+import { AddActivationFlowToLicenseKeys1777200000000 } from './migrations/1777200000000-AddActivationFlowToLicenseKeys';
+import { AddStripeInvoiceUrlToSubscriptions1777300000001 } from './migrations/1777300000001-AddStripeInvoiceUrlToSubscriptions';
 
 @Module({
   imports: [
@@ -25,7 +27,11 @@ import { AddProductSnapshotToLicenseKeys1776845407292 } from './migrations/17768
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
       entities: [Subscription, LicenseKey, ProcessedWebhook],
-      migrations: [AddProductSnapshotToLicenseKeys1776845407292],
+      migrations: [
+        AddProductSnapshotToLicenseKeys1776845407292,
+        AddActivationFlowToLicenseKeys1777200000000,
+        AddStripeInvoiceUrlToSubscriptions1777300000001,
+      ],
       migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
       synchronize: process.env.DATABASE_SYNC === 'true',
       logging: process.env.DATABASE_LOGGING === 'true',

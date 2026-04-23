@@ -1,0 +1,36 @@
+<h1>Your CYNA licenses are ready</h1>
+
+<p>Thank you for your order <strong>{{orderNumber}}</strong>.</p>
+
+<p>Below
+  {{#if hasSingleLicense}}is your license{{else}}are your {{licenseCount}} licenses{{/if}}
+  to activate. Each activation link is valid for 30 days and can only be used once.</p>
+
+{{#each licenses}}
+  <p style='margin-top:24px;'><strong>{{productName}}</strong></p>
+  <div
+    class='code-box'
+    style='background-color:#f9f9f9; border-radius:12px; padding:24px; text-align:center; margin:20px 0; border:1px solid #f0f0f0;'
+  >
+    <div
+      class='code'
+      style='font-size:20px; font-weight:700; letter-spacing:4px; color:#4f39f6;'
+    >{{licenseKey}}</div>
+  </div>
+  <p style='text-align:center;'>
+    <a
+      href='{{activationUrl}}'
+      class='button'
+      style='display:inline-block; background-color:#4f39f6 !important; color:#ffffff !important; padding:14px 36px; text-decoration:none; border-radius:50px; font-weight:600; font-size:15px; margin:16px 0;'
+    >Activate my license</a>
+  </p>
+  <p class='hint' style='color:#9ca3af; font-size:13px; line-height:1.5;'>If the button does not
+    work, copy this link into your browser:</p>
+  <p
+    class='link-fallback'
+    style='word-break:break-all; font-size:13px; color:#4f39f6;'
+  >{{activationUrl}}</p>
+{{/each}}
+
+<p class='hint' style='color:#9ca3af; font-size:13px; line-height:1.5; margin-top:24px;'>If you did
+  not make this purchase, please contact us immediately at support@cyna.app.</p>

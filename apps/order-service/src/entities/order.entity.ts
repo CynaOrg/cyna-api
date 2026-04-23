@@ -1,5 +1,5 @@
 import { Entity, Column, OneToMany, Index } from 'typeorm';
-import { BaseEntity, OrderStatus, OrderType } from '@cyna-api/common';
+import { BaseEntity, Language, OrderStatus, OrderType } from '@cyna-api/common';
 import { OrderItem } from './order-item.entity';
 
 @Entity('orders')
@@ -16,6 +16,17 @@ export class Order extends BaseEntity {
 
   @Column({ name: 'customer_email', type: 'varchar', length: 255 })
   customerEmail: string;
+
+  @Column({ name: 'notification_email', type: 'varchar', length: 255, nullable: true })
+  notificationEmail: string | null;
+
+  @Column({
+    name: 'notification_language',
+    type: 'enum',
+    enum: Language,
+    nullable: true,
+  })
+  notificationLanguage: Language | null;
 
   @Column({
     type: 'enum',
@@ -57,6 +68,12 @@ export class Order extends BaseEntity {
 
   @Column({ name: 'stripe_payment_intent_id', type: 'varchar', length: 255, nullable: true })
   stripePaymentIntentId: string | null;
+
+  @Column({ name: 'stripe_invoice_id', type: 'varchar', length: 255, nullable: true })
+  stripeInvoiceId: string | null;
+
+  @Column({ name: 'stripe_invoice_url', type: 'varchar', length: 2048, nullable: true })
+  stripeInvoiceUrl: string | null;
 
   @Column({ name: 'paid_at', type: 'timestamptz', nullable: true })
   paidAt: Date | null;

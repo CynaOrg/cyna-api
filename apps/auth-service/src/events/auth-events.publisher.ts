@@ -97,10 +97,14 @@ export class AuthEventsPublisher {
     }
   }
 
-  async emitUserVerified(userId: string): Promise<void> {
+  async emitUserVerified(userId: string, email: string, language: Language): Promise<void> {
     try {
       await firstValueFrom(
-        this.notificationClient.emit(EVENT_PATTERNS.AUTH.USER_VERIFIED, { userId }),
+        this.notificationClient.emit(EVENT_PATTERNS.AUTH.USER_VERIFIED, {
+          userId,
+          email,
+          language,
+        }),
       );
       this.logger.log(`Emitted user_verified event for user: ${userId}`, 'AuthEventsPublisher');
     } catch (error) {
@@ -152,11 +156,17 @@ export class AuthEventsPublisher {
     }
   }
 
-  async emitPasswordResetCompleted(userId: string): Promise<void> {
+  async emitPasswordResetCompleted(
+    userId: string,
+    email: string,
+    language: Language,
+  ): Promise<void> {
     try {
       await firstValueFrom(
         this.notificationClient.emit(EVENT_PATTERNS.AUTH.PASSWORD_RESET_COMPLETED, {
           userId,
+          email,
+          language,
           timestamp: new Date(),
         }),
       );

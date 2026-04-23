@@ -1,0 +1,18 @@
+<h1>Payment failed</h1>
+
+<p>The payment for order <strong>{{orderNumber}}</strong> did not go through.</p>
+
+<p><strong>Reason:</strong> {{error}}</p>
+
+<p>You can retry your order from your account.</p>
+
+<p style='text-align: center;'>
+  <a
+    href='{{frontendUrl}}/dashboard/account?tab=billing'
+    class='button'
+    style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; margin: 24px 0;'
+  >Retry</a>
+</p>
+
+<p class='hint' style='color: #9ca3af; font-size: 13px; line-height: 1.5;'>If the issue persists,
+  check your payment method or contact our support team.</p>

@@ -103,6 +103,7 @@ describe('PaymentService', () => {
         12997,
         'eur',
         expect.objectContaining({ orderId: 'order-1', userId: 'user-1' }),
+        expect.anything(),
       );
     });
 
@@ -125,6 +126,7 @@ describe('PaymentService', () => {
         1000,
         'eur',
         expect.objectContaining({ userId: '', guestEmail: '' }),
+        expect.anything(),
       );
     });
   });

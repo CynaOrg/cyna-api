@@ -1,12 +1,16 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } from 'rxjs';
-import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
+import {
+  SERVICE_NAMES,
+  MESSAGE_PATTERNS,
+  coerceLanguage,
+  SubscriptionStatus,
+} from '@cyna-api/common';
 import { StripeService } from './stripe.service';
 import { SubscriptionService } from './subscription.service';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
-import { SubscriptionStatus } from '@cyna-api/common';
 
 @Injectable()
 export class PaymentService {
@@ -39,12 +43,16 @@ export class PaymentService {
       });
     }
 
-    // Create Payment Intent via Stripe
-    const paymentIntent = await this.stripeService.createPaymentIntent(amountInCents, currency, {
-      orderId: dto.orderId,
-      userId: dto.userId || '',
-      guestEmail: dto.guestEmail || '',
-    });
+    const paymentIntent = await this.stripeService.createPaymentIntent(
+      amountInCents,
+      currency,
+      {
+        orderId: dto.orderId,
+        userId: dto.userId || '',
+        guestEmail: dto.guestEmail || '',
+      },
+      { receiptEmail: dto.guestEmail || undefined },
+    );
 
     this.logger.log(
       `Payment Intent created: ${paymentIntent.id} for amount ${amountInCents} ${currency}`,
@@ -286,6 +294,8 @@ export class PaymentService {
       stripeSubscriptionId: stripeSubscription.id,
       stripeCustomerId,
       stripePriceId,
+      notificationEmail: user.email,
+      notificationLanguage: coerceLanguage(user.preferredLanguage),
       currentPeriodStart: (() => {
         const raw = stripeSubscription as unknown as Record<string, unknown>;
         const ts = raw.current_period_start ?? raw.start_date;

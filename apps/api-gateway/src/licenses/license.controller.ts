@@ -1,6 +1,8 @@
 import {
   Controller,
   Get,
+  Post,
+  Body,
   Param,
   Req,
   Inject,
@@ -19,10 +21,11 @@ import {
   TimeoutError,
 } from 'rxjs';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
-import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
+import { SERVICE_NAMES, MESSAGE_PATTERNS, Public } from '@cyna-api/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards';
 import { LicenseResponseDto } from './dto/license-response.dto';
+import { ActivateLicenseDto } from './dto/activate-license.dto';
 
 interface AuthenticatedRequest extends Request {
   user: { id: string; email: string; type: string; role?: string };
@@ -127,6 +130,23 @@ export class LicenseController {
         .pipe(
           timeout(10000),
           retry(1),
+          catchError((err) => rpcToHttpError(err)),
+        ),
+    );
+    return toLicenseResponseDto(raw);
+  }
+
+  @Public()
+  @Post('activate')
+  @ApiOperation({ summary: 'Activate a license using a one-shot email token' })
+  @ApiResponse({ status: 200, type: LicenseResponseDto })
+  @ApiResponse({ status: 404, description: 'Invalid or expired activation link' })
+  async activateLicense(@Body() dto: ActivateLicenseDto): Promise<LicenseResponseDto> {
+    const raw = await firstValueFrom(
+      this.paymentClient
+        .send<RawLicense>(MESSAGE_PATTERNS.PAYMENT.ACTIVATE_LICENSE, { token: dto.token })
+        .pipe(
+          timeout(10000),
           catchError((err) => rpcToHttpError(err)),
         ),
     );

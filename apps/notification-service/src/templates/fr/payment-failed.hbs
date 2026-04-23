@@ -1,0 +1,18 @@
+<h1>Paiement échoué</h1>
+
+<p>Le paiement pour la commande <strong>{{orderNumber}}</strong> n'a pas abouti.</p>
+
+<p><strong>Raison :</strong> {{error}}</p>
+
+<p>Vous pouvez réessayer votre commande depuis votre espace client.</p>
+
+<p style='text-align: center;'>
+  <a
+    href='{{frontendUrl}}/dashboard/account?tab=billing'
+    class='button'
+    style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; margin: 24px 0;'
+  >Réessayer</a>
+</p>
+
+<p class='hint' style='color: #9ca3af; font-size: 13px; line-height: 1.5;'>Si le problème persiste,
+  vérifiez votre moyen de paiement ou contactez notre support.</p>

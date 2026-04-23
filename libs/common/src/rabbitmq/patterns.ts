@@ -150,6 +150,7 @@ export const MESSAGE_PATTERNS = {
     CREATE_SUBSCRIPTION: { cmd: 'payment.create_subscription' },
     GET_USER_LICENSES: { cmd: 'payment.get_user_licenses' },
     GET_LICENSE_BY_ID: { cmd: 'payment.get_license_by_id' },
+    ACTIVATE_LICENSE: { cmd: 'payment.activate_license' },
   },
 
   // Content Service
@@ -247,6 +248,7 @@ export const EVENT_PATTERNS = {
     FAILED: 'payment.payment.failed',
     REFUNDED: 'payment.payment.refunded',
     WEBHOOK_RECEIVED: 'payment.webhook.received',
+    LICENSES_ISSUED: 'payment.licenses.issued',
     SUBSCRIPTION_CREATED: 'payment.subscription.created',
     SUBSCRIPTION_RENEWED: 'payment.subscription.renewed',
     SUBSCRIPTION_CANCELLED: 'payment.subscription.cancelled',

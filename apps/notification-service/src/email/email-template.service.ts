@@ -10,6 +10,17 @@ interface CompiledTemplates {
   };
 }
 
+const FOOTER_I18N: Record<Language, { copyright: string; tagline: string }> = {
+  [Language.FR]: {
+    copyright: 'Tous droits réservés.',
+    tagline: 'Solutions de cybersécurité pour les entreprises',
+  },
+  [Language.EN]: {
+    copyright: 'All rights reserved.',
+    tagline: 'Cybersecurity solutions for businesses',
+  },
+};
+
 @Injectable()
 export class EmailTemplateService implements OnModuleInit {
   private templates: CompiledTemplates = {};
@@ -88,7 +99,14 @@ export class EmailTemplateService implements OnModuleInit {
     const content = template(variables);
 
     if (this.baseLayout) {
-      return this.baseLayout({ content, ...variables });
+      const footer = FOOTER_I18N[lang];
+      return this.baseLayout({
+        language: lang,
+        footerCopyright: footer.copyright,
+        footerTagline: footer.tagline,
+        content,
+        ...variables,
+      });
     }
 
     return content;

@@ -54,7 +54,7 @@ import { AddImageUploadColumns1739451600000 } from './migrations/1739451600000-A
         transport: Transport.RMQ,
         options: {
           urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
-          queue: 'notification_queue',
+          queue: 'notification.emails',
           queueOptions: {
             durable: true,
           },

@@ -12,6 +12,7 @@ import {
   SubscriptionPastDueEvent,
   SubscriptionCancelledEvent,
   RefundedEvent,
+  LicensesIssuedEvent,
 } from '@cyna-api/common';
 import { EmailService } from '../email/email.service';
 import { EmailTemplateService } from '../email/email-template.service';
@@ -218,6 +219,55 @@ export class PaymentEventsHandler {
     } catch (err) {
       this.logger.error(
         `Failed to handle PAYMENT.SUBSCRIPTION_CANCELLED for ${data.subscriptionId}: ${err instanceof Error ? err.message : String(err)}`,
+        err instanceof Error ? err.stack : undefined,
+        'PaymentEventsHandler',
+      );
+    }
+  }
+
+  @EventPattern(EVENT_PATTERNS.PAYMENT.LICENSES_ISSUED)
+  async handleLicensesIssued(@Payload() data: LicensesIssuedEvent): Promise<void> {
+    this.logger.log(
+      `Handling PAYMENT.LICENSES_ISSUED for order ${data.orderId} (${data.licenses.length} license(s), lang=${data.language})`,
+      'PaymentEventsHandler',
+    );
+    try {
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:4200');
+      const licenses = data.licenses.map((l) => ({
+        licenseKey: l.licenseKey,
+        productName:
+          data.language === Language.EN ? l.productSnapshot.nameEn : l.productSnapshot.nameFr,
+        activationUrl: `${frontendUrl}/licenses/activate?token=${encodeURIComponent(l.activationToken)}`,
+      }));
+      const subjects: Record<Language, string> = {
+        [Language.FR]:
+          data.licenses.length > 1
+            ? `Vos licences CYNA sont prêtes (${data.orderNumber})`
+            : `Votre licence CYNA est prête (${data.orderNumber})`,
+        [Language.EN]:
+          data.licenses.length > 1
+            ? `Your CYNA licenses are ready (${data.orderNumber})`
+            : `Your CYNA license is ready (${data.orderNumber})`,
+      };
+      const html = this.emailTemplateService.render('license-delivery', data.language, {
+        ...this.baseVars(),
+        orderNumber: data.orderNumber,
+        licenseCount: data.licenses.length,
+        hasSingleLicense: data.licenses.length === 1,
+        licenses,
+        preheader:
+          data.language === Language.EN
+            ? `Activate your ${data.licenses.length > 1 ? 'licenses' : 'license'} for order ${data.orderNumber}`
+            : `Activez ${data.licenses.length > 1 ? 'vos licences' : 'votre licence'} pour la commande ${data.orderNumber}`,
+      });
+      await this.emailService.sendEmail({
+        to: data.email,
+        subject: this.pickSubject(subjects, data.language),
+        html,
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to handle PAYMENT.LICENSES_ISSUED for order ${data.orderId}: ${err instanceof Error ? err.message : String(err)}`,
         err instanceof Error ? err.stack : undefined,
         'PaymentEventsHandler',
       );

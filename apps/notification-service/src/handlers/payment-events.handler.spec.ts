@@ -248,4 +248,97 @@ describe('PaymentEventsHandler', () => {
       );
     });
   });
+
+  describe('handleLicensesIssued', () => {
+    const issuedEvent = {
+      orderId: 'order-1',
+      orderNumber: 'ORD-001',
+      userId: 'user-1',
+      email: 'user@example.com',
+      language: Language.FR,
+      licenses: [
+        {
+          licenseId: 'lic-1',
+          licenseKey: 'CYNA-AAAA-BBBB-CCCC-DDDD',
+          productSnapshot: { nameFr: 'Antivirus Pro', nameEn: 'Antivirus Pro EN', slug: 'av' },
+          activationToken: 'raw-token-1',
+          activationExpiresAt: '2026-05-23T00:00:00.000Z',
+        },
+      ],
+    };
+
+    it('renders license-delivery with activation URLs built from FRONTEND_URL', async () => {
+      await handler.handleLicensesIssued(issuedEvent);
+
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
+        'license-delivery',
+        Language.FR,
+        expect.objectContaining({
+          orderNumber: 'ORD-001',
+          licenseCount: 1,
+          hasSingleLicense: true,
+          licenses: [
+            expect.objectContaining({
+              licenseKey: 'CYNA-AAAA-BBBB-CCCC-DDDD',
+              productName: 'Antivirus Pro',
+              activationUrl: 'https://app.cyna.test/licenses/activate?token=raw-token-1',
+            }),
+          ],
+        }),
+      );
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'user@example.com',
+          subject: 'Votre licence CYNA est prête (ORD-001)',
+        }),
+      );
+    });
+
+    it('URL-encodes the raw token to survive punctuation characters', async () => {
+      await handler.handleLicensesIssued({
+        ...issuedEvent,
+        licenses: [{ ...issuedEvent.licenses[0], activationToken: 'foo/bar+baz==' }],
+      });
+
+      const callArgs = mockEmailTemplateService.render.mock.calls[0][2];
+      expect(callArgs.licenses[0].activationUrl).toBe(
+        'https://app.cyna.test/licenses/activate?token=foo%2Fbar%2Bbaz%3D%3D',
+      );
+    });
+
+    it('pluralizes subject and uses nameEn for English payloads with multiple licenses', async () => {
+      await handler.handleLicensesIssued({
+        ...issuedEvent,
+        language: Language.EN,
+        licenses: [
+          issuedEvent.licenses[0],
+          {
+            licenseId: 'lic-2',
+            licenseKey: 'CYNA-1111-2222-3333-4444',
+            productSnapshot: { nameFr: 'EDR', nameEn: 'EDR EN', slug: 'edr' },
+            activationToken: 'raw-token-2',
+            activationExpiresAt: '2026-05-23T00:00:00.000Z',
+          },
+        ],
+      });
+
+      const callArgs = mockEmailTemplateService.render.mock.calls[0][2];
+      expect(callArgs.licenses[0].productName).toBe('Antivirus Pro EN');
+      expect(callArgs.licenses[1].productName).toBe('EDR EN');
+      expect(callArgs.hasSingleLicense).toBe(false);
+      expect(callArgs.licenseCount).toBe(2);
+      expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
+        expect.objectContaining({ subject: 'Your CYNA licenses are ready (ORD-001)' }),
+      );
+    });
+
+    it('swallows render/send failures instead of crashing the event loop', async () => {
+      mockEmailTemplateService.render.mockImplementationOnce(() => {
+        throw new Error('template broken');
+      });
+
+      await expect(handler.handleLicensesIssued(issuedEvent)).resolves.toBeUndefined();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+  });
 });

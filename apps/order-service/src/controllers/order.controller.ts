@@ -1,6 +1,6 @@
 import { Controller, Logger } from '@nestjs/common';
 import { MessagePattern, EventPattern, Payload, RpcException } from '@nestjs/microservices';
-import { MESSAGE_PATTERNS, EVENT_PATTERNS, BillingPeriod } from '@cyna-api/common';
+import { MESSAGE_PATTERNS, EVENT_PATTERNS, BillingPeriod, Language } from '@cyna-api/common';
 import { CartService, OrderService } from '../services';
 import { AddCartItemDto, UpdateCartItemDto } from '../dto';
 
@@ -127,6 +127,7 @@ export class OrderController {
       billingAddress: Record<string, unknown>;
       shippingAddress?: Record<string, unknown>;
       email: string;
+      preferredLanguage?: Language;
       stripePaymentIntentId: string;
     },
   ) {
@@ -165,9 +166,19 @@ export class OrderController {
   }
 
   @EventPattern(EVENT_PATTERNS.PAYMENT.CONFIRMED)
-  async onPaymentConfirmed(@Payload() data: { paymentIntentId: string }) {
+  async onPaymentConfirmed(
+    @Payload()
+    data: {
+      paymentIntentId: string;
+      stripeInvoiceId?: string | null;
+      stripeInvoiceUrl?: string | null;
+    },
+  ) {
     try {
-      await this.orderService.handlePaymentConfirmed(data.paymentIntentId);
+      await this.orderService.handlePaymentConfirmed(data.paymentIntentId, {
+        stripeInvoiceId: data.stripeInvoiceId ?? null,
+        stripeInvoiceUrl: data.stripeInvoiceUrl ?? null,
+      });
     } catch (error) {
       this.logger.error(`Failed to handle payment confirmed: ${error}`);
     }

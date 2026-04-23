@@ -212,7 +212,7 @@ export class AuthService {
     emailVerificationToken.verifiedAt = new Date();
     await this.emailVerificationTokenRepository.save(emailVerificationToken);
 
-    await this.authEventsPublisher.emitUserVerified(user.id);
+    await this.authEventsPublisher.emitUserVerified(user.id, user.email, user.preferredLanguage);
 
     this.logger.log(`Email verified for user: ${user.email}`, 'AuthService');
 
@@ -370,7 +370,11 @@ export class AuthService {
       { revokedAt: new Date() },
     );
 
-    await this.authEventsPublisher.emitPasswordResetCompleted(user.id);
+    await this.authEventsPublisher.emitPasswordResetCompleted(
+      user.id,
+      user.email,
+      user.preferredLanguage,
+    );
 
     this.logger.log(`Password reset completed for user: ${user.email}`, 'AuthService');
 

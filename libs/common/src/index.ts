@@ -28,6 +28,12 @@ export * from './enums';
 // RabbitMQ
 export * from './rabbitmq';
 
+// Events
+export * from './events';
+
+// Stripe helpers
+export * from './stripe';
+
 // Database
 export * from './database';
 

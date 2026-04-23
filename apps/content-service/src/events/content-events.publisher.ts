@@ -1,12 +1,13 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { SERVICE_NAMES, EVENT_PATTERNS, CynaLoggerService } from '@cyna-api/common';
+import { SERVICE_NAMES, EVENT_PATTERNS, CynaLoggerService, Language } from '@cyna-api/common';
 
 export interface ContactMessageReceivedEvent {
   messageId: string;
   name: string;
   email: string;
   subject: string;
+  language?: Language;
 }
 
 @Injectable()

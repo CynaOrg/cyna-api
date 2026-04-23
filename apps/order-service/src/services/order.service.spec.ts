@@ -10,6 +10,7 @@ import { OrderItem } from '../entities/order-item.entity';
 import {
   SERVICE_NAMES,
   EVENT_PATTERNS,
+  Language,
   OrderStatus,
   OrderType,
   ProductType,
@@ -116,6 +117,9 @@ describe('OrderService', () => {
       emit: jest.fn(),
     };
 
+    const notificationClient = { emit: jest.fn() };
+    const authClient = { send: jest.fn(), emit: jest.fn() };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrderService,
@@ -123,6 +127,8 @@ describe('OrderService', () => {
         { provide: getRepositoryToken(OrderItem), useValue: orderItemRepository },
         { provide: CartService, useValue: cartService },
         { provide: SERVICE_NAMES.CATALOG, useValue: catalogClient },
+        { provide: SERVICE_NAMES.NOTIFICATION, useValue: notificationClient },
+        { provide: SERVICE_NAMES.AUTH, useValue: authClient },
       ],
     }).compile();
 
@@ -435,6 +441,26 @@ describe('OrderService', () => {
 
       await expect(service.handlePaymentConfirmed('pi_nonexistent')).resolves.toBeUndefined();
     });
+
+    it('persists stripeInvoiceId and stripeInvoiceUrl when provided', async () => {
+      (orderRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        ...mockOrder,
+        items: [{ productId: 'prod-1', quantity: 1 }],
+      });
+
+      await service.handlePaymentConfirmed('pi_test_123', {
+        stripeInvoiceId: 'ch_abc',
+        stripeInvoiceUrl: 'https://stripe.test/receipt/ch_abc',
+      });
+
+      expect(orderRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: OrderStatus.PAID,
+          stripeInvoiceId: 'ch_abc',
+          stripeInvoiceUrl: 'https://stripe.test/receipt/ch_abc',
+        }),
+      );
+    });
   });
 
   describe('handlePaymentFailed', () => {
@@ -541,6 +567,54 @@ describe('OrderService', () => {
       const result = await service.getOrderByPaymentIntentId('pi_nonexistent');
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('createOrderFromCart notification snapshot', () => {
+    beforeEach(() => {
+      catalogClient.send
+        .mockReturnValueOnce(of(mockProducts[0]))
+        .mockReturnValueOnce(of(mockProducts[1]));
+      (orderRepository.findOne as jest.Mock).mockResolvedValue({
+        id: 'order-new',
+        items: [],
+        orderNumber: 'CYN-2026-00001',
+      });
+    });
+
+    it('persists notificationEmail and notificationLanguage from the input data', async () => {
+      await service.createOrderFromCart({
+        userId: 'user-1',
+        cartId: 'cart-1',
+        billingAddress: { street: '1 Rue', city: 'Paris' },
+        email: 'user@test.com',
+        preferredLanguage: Language.EN,
+        stripePaymentIntentId: 'pi_123',
+      });
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notificationEmail: 'user@test.com',
+          notificationLanguage: Language.EN,
+        }),
+      );
+    });
+
+    it("defaults notificationLanguage to 'fr' when preferredLanguage is undefined", async () => {
+      await service.createOrderFromCart({
+        userId: 'user-1',
+        cartId: 'cart-1',
+        billingAddress: { street: '1 Rue', city: 'Paris' },
+        email: 'user@test.com',
+        stripePaymentIntentId: 'pi_123',
+      });
+
+      expect(orderRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          notificationEmail: 'user@test.com',
+          notificationLanguage: Language.FR,
+        }),
+      );
     });
   });
 });

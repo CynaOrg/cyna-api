@@ -1,5 +1,5 @@
 import { Entity, Column, Index } from 'typeorm';
-import { BaseEntity, SubscriptionStatus, BillingPeriod } from '@cyna-api/common';
+import { BaseEntity, BillingPeriod, Language, SubscriptionStatus } from '@cyna-api/common';
 
 @Entity('subscriptions')
 @Index('idx_subscriptions_user_id', ['userId'])
@@ -59,4 +59,18 @@ export class Subscription extends BaseEntity {
 
   @Column({ name: 'ended_at', type: 'timestamptz', nullable: true })
   endedAt: Date | null;
+
+  @Column({ name: 'notification_email', type: 'varchar', length: 255, nullable: true })
+  notificationEmail: string | null;
+
+  @Column({
+    name: 'notification_language',
+    type: 'enum',
+    enum: Language,
+    nullable: true,
+  })
+  notificationLanguage: Language | null;
+
+  @Column({ name: 'stripe_latest_invoice_url', type: 'varchar', length: 2048, nullable: true })
+  stripeLatestInvoiceUrl: string | null;
 }

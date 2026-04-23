@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { CynaLoggerService } from '@cyna-api/common';
+import { CynaLoggerService, Language, coerceLanguage } from '@cyna-api/common';
 import * as Handlebars from 'handlebars';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -9,6 +9,17 @@ interface CompiledTemplates {
     [templateName: string]: Handlebars.TemplateDelegate;
   };
 }
+
+const FOOTER_I18N: Record<Language, { copyright: string; tagline: string }> = {
+  [Language.FR]: {
+    copyright: 'Tous droits réservés.',
+    tagline: 'Solutions de cybersécurité pour les entreprises',
+  },
+  [Language.EN]: {
+    copyright: 'All rights reserved.',
+    tagline: 'Cybersecurity solutions for businesses',
+  },
+};
 
 @Injectable()
 export class EmailTemplateService implements OnModuleInit {
@@ -68,12 +79,12 @@ export class EmailTemplateService implements OnModuleInit {
     }
   }
 
-  render(
-    templateName: string,
-    language: 'fr' | 'en',
-    variables: Record<string, string | number>,
-  ): string {
-    const lang = this.templates[language] ? language : 'fr';
+  render(templateName: string, language: Language, variables: Record<string, unknown>): string {
+    // Defense-in-depth: reject any non-enum value at the trust boundary even
+    // though today's template loader keys against an in-memory map. A future
+    // refactor that touches the filesystem would otherwise become a path
+    // traversal surface.
+    const lang = coerceLanguage(language);
     const template = this.templates[lang]?.[templateName];
 
     if (!template) {
@@ -88,7 +99,14 @@ export class EmailTemplateService implements OnModuleInit {
     const content = template(variables);
 
     if (this.baseLayout) {
-      return this.baseLayout({ content, ...variables });
+      const footer = FOOTER_I18N[lang];
+      return this.baseLayout({
+        language: lang,
+        footerCopyright: footer.copyright,
+        footerTagline: footer.tagline,
+        content,
+        ...variables,
+      });
     }
 
     return content;

@@ -1,0 +1,28 @@
+<h1>Votre commande est en route</h1>
+
+<p>Bonne nouvelle : votre commande <strong>{{orderNumber}}</strong> vient d'être expédiée.</p>
+
+{{#if trackingNumber}}
+  <p><strong>Numéro de suivi :</strong> {{trackingNumber}}</p>
+{{/if}}
+
+{{#if trackingUrl}}
+  <p style='text-align: center;'>
+    <a
+      href='{{trackingUrl}}'
+      class='button'
+      style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; margin: 24px 0;'
+    >Suivre mon colis</a>
+  </p>
+{{else}}
+  <p style='text-align: center;'>
+    <a
+      href='{{frontendUrl}}/dashboard/account?tab=orders'
+      class='button'
+      style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; margin: 24px 0;'
+    >Voir ma commande</a>
+  </p>
+{{/if}}
+
+<p class='hint' style='color: #9ca3af; font-size: 13px; line-height: 1.5;'>La livraison intervient
+  généralement sous 3 à 5 jours ouvrés selon votre zone.</p>

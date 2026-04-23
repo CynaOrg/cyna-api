@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { LicenseKeyStatus } from '@cyna-api/common';
 import { LicenseKey, ProductSnapshot } from '../entities/license-key.entity';
 
@@ -13,6 +13,13 @@ export interface OrderItemWithProduct {
   userId?: string;
   productSnapshot: ProductSnapshot;
 }
+
+export interface IssuedLicense {
+  license: LicenseKey;
+  activationToken: string;
+}
+
+const ACTIVATION_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 @Injectable()
 export class LicenseService {
@@ -30,14 +37,28 @@ export class LicenseService {
     return `CYNA-${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`;
   }
 
-  async generateForOrder(orderId: string, items: OrderItemWithProduct[]): Promise<LicenseKey[]> {
-    const licenseKeys: LicenseKey[] = [];
+  private generateActivationToken(): { token: string; hash: string; expiresAt: Date } {
+    // URL-safe base64 of 32 random bytes (43 chars). Never stored raw: we keep
+    // only the SHA-256 hash so a DB dump cannot activate licenses.
+    const token = randomBytes(32).toString('base64url');
+    const hash = createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + ACTIVATION_TOKEN_TTL_MS);
+    return { token, hash, expiresAt };
+  }
+
+  private hashToken(token: string): string {
+    return createHash('sha256').update(token).digest('hex');
+  }
+
+  async generateForOrder(orderId: string, items: OrderItemWithProduct[]): Promise<IssuedLicense[]> {
+    const issued: IssuedLicense[] = [];
 
     for (const item of items) {
       if (item.productType !== 'license') continue;
 
       for (let i = 0; i < item.quantity; i++) {
-        const key = this.licenseKeyRepository.create({
+        const activation = this.generateActivationToken();
+        const license = this.licenseKeyRepository.create({
           orderId,
           productId: item.productId,
           userId: item.userId || null,
@@ -45,18 +66,48 @@ export class LicenseService {
           email: item.email,
           productSnapshot: item.productSnapshot,
           status: LicenseKeyStatus.ACTIVE,
-          activatedAt: new Date(),
+          activatedAt: null,
+          activationTokenHash: activation.hash,
+          activationTokenExpiresAt: activation.expiresAt,
         });
-        licenseKeys.push(key);
+        issued.push({ license, activationToken: activation.token });
       }
     }
 
-    if (licenseKeys.length > 0) {
-      await this.licenseKeyRepository.save(licenseKeys);
-      this.logger.log(`Generated ${licenseKeys.length} license keys for order ${orderId}`);
+    if (issued.length > 0) {
+      await this.licenseKeyRepository.save(issued.map((i) => i.license));
+      this.logger.log(`Generated ${issued.length} license keys for order ${orderId}`);
     }
 
-    return licenseKeys;
+    return issued;
+  }
+
+  async activate(token: string): Promise<LicenseKey> {
+    const hash = this.hashToken(token);
+    const license = await this.licenseKeyRepository.findOne({
+      where: { activationTokenHash: hash },
+    });
+
+    if (!license) {
+      // Token unknown, consumed, or never existed. Return a uniform 404 so
+      // callers cannot distinguish "already activated" from "invalid token"
+      // via timing — mild defense against token enumeration.
+      throw new NotFoundException('Invalid or expired activation link');
+    }
+
+    if (
+      license.activationTokenExpiresAt &&
+      license.activationTokenExpiresAt.getTime() < Date.now()
+    ) {
+      throw new NotFoundException('Invalid or expired activation link');
+    }
+
+    license.activatedAt = new Date();
+    license.activationTokenHash = null;
+    license.activationTokenExpiresAt = null;
+    await this.licenseKeyRepository.save(license);
+    this.logger.log(`License ${license.id} activated`);
+    return license;
   }
 
   async findByOrderId(orderId: string): Promise<LicenseKey[]> {

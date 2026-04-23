@@ -1,0 +1,26 @@
+<h1>Merci pour votre commande !</h1>
+
+<p>Votre commande <strong>{{orderNumber}}</strong> a bien été confirmée.</p>
+
+<p><strong>Contenu :</strong> {{itemsSummary}}</p>
+<p><strong>Total :</strong> {{total}}</p>
+
+<p style='text-align: center;'>
+  <a
+    href='{{frontendUrl}}/dashboard/account?tab=billing'
+    class='button'
+    style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; margin: 24px 0;'
+  >Voir ma commande</a>
+</p>
+
+{{#if invoiceUrl}}
+  <p style='text-align: center; margin-top: 8px;'>
+    <a
+      href='{{invoiceUrl}}'
+      style='display: inline-block; color: #4f39f6; text-decoration: underline; font-size: 14px; font-weight: 500;'
+    >Télécharger la facture</a>
+  </p>
+{{/if}}
+
+<p class='hint' style='color: #9ca3af; font-size: 13px; line-height: 1.5;'>Un email de livraison
+  vous sera envoyé si votre commande contient des produits physiques.</p>

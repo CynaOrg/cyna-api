@@ -12,6 +12,7 @@ export interface ProductSnapshot {
 @Index('idx_license_keys_user_id', ['userId'])
 @Index('idx_license_keys_product_id', ['productId'])
 @Index('idx_license_keys_license_key', ['licenseKey'], { unique: true })
+@Index('idx_license_keys_activation_token_hash', ['activationTokenHash'], { unique: true })
 export class LicenseKey extends BaseEntity {
   @Column({ name: 'order_id', type: 'uuid' })
   orderId: string;
@@ -43,4 +44,10 @@ export class LicenseKey extends BaseEntity {
 
   @Column({ name: 'expires_at', type: 'timestamptz', nullable: true })
   expiresAt: Date | null;
+
+  @Column({ name: 'activation_token_hash', type: 'varchar', length: 64, nullable: true })
+  activationTokenHash: string | null;
+
+  @Column({ name: 'activation_token_expires_at', type: 'timestamptz', nullable: true })
+  activationTokenExpiresAt: Date | null;
 }

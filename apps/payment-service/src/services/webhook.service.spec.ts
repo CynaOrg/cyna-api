@@ -59,9 +59,18 @@ describe('WebhookService', () => {
     };
 
     stripeService = {
+      // Default: PI has a customer attached so the webhook takes the "real
+      // invoice" path. Individual tests can override to test the fallback.
       getPaymentIntentWithCharge: jest.fn().mockResolvedValue({
         id: 'pi_stub',
+        customer: 'cus_stub',
         latest_charge: { id: 'ch_stub', receipt_url: 'https://stripe.test/receipt/ch_stub' },
+      }),
+      generateInvoiceForPurchase: jest.fn().mockResolvedValue({
+        id: 'in_stub',
+        number: 'F-2026-0001',
+        hosted_invoice_url: 'https://invoice.stripe.test/i/in_stub',
+        invoice_pdf: 'https://invoice.stripe.test/i/in_stub/pdf',
       }),
       getInvoice: jest.fn(),
     };
@@ -214,6 +223,7 @@ describe('WebhookService', () => {
           {
             productId: 'prod-1',
             quantity: 2,
+            unitPrice: 50,
             productSnapshot: {
               productType: 'license',
               name: 'Antivirus',
@@ -341,28 +351,71 @@ describe('WebhookService', () => {
         );
       });
 
-      it('forwards the Stripe charge receipt URL on both order-service and notification events', async () => {
+      it('generates a real Stripe invoice and forwards its hosted URL', async () => {
         orderClient.send.mockReturnValue(of(licenseOrder));
 
         await service.handleWebhookEvent({
-          eventId: 'evt_receipt',
+          eventId: 'evt_invoice',
           eventType: 'payment_intent.succeeded',
-          data: { id: 'pi_receipt', amount: 100, metadata: {} },
+          data: { id: 'pi_invoice', amount: 100, metadata: {} },
           created: Date.now(),
         });
 
-        expect(stripeService.getPaymentIntentWithCharge).toHaveBeenCalledWith('pi_receipt');
+        expect(stripeService.getPaymentIntentWithCharge).toHaveBeenCalledWith('pi_invoice');
+        expect(stripeService.generateInvoiceForPurchase).toHaveBeenCalledWith(
+          expect.objectContaining({
+            customerId: 'cus_stub',
+            currency: 'EUR',
+            items: [
+              {
+                description: 'Antivirus',
+                unitPriceHt: 50,
+                quantity: 2,
+              },
+            ],
+            metadata: expect.objectContaining({
+              orderId: 'order-1',
+              orderNumber: 'CYN-2026-00001',
+              paymentIntentId: 'pi_invoice',
+            }),
+          }),
+        );
         expect(orderClient.emit).toHaveBeenCalledWith(
           EVENT_PATTERNS.PAYMENT.CONFIRMED,
           expect.objectContaining({
-            paymentIntentId: 'pi_receipt',
-            stripeInvoiceId: 'ch_stub',
-            stripeInvoiceUrl: 'https://stripe.test/receipt/ch_stub',
+            paymentIntentId: 'pi_invoice',
+            stripeInvoiceId: 'in_stub',
+            stripeInvoiceUrl: 'https://invoice.stripe.test/i/in_stub',
           }),
         );
         expect(notificationClient.emit).toHaveBeenCalledWith(
           EVENT_PATTERNS.PAYMENT.CONFIRMED,
-          expect.objectContaining({ invoiceUrl: 'https://stripe.test/receipt/ch_stub' }),
+          expect.objectContaining({ invoiceUrl: 'https://invoice.stripe.test/i/in_stub' }),
+        );
+      });
+
+      it('falls back to charge receipt URL when PaymentIntent has no customer attached', async () => {
+        orderClient.send.mockReturnValue(of(licenseOrder));
+        (stripeService.getPaymentIntentWithCharge as jest.Mock).mockResolvedValueOnce({
+          id: 'pi_no_customer',
+          customer: null,
+          latest_charge: { id: 'ch_fb', receipt_url: 'https://stripe.test/receipt/ch_fb' },
+        });
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_fallback',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_no_customer', amount: 100, metadata: {} },
+          created: Date.now(),
+        });
+
+        expect(stripeService.generateInvoiceForPurchase).not.toHaveBeenCalled();
+        expect(orderClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.CONFIRMED,
+          expect.objectContaining({
+            stripeInvoiceId: 'ch_fb',
+            stripeInvoiceUrl: 'https://stripe.test/receipt/ch_fb',
+          }),
         );
       });
 

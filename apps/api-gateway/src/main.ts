@@ -1,7 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import { SwaggerModule } from '@nestjs/swagger';
+import { createOpenApiDocument } from './swagger.factory';
 import { I18nService } from 'nestjs-i18n';
 import helmet from 'helmet';
 import * as compression from 'compression';
@@ -86,30 +87,7 @@ async function bootstrap() {
 
   // Swagger documentation
   if (swaggerEnabled) {
-    const config = new DocumentBuilder()
-      .setTitle('CYNA API')
-      .setDescription('B2B Cybersecurity E-commerce Platform API')
-      .setVersion('1.0.0')
-      .addBearerAuth(
-        {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-          description: 'Enter your JWT access token',
-        },
-        'JWT-auth',
-      )
-      .addTag('Health', 'Health check endpoints')
-      .addTag('Auth', 'Authentication endpoints')
-      .addTag('Users', 'User management endpoints')
-      .addTag('Catalog', 'Product catalog endpoints')
-      .addTag('Orders', 'Order management endpoints')
-      .addTag('Payments', 'Payment and subscription endpoints')
-      .addTag('Content', 'CMS content endpoints')
-      .addTag('Analytics', 'Analytics and reporting endpoints')
-      .build();
-
-    const document = SwaggerModule.createDocument(app, config);
+    const document = createOpenApiDocument(app);
     SwaggerModule.setup(swaggerPath, app, document, {
       swaggerOptions: {
         persistAuthorization: true,

@@ -1,0 +1,5644 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/health": {
+      "get": {
+        "operationId": "HealthController_getHealth",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ok",
+                        "degraded",
+                        "error"
+                      ]
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "service": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "rabbitmq": {
+                      "type": "string",
+                      "enum": [
+                        "connected",
+                        "disconnected"
+                      ]
+                    },
+                    "uptime": {
+                      "type": "number",
+                      "description": "Uptime in seconds"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Health check",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/ready": {
+      "get": {
+        "operationId": "HealthController_getReadiness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Service is ready to accept requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ready": {
+                      "type": "boolean"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Readiness check",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/live": {
+      "get": {
+        "operationId": "HealthController_getLiveness",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Service is alive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "alive": {
+                      "type": "boolean"
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "summary": "Liveness check",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/auth/register": {
+      "post": {
+        "operationId": "AuthController_register",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User registered successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "409": {
+            "description": "Email already exists"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        },
+        "summary": "Register a new user",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "operationId": "AuthController_login",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful"
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "403": {
+            "description": "Email not verified"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        },
+        "summary": "Login user",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/verify-email": {
+      "post": {
+        "operationId": "AuthController_verifyEmail",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VerifyEmailDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email verified successfully"
+          },
+          "400": {
+            "description": "Invalid or expired token"
+          }
+        },
+        "summary": "Verify email address",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/resend-verification": {
+      "post": {
+        "operationId": "AuthController_resendVerification",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendVerificationDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Verification email sent"
+          },
+          "404": {
+            "description": "User not found"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        },
+        "summary": "Resend verification email",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/forgot-password": {
+      "post": {
+        "operationId": "AuthController_forgotPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset email sent"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        },
+        "summary": "Request password reset",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/reset-password": {
+      "post": {
+        "operationId": "AuthController_resetPassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetPasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset successfully"
+          },
+          "400": {
+            "description": "Invalid or expired token"
+          }
+        },
+        "summary": "Reset password with token",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/refresh-token": {
+      "post": {
+        "operationId": "AuthController_refreshToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully"
+          },
+          "401": {
+            "description": "Invalid refresh token"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        },
+        "summary": "Refresh access token",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/logout": {
+      "post": {
+        "operationId": "AuthController_logout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logout successful"
+          },
+          "401": {
+            "description": "Invalid or missing token"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Logout user",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/admin/login": {
+      "post": {
+        "operationId": "AdminAuthController_adminLogin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminLoginDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "2FA code sent to email",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "requires2FA": true,
+                    "tempToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                    "message": "Verification code sent to your email",
+                    "expiresInMinutes": 5
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          },
+          "403": {
+            "description": "Account disabled"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        },
+        "summary": "Admin login (Step 1) - Sends 2FA code",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/admin/verify-2fa": {
+      "post": {
+        "operationId": "AdminAuthController_verify2FA",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Verify2FADto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                    "expiresIn": 900,
+                    "admin": {
+                      "id": "uuid",
+                      "email": "admin@cyna.io",
+                      "firstName": "Super",
+                      "lastName": "Admin",
+                      "role": "super_admin"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or expired code"
+          },
+          "401": {
+            "description": "Invalid temp token"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        },
+        "summary": "Admin login (Step 2) - Verify 2FA code",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/admin/resend-2fa": {
+      "post": {
+        "operationId": "AdminAuthController_resend2FA",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Resend2FADto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New 2FA code sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "example": {
+                    "requires2FA": true,
+                    "tempToken": "new-temp-token...",
+                    "message": "New verification code sent",
+                    "expiresInMinutes": 5
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid temp token"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        },
+        "summary": "Resend 2FA code",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/admin/refresh-token": {
+      "post": {
+        "operationId": "AdminAuthController_refreshToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshTokenDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token refreshed successfully"
+          },
+          "401": {
+            "description": "Invalid refresh token"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        },
+        "summary": "Refresh admin access token",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/auth/admin/logout": {
+      "post": {
+        "operationId": "AdminAuthController_logout",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Logout successful"
+          },
+          "401": {
+            "description": "Invalid or missing token"
+          },
+          "403": {
+            "description": "Admin access required"
+          },
+          "429": {
+            "description": "Too many requests"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Admin logout",
+        "tags": [
+          "Auth"
+        ]
+      }
+    },
+    "/admin/admins": {
+      "get": {
+        "operationId": "AdminManagementController_getAdmins",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of admin accounts"
+          },
+          "403": {
+            "description": "Super admin access required"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all admin accounts (super admin only)",
+        "tags": [
+          "Admin - Admin Management"
+        ]
+      },
+      "post": {
+        "operationId": "AdminManagementController_createAdmin",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdminDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Admin account created"
+          },
+          "403": {
+            "description": "Super admin access required"
+          },
+          "409": {
+            "description": "Email already taken"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new admin account (super admin only)",
+        "tags": [
+          "Admin - Admin Management"
+        ]
+      }
+    },
+    "/admin/admins/{adminId}": {
+      "get": {
+        "operationId": "AdminManagementController_getAdmin",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "description": "Admin ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin account details"
+          },
+          "403": {
+            "description": "Super admin access required"
+          },
+          "404": {
+            "description": "Admin not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get admin account details (super admin only)",
+        "tags": [
+          "Admin - Admin Management"
+        ]
+      },
+      "patch": {
+        "operationId": "AdminManagementController_updateAdmin",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "description": "Admin ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAdminDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Admin account updated"
+          },
+          "403": {
+            "description": "Super admin access required"
+          },
+          "404": {
+            "description": "Admin not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update admin account (super admin only)",
+        "tags": [
+          "Admin - Admin Management"
+        ]
+      },
+      "delete": {
+        "operationId": "AdminManagementController_deleteAdmin",
+        "parameters": [
+          {
+            "name": "adminId",
+            "required": true,
+            "in": "path",
+            "description": "Admin ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Admin account deleted"
+          },
+          "400": {
+            "description": "Cannot delete yourself"
+          },
+          "403": {
+            "description": "Super admin access required"
+          },
+          "404": {
+            "description": "Admin not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete admin account (super admin only)",
+        "tags": [
+          "Admin - Admin Management"
+        ]
+      }
+    },
+    "/profile": {
+      "get": {
+        "operationId": "ProfileController_getProfile",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Profile retrieved successfully"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get current user profile",
+        "tags": [
+          "Profile"
+        ]
+      },
+      "patch": {
+        "operationId": "ProfileController_updateProfile",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProfileDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Profile updated successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update current user profile",
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/profile/password": {
+      "post": {
+        "operationId": "ProfileController_updatePassword",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePasswordDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password changed successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Current password is incorrect"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Change password",
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/profile/language": {
+      "patch": {
+        "operationId": "ProfileController_updateLanguage",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateLanguageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Language preference updated successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update language preference",
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/profile/delete": {
+      "post": {
+        "operationId": "ProfileController_deleteAccount",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Account deleted successfully"
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Password is incorrect"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete account (soft delete)",
+        "tags": [
+          "Profile"
+        ]
+      }
+    },
+    "/catalog/categories": {
+      "get": {
+        "operationId": "CatalogController_findAllCategories",
+        "parameters": [
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "description": "Filter by active status",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "description": "Language for responses",
+            "schema": {
+              "default": "fr",
+              "type": "string",
+              "enum": [
+                "fr",
+                "en"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of categories"
+          }
+        },
+        "summary": "Get all categories",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/categories/{slug}": {
+      "get": {
+        "operationId": "CatalogController_findCategoryBySlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "description": "Category slug",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "fr",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category details"
+          },
+          "404": {
+            "description": "Category not found"
+          }
+        },
+        "summary": "Get category by slug",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/products": {
+      "get": {
+        "operationId": "CatalogController_findAllProducts",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page",
+            "schema": {
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "categorySlug",
+            "required": false,
+            "in": "query",
+            "description": "Filter by category slug",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productType",
+            "required": false,
+            "in": "query",
+            "description": "Filter by product type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "saas",
+                "physical",
+                "license"
+              ]
+            }
+          },
+          {
+            "name": "isAvailable",
+            "required": false,
+            "in": "query",
+            "description": "Filter by availability",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isFeatured",
+            "required": false,
+            "in": "query",
+            "description": "Filter by featured status",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "minPrice",
+            "required": false,
+            "in": "query",
+            "description": "Minimum price filter",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxPrice",
+            "required": false,
+            "in": "query",
+            "description": "Maximum price filter",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search products by name or description",
+            "schema": {
+              "maxLength": 255,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "Sort field",
+            "schema": {
+              "default": "displayOrder",
+              "type": "string",
+              "enum": [
+                "displayOrder",
+                "priceMonthly",
+                "priceUnit",
+                "createdAt"
+              ]
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "Sort order",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "description": "Language for responses",
+            "schema": {
+              "default": "fr",
+              "type": "string",
+              "enum": [
+                "fr",
+                "en"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of products"
+          }
+        },
+        "summary": "Get all products with filtering and pagination",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/products/featured": {
+      "get": {
+        "operationId": "CatalogController_findFeaturedProducts",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of products to return",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "fr",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of featured products"
+          }
+        },
+        "summary": "Get featured products",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/products/{slug}": {
+      "get": {
+        "operationId": "CatalogController_findProductBySlug",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "description": "Product slug",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "fr",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product details"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "summary": "Get product by slug",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/products/{slug}/stock": {
+      "get": {
+        "operationId": "CatalogController_getProductStock",
+        "parameters": [
+          {
+            "name": "slug",
+            "required": true,
+            "in": "path",
+            "description": "Product slug",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock information"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "summary": "Get product stock information",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/catalog/search": {
+      "get": {
+        "operationId": "CatalogController_searchProducts",
+        "parameters": [
+          {
+            "name": "q",
+            "required": true,
+            "in": "query",
+            "description": "Search query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page",
+            "schema": {
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "categorySlug",
+            "required": false,
+            "in": "query",
+            "description": "Filter by category slug",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productType",
+            "required": false,
+            "in": "query",
+            "description": "Filter by product type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "saas",
+                "physical",
+                "license"
+              ]
+            }
+          },
+          {
+            "name": "isAvailable",
+            "required": false,
+            "in": "query",
+            "description": "Filter by availability",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isFeatured",
+            "required": false,
+            "in": "query",
+            "description": "Filter by featured status",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "minPrice",
+            "required": false,
+            "in": "query",
+            "description": "Minimum price filter",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxPrice",
+            "required": false,
+            "in": "query",
+            "description": "Maximum price filter",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search products by name or description",
+            "schema": {
+              "maxLength": 255,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "Sort field",
+            "schema": {
+              "default": "displayOrder",
+              "type": "string",
+              "enum": [
+                "displayOrder",
+                "priceMonthly",
+                "priceUnit",
+                "createdAt"
+              ]
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "Sort order",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "description": "Language for responses",
+            "schema": {
+              "default": "fr",
+              "type": "string",
+              "enum": [
+                "fr",
+                "en"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Search results"
+          }
+        },
+        "summary": "Search products",
+        "tags": [
+          "Catalog"
+        ]
+      }
+    },
+    "/admin/catalog/categories": {
+      "get": {
+        "operationId": "CatalogAdminController_findAllCategories",
+        "parameters": [
+          {
+            "name": "isActive",
+            "required": false,
+            "in": "query",
+            "description": "Filter by active status",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "description": "Language for responses",
+            "schema": {
+              "default": "fr",
+              "type": "string",
+              "enum": [
+                "fr",
+                "en"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of categories"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get all categories (admin)",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      },
+      "post": {
+        "operationId": "CatalogAdminController_createCategory",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Category created"
+          },
+          "409": {
+            "description": "Category slug already exists"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new category",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      }
+    },
+    "/admin/catalog/categories/{categoryId}": {
+      "patch": {
+        "operationId": "CatalogAdminController_updateCategory",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "description": "Category ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Category updated"
+          },
+          "404": {
+            "description": "Category not found"
+          },
+          "409": {
+            "description": "Category slug already exists"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update a category",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogAdminController_deleteCategory",
+        "parameters": [
+          {
+            "name": "categoryId",
+            "required": true,
+            "in": "path",
+            "description": "Category ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category deleted"
+          },
+          "404": {
+            "description": "Category not found"
+          },
+          "409": {
+            "description": "Category has associated products"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete a category",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      }
+    },
+    "/admin/catalog/products": {
+      "get": {
+        "operationId": "CatalogAdminController_findAllProducts",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page",
+            "schema": {
+              "maximum": 100,
+              "default": 20,
+              "type": "number"
+            }
+          },
+          {
+            "name": "categorySlug",
+            "required": false,
+            "in": "query",
+            "description": "Filter by category slug",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "productType",
+            "required": false,
+            "in": "query",
+            "description": "Filter by product type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "saas",
+                "physical",
+                "license"
+              ]
+            }
+          },
+          {
+            "name": "isAvailable",
+            "required": false,
+            "in": "query",
+            "description": "Filter by availability",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isFeatured",
+            "required": false,
+            "in": "query",
+            "description": "Filter by featured status",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "minPrice",
+            "required": false,
+            "in": "query",
+            "description": "Minimum price filter",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "maxPrice",
+            "required": false,
+            "in": "query",
+            "description": "Maximum price filter",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search products by name or description",
+            "schema": {
+              "maxLength": 255,
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortBy",
+            "required": false,
+            "in": "query",
+            "description": "Sort field",
+            "schema": {
+              "default": "displayOrder",
+              "type": "string",
+              "enum": [
+                "displayOrder",
+                "priceMonthly",
+                "priceUnit",
+                "createdAt"
+              ]
+            }
+          },
+          {
+            "name": "sortOrder",
+            "required": false,
+            "in": "query",
+            "description": "Sort order",
+            "schema": {
+              "default": "asc",
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ]
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "description": "Language for responses",
+            "schema": {
+              "default": "fr",
+              "type": "string",
+              "enum": [
+                "fr",
+                "en"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of products"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get all products (admin)",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      },
+      "post": {
+        "operationId": "CatalogAdminController_createProduct",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Product created"
+          },
+          "404": {
+            "description": "Category not found"
+          },
+          "409": {
+            "description": "Product slug or SKU already exists"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new product",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      }
+    },
+    "/admin/catalog/products/{productId}": {
+      "get": {
+        "operationId": "CatalogAdminController_findProductById",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product details"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get product by ID (admin)",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      },
+      "patch": {
+        "operationId": "CatalogAdminController_updateProduct",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateProductDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Product updated"
+          },
+          "404": {
+            "description": "Product not found"
+          },
+          "409": {
+            "description": "Product slug or SKU already exists"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update a product",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      },
+      "delete": {
+        "operationId": "CatalogAdminController_deleteProduct",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product deleted"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete a product",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      }
+    },
+    "/admin/catalog/products/{productId}/images": {
+      "post": {
+        "operationId": "CatalogAdminController_addProductImage",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddImageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Image added"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Add an image to a product",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      }
+    },
+    "/admin/catalog/products/{productId}/images/{imageId}": {
+      "delete": {
+        "operationId": "CatalogAdminController_deleteProductImage",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "imageId",
+            "required": true,
+            "in": "path",
+            "description": "Image ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Image deleted"
+          },
+          "404": {
+            "description": "Image not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete a product image",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      }
+    },
+    "/admin/catalog/products/{productId}/images/reorder": {
+      "patch": {
+        "operationId": "CatalogAdminController_reorderProductImages",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderImagesDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Images reordered"
+          },
+          "400": {
+            "description": "Invalid image IDs"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Reorder product images",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      }
+    },
+    "/admin/catalog/products/{productId}/images/upload-url": {
+      "post": {
+        "operationId": "CatalogAdminController_requestImageUploadUrl",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestUploadUrlDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Presigned URL generated"
+          },
+          "400": {
+            "description": "Max images reached or invalid file"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get presigned URL for image upload",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      }
+    },
+    "/admin/catalog/products/{productId}/images/confirm": {
+      "post": {
+        "operationId": "CatalogAdminController_confirmImageUpload",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Image record created"
+          },
+          "400": {
+            "description": "Invalid storage key or max images reached"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          },
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Confirm image upload and create record",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      }
+    },
+    "/admin/catalog/products/{productId}/stock": {
+      "patch": {
+        "operationId": "CatalogAdminController_updateProductStock",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStockDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stock updated"
+          },
+          "400": {
+            "description": "Stock management not applicable"
+          },
+          "404": {
+            "description": "Product not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update product stock",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      }
+    },
+    "/admin/catalog/stock/alerts": {
+      "get": {
+        "operationId": "CatalogAdminController_getStockAlerts",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "List of products with low stock"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get products with low stock",
+        "tags": [
+          "Admin - Catalog"
+        ]
+      }
+    },
+    "/cart": {
+      "get": {
+        "operationId": "CartController_getCart",
+        "parameters": [
+          {
+            "name": "X-Session-Id",
+            "in": "header",
+            "description": "Guest session UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cart with enriched product info"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get current cart (authenticated or guest)",
+        "tags": [
+          "Cart"
+        ]
+      },
+      "delete": {
+        "operationId": "CartController_clearCart",
+        "parameters": [
+          {
+            "name": "X-Session-Id",
+            "in": "header",
+            "description": "Guest session UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cart cleared"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Clear entire cart",
+        "tags": [
+          "Cart"
+        ]
+      }
+    },
+    "/cart/items": {
+      "post": {
+        "operationId": "CartController_addItem",
+        "parameters": [
+          {
+            "name": "X-Session-Id",
+            "in": "header",
+            "description": "Guest session UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddCartItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Item added, returns updated cart"
+          },
+          "400": {
+            "description": "Product unavailable or insufficient stock"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Add item to cart",
+        "tags": [
+          "Cart"
+        ]
+      }
+    },
+    "/cart/items/{productId}": {
+      "patch": {
+        "operationId": "CartController_updateItem",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "billingPeriod",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "monthly",
+                "yearly",
+                "one_time"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session-Id",
+            "in": "header",
+            "description": "Guest session UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateCartItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Item updated, returns updated cart"
+          },
+          "404": {
+            "description": "Cart item not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update cart item quantity",
+        "tags": [
+          "Cart"
+        ]
+      },
+      "delete": {
+        "operationId": "CartController_removeItem",
+        "parameters": [
+          {
+            "name": "productId",
+            "required": true,
+            "in": "path",
+            "description": "Product UUID",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "billingPeriod",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "monthly",
+                "yearly",
+                "one_time"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Session-Id",
+            "in": "header",
+            "description": "Guest session UUID",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Item removed, returns updated cart"
+          },
+          "404": {
+            "description": "Cart item not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Remove item from cart",
+        "tags": [
+          "Cart"
+        ]
+      }
+    },
+    "/cart/merge": {
+      "post": {
+        "operationId": "CartController_mergeGuestCart",
+        "parameters": [
+          {
+            "name": "X-Session-Id",
+            "in": "header",
+            "description": "Guest session UUID to merge from",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Carts merged, returns updated cart"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Merge guest cart into authenticated user cart",
+        "tags": [
+          "Cart"
+        ]
+      }
+    },
+    "/webhooks/stripe": {
+      "post": {
+        "operationId": "WebhookController_handleStripeWebhook",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Webhook"
+        ]
+      }
+    },
+    "/checkout/payment-intent": {
+      "post": {
+        "operationId": "CheckoutController_createPaymentIntent",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutPaymentIntentDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentIntentResponseDto"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Create a Stripe PaymentIntent for the current cart",
+        "tags": [
+          "Payments"
+        ]
+      }
+    },
+    "/orders": {
+      "get": {
+        "operationId": "OrderGatewayController_getOrders",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OrderGateway"
+        ]
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "operationId": "OrderGatewayController_getOrder",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "OrderGateway"
+        ]
+      }
+    },
+    "/admin/orders": {
+      "get": {
+        "operationId": "OrderAdminController_getOrders",
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Search by order number or guest email",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "description": "Filter by order status",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "paid",
+                "processing",
+                "shipped",
+                "delivered",
+                "completed",
+                "cancelled",
+                "refunded"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number (starts at 1)",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Number of items per page",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of orders"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all orders (admin)",
+        "tags": [
+          "Admin - Orders"
+        ]
+      }
+    },
+    "/admin/orders/{orderId}": {
+      "get": {
+        "operationId": "OrderAdminController_getOrder",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "description": "Order ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order details"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get order details (admin)",
+        "tags": [
+          "Admin - Orders"
+        ]
+      }
+    },
+    "/admin/orders/{orderId}/status": {
+      "patch": {
+        "operationId": "OrderAdminController_updateOrderStatus",
+        "parameters": [
+          {
+            "name": "orderId",
+            "required": true,
+            "in": "path",
+            "description": "Order ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateOrderStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Order status updated"
+          },
+          "404": {
+            "description": "Order not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update order status (super admin only)",
+        "tags": [
+          "Admin - Orders"
+        ]
+      }
+    },
+    "/subscriptions": {
+      "post": {
+        "operationId": "SubscriptionController_createSubscription",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSubscriptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Subscription"
+        ]
+      },
+      "get": {
+        "operationId": "SubscriptionController_getSubscriptions",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Subscription"
+        ]
+      }
+    },
+    "/subscriptions/{id}": {
+      "get": {
+        "operationId": "SubscriptionController_getSubscription",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Subscription"
+        ]
+      }
+    },
+    "/subscriptions/{id}/cancel": {
+      "post": {
+        "operationId": "SubscriptionController_cancelSubscription",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelSubscriptionDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": ""
+          }
+        },
+        "tags": [
+          "Subscription"
+        ]
+      }
+    },
+    "/admin/payments/subscriptions": {
+      "get": {
+        "operationId": "SubscriptionAdminController_findAll",
+        "parameters": [
+          {
+            "name": "status",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "active",
+                "past_due",
+                "cancelled",
+                "unpaid",
+                "paused"
+              ]
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of subscriptions"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all subscriptions (admin)",
+        "tags": [
+          "Admin - Subscriptions"
+        ]
+      }
+    },
+    "/admin/payments/subscriptions/{id}": {
+      "get": {
+        "operationId": "SubscriptionAdminController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Subscription ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Subscription details"
+          },
+          "404": {
+            "description": "Subscription not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get subscription detail (admin)",
+        "tags": [
+          "Admin - Subscriptions"
+        ]
+      }
+    },
+    "/admin/payments/subscriptions/{id}/status": {
+      "patch": {
+        "operationId": "SubscriptionAdminController_updateStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Subscription ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSubscriptionStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Subscription status updated"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update subscription status (super_admin only)",
+        "tags": [
+          "Admin - Subscriptions"
+        ]
+      }
+    },
+    "/licenses": {
+      "get": {
+        "operationId": "LicenseController_getMyLicenses",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LicenseResponseDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "List authenticated user licenses",
+        "tags": [
+          "licenses"
+        ]
+      }
+    },
+    "/licenses/{id}": {
+      "get": {
+        "operationId": "LicenseController_getLicenseById",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LicenseResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "License not found"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Get a license by id (owned by authenticated user)",
+        "tags": [
+          "licenses"
+        ]
+      }
+    },
+    "/licenses/activate": {
+      "post": {
+        "operationId": "LicenseController_activateLicense",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActivateLicenseDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LicenseResponseDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Invalid or expired activation link"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Activate a license using a one-shot email token",
+        "tags": [
+          "licenses"
+        ]
+      }
+    },
+    "/admin/users": {
+      "get": {
+        "operationId": "UserAdminController_findAll",
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "default": 20,
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated list of users"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "List all users (super_admin only)",
+        "tags": [
+          "Admin - Users"
+        ]
+      }
+    },
+    "/admin/users/{userId}": {
+      "get": {
+        "operationId": "UserAdminController_findOne",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "User ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User details"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get user detail (super_admin only)",
+        "tags": [
+          "Admin - Users"
+        ]
+      }
+    },
+    "/admin/users/{userId}/status": {
+      "patch": {
+        "operationId": "UserAdminController_updateStatus",
+        "parameters": [
+          {
+            "name": "userId",
+            "required": true,
+            "in": "path",
+            "description": "User ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserStatusDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User status updated"
+          },
+          "404": {
+            "description": "User not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update user active status (super_admin only)",
+        "tags": [
+          "Admin - Users"
+        ]
+      }
+    },
+    "/content/homepage": {
+      "get": {
+        "operationId": "ContentController_getHomepage",
+        "parameters": [
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "fr",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Homepage content"
+          }
+        },
+        "summary": "Get homepage content (carousel + hero + top products)",
+        "tags": [
+          "Content"
+        ]
+      }
+    },
+    "/content/carousel": {
+      "get": {
+        "operationId": "ContentController_getCarousel",
+        "parameters": [
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "fr",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active carousel slides"
+          }
+        },
+        "summary": "Get active carousel slides",
+        "tags": [
+          "Content"
+        ]
+      }
+    },
+    "/content/top-services": {
+      "get": {
+        "operationId": "ContentController_getTopServices",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "fr",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Top services list"
+          }
+        },
+        "summary": "Get top services (SaaS products)",
+        "tags": [
+          "Content"
+        ]
+      }
+    },
+    "/content/top-products": {
+      "get": {
+        "operationId": "ContentController_getTopProducts",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "lang",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "enum": [
+                "fr",
+                "en"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Top products list"
+          }
+        },
+        "summary": "Get top products",
+        "tags": [
+          "Content"
+        ]
+      }
+    },
+    "/content/contact": {
+      "post": {
+        "operationId": "ContentController_createContactMessage",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateContactMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Message sent"
+          },
+          "400": {
+            "description": "Invalid input"
+          }
+        },
+        "summary": "Submit a contact message",
+        "tags": [
+          "Content"
+        ]
+      }
+    },
+    "/admin/content/carousel": {
+      "get": {
+        "operationId": "ContentAdminController_getCarousel",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "All carousel slides"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get all carousel slides (admin, includes inactive)",
+        "tags": [
+          "Admin - Content"
+        ]
+      },
+      "post": {
+        "operationId": "ContentAdminController_createSlide",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSlideDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Slide created"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Create a new carousel slide",
+        "tags": [
+          "Admin - Content"
+        ]
+      }
+    },
+    "/admin/content/carousel/reorder": {
+      "patch": {
+        "operationId": "ContentAdminController_reorderCarousel",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderCarouselDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Slides reordered"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Reorder carousel slides",
+        "tags": [
+          "Admin - Content"
+        ]
+      }
+    },
+    "/admin/content/carousel/{slideId}": {
+      "patch": {
+        "operationId": "ContentAdminController_updateSlide",
+        "parameters": [
+          {
+            "name": "slideId",
+            "required": true,
+            "in": "path",
+            "description": "Slide ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSlideDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Slide updated"
+          },
+          "404": {
+            "description": "Slide not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update a carousel slide",
+        "tags": [
+          "Admin - Content"
+        ]
+      },
+      "delete": {
+        "operationId": "ContentAdminController_deleteSlide",
+        "parameters": [
+          {
+            "name": "slideId",
+            "required": true,
+            "in": "path",
+            "description": "Slide ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Slide deleted"
+          },
+          "404": {
+            "description": "Slide not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete a carousel slide",
+        "tags": [
+          "Admin - Content"
+        ]
+      }
+    },
+    "/admin/content/hero-text": {
+      "patch": {
+        "operationId": "ContentAdminController_updateHeroText",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateHeroTextDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Hero text updated"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update hero section text",
+        "tags": [
+          "Admin - Content"
+        ]
+      }
+    },
+    "/admin/content/top-services": {
+      "patch": {
+        "operationId": "ContentAdminController_updateTopServices",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTopConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Top services updated"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Configure top services (SaaS products displayed on homepage)",
+        "tags": [
+          "Admin - Content"
+        ]
+      }
+    },
+    "/admin/content/top-products": {
+      "patch": {
+        "operationId": "ContentAdminController_updateTopProducts",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTopConfigDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Top products updated"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Configure top products displayed on homepage",
+        "tags": [
+          "Admin - Content"
+        ]
+      }
+    },
+    "/admin/content/contact-messages": {
+      "get": {
+        "operationId": "ContentAdminController_getContactMessages",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "description": "Page number",
+            "schema": {
+              "default": 1,
+              "type": "number"
+            }
+          },
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Items per page",
+            "schema": {
+              "default": 10,
+              "type": "number"
+            }
+          },
+          {
+            "name": "isRead",
+            "required": false,
+            "in": "query",
+            "description": "Filter by read status",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isProcessed",
+            "required": false,
+            "in": "query",
+            "description": "Filter by processed status",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated contact messages"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get contact messages (paginated)",
+        "tags": [
+          "Admin - Content"
+        ]
+      }
+    },
+    "/admin/content/contact-messages/{messageId}": {
+      "patch": {
+        "operationId": "ContentAdminController_updateContactMessage",
+        "parameters": [
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "description": "Contact message ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateContactMessageDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Message updated"
+          },
+          "404": {
+            "description": "Message not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Update contact message status",
+        "tags": [
+          "Admin - Content"
+        ]
+      },
+      "delete": {
+        "operationId": "ContentAdminController_deleteContactMessage",
+        "parameters": [
+          {
+            "name": "messageId",
+            "required": true,
+            "in": "path",
+            "description": "Contact message ID",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message deleted"
+          },
+          "404": {
+            "description": "Message not found"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Delete a contact message",
+        "tags": [
+          "Admin - Content"
+        ]
+      }
+    },
+    "/admin/analytics/dashboard": {
+      "get": {
+        "operationId": "AnalyticsAdminController_getDashboard",
+        "parameters": [
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "description": "Period for dashboard/sales data",
+            "schema": {
+              "default": "month",
+              "type": "string",
+              "enum": [
+                "today",
+                "week",
+                "month",
+                "quarter",
+                "year"
+              ]
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "description": "Group by period for sales data",
+            "schema": {
+              "default": "day",
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ]
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO 8601)",
+            "schema": {
+              "example": "2024-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO 8601)",
+            "schema": {
+              "example": "2024-12-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dashboard KPIs with variations"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get dashboard KPIs (revenue, orders, subscriptions, MRR, avg cart)",
+        "tags": [
+          "Admin - Analytics"
+        ]
+      }
+    },
+    "/admin/analytics/sales": {
+      "get": {
+        "operationId": "AnalyticsAdminController_getSales",
+        "parameters": [
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "description": "Period for dashboard/sales data",
+            "schema": {
+              "default": "month",
+              "type": "string",
+              "enum": [
+                "today",
+                "week",
+                "month",
+                "quarter",
+                "year"
+              ]
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "description": "Group by period for sales data",
+            "schema": {
+              "default": "day",
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ]
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO 8601)",
+            "schema": {
+              "example": "2024-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO 8601)",
+            "schema": {
+              "example": "2024-12-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales history data"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get sales history (grouped by day/week/month)",
+        "tags": [
+          "Admin - Analytics"
+        ]
+      }
+    },
+    "/admin/analytics/sales-by-category": {
+      "get": {
+        "operationId": "AnalyticsAdminController_getSalesByCategory",
+        "parameters": [
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "description": "Period for dashboard/sales data",
+            "schema": {
+              "default": "month",
+              "type": "string",
+              "enum": [
+                "today",
+                "week",
+                "month",
+                "quarter",
+                "year"
+              ]
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "description": "Group by period for sales data",
+            "schema": {
+              "default": "day",
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ]
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO 8601)",
+            "schema": {
+              "example": "2024-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO 8601)",
+            "schema": {
+              "example": "2024-12-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales by category"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get sales breakdown by category",
+        "tags": [
+          "Admin - Analytics"
+        ]
+      }
+    },
+    "/admin/analytics/sales-by-product-type": {
+      "get": {
+        "operationId": "AnalyticsAdminController_getSalesByProductType",
+        "parameters": [
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "description": "Period for dashboard/sales data",
+            "schema": {
+              "default": "month",
+              "type": "string",
+              "enum": [
+                "today",
+                "week",
+                "month",
+                "quarter",
+                "year"
+              ]
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "description": "Group by period for sales data",
+            "schema": {
+              "default": "day",
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ]
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO 8601)",
+            "schema": {
+              "example": "2024-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO 8601)",
+            "schema": {
+              "example": "2024-12-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales by product type"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get sales breakdown by product type (SaaS, Digital, Physical)",
+        "tags": [
+          "Admin - Analytics"
+        ]
+      }
+    },
+    "/admin/analytics/average-cart": {
+      "get": {
+        "operationId": "AnalyticsAdminController_getAverageCart",
+        "parameters": [
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "description": "Period for dashboard/sales data",
+            "schema": {
+              "default": "month",
+              "type": "string",
+              "enum": [
+                "today",
+                "week",
+                "month",
+                "quarter",
+                "year"
+              ]
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "description": "Group by period for sales data",
+            "schema": {
+              "default": "day",
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ]
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO 8601)",
+            "schema": {
+              "example": "2024-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO 8601)",
+            "schema": {
+              "example": "2024-12-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Average cart data"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get average cart value over time",
+        "tags": [
+          "Admin - Analytics"
+        ]
+      }
+    },
+    "/admin/analytics/mrr": {
+      "get": {
+        "operationId": "AnalyticsAdminController_getMrr",
+        "parameters": [
+          {
+            "name": "period",
+            "required": false,
+            "in": "query",
+            "description": "Period for dashboard/sales data",
+            "schema": {
+              "default": "month",
+              "type": "string",
+              "enum": [
+                "today",
+                "week",
+                "month",
+                "quarter",
+                "year"
+              ]
+            }
+          },
+          {
+            "name": "groupBy",
+            "required": false,
+            "in": "query",
+            "description": "Group by period for sales data",
+            "schema": {
+              "default": "day",
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ]
+            }
+          },
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO 8601)",
+            "schema": {
+              "example": "2024-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO 8601)",
+            "schema": {
+              "example": "2024-12-31",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "MRR evolution data"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get MRR history and trends",
+        "tags": [
+          "Admin - Analytics"
+        ]
+      }
+    },
+    "/admin/analytics/stock": {
+      "get": {
+        "operationId": "AnalyticsAdminController_getStockStatus",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Stock status for all physical products"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Get stock status overview",
+        "tags": [
+          "Admin - Analytics"
+        ]
+      }
+    },
+    "/admin/analytics/export/sales": {
+      "get": {
+        "operationId": "AnalyticsAdminController_exportSales",
+        "parameters": [
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO 8601)",
+            "schema": {
+              "example": "2024-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO 8601)",
+            "schema": {
+              "example": "2024-12-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Export format",
+            "schema": {
+              "default": "csv",
+              "type": "string",
+              "enum": [
+                "csv",
+                "xlsx"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV file"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Export sales data as CSV",
+        "tags": [
+          "Admin - Analytics"
+        ]
+      }
+    },
+    "/admin/analytics/export/orders": {
+      "get": {
+        "operationId": "AnalyticsAdminController_exportOrders",
+        "parameters": [
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO 8601)",
+            "schema": {
+              "example": "2024-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO 8601)",
+            "schema": {
+              "example": "2024-12-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Export format",
+            "schema": {
+              "default": "csv",
+              "type": "string",
+              "enum": [
+                "csv",
+                "xlsx"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV file"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Export orders data as CSV",
+        "tags": [
+          "Admin - Analytics"
+        ]
+      }
+    },
+    "/admin/analytics/export/subscriptions": {
+      "get": {
+        "operationId": "AnalyticsAdminController_exportSubscriptions",
+        "parameters": [
+          {
+            "name": "dateFrom",
+            "required": false,
+            "in": "query",
+            "description": "Start date (ISO 8601)",
+            "schema": {
+              "example": "2024-01-01",
+              "type": "string"
+            }
+          },
+          {
+            "name": "dateTo",
+            "required": false,
+            "in": "query",
+            "description": "End date (ISO 8601)",
+            "schema": {
+              "example": "2024-12-31",
+              "type": "string"
+            }
+          },
+          {
+            "name": "format",
+            "required": false,
+            "in": "query",
+            "description": "Export format",
+            "schema": {
+              "default": "csv",
+              "type": "string",
+              "enum": [
+                "csv",
+                "xlsx"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "CSV file"
+          }
+        },
+        "security": [
+          {
+            "JWT-auth": []
+          }
+        ],
+        "summary": "Export subscriptions data as CSV",
+        "tags": [
+          "Admin - Analytics"
+        ]
+      }
+    }
+  },
+  "info": {
+    "title": "CYNA API",
+    "description": "B2B Cybersecurity E-commerce Platform API",
+    "version": "1.0.0",
+    "contact": {}
+  },
+  "tags": [
+    {
+      "name": "Health",
+      "description": "Health check endpoints"
+    },
+    {
+      "name": "Auth",
+      "description": "Authentication endpoints"
+    },
+    {
+      "name": "Users",
+      "description": "User management endpoints"
+    },
+    {
+      "name": "Catalog",
+      "description": "Product catalog endpoints"
+    },
+    {
+      "name": "Orders",
+      "description": "Order management endpoints"
+    },
+    {
+      "name": "Payments",
+      "description": "Payment and subscription endpoints"
+    },
+    {
+      "name": "Content",
+      "description": "CMS content endpoints"
+    },
+    {
+      "name": "Analytics",
+      "description": "Analytics and reporting endpoints"
+    }
+  ],
+  "servers": [],
+  "components": {
+    "securitySchemes": {
+      "JWT-auth": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http",
+        "description": "Enter your JWT access token"
+      }
+    },
+    "schemas": {
+      "RegisterDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "user@example.com",
+            "description": "User email address"
+          },
+          "password": {
+            "type": "string",
+            "example": "Password123!",
+            "description": "User password (min 8 chars, 1 uppercase, 1 number, 1 special)"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John",
+            "description": "User first name"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe",
+            "description": "User last name"
+          },
+          "companyName": {
+            "type": "string",
+            "example": "Acme Corp",
+            "description": "Company name (optional)"
+          },
+          "vatNumber": {
+            "type": "string",
+            "example": "FR12345678901",
+            "description": "VAT number (optional)"
+          },
+          "preferredLanguage": {
+            "type": "string",
+            "enum": [
+              "fr",
+              "en"
+            ],
+            "default": "fr",
+            "description": "Preferred language"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "firstName",
+          "lastName"
+        ]
+      },
+      "LoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "user@example.com",
+            "description": "User email address"
+          },
+          "password": {
+            "type": "string",
+            "example": "Password123!",
+            "description": "User password"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "VerifyEmailDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "example": "verification-token",
+            "description": "Email verification token"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "ResendVerificationDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "user@example.com",
+            "description": "User email address"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ForgotPasswordDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "user@example.com",
+            "description": "User email address"
+          }
+        },
+        "required": [
+          "email"
+        ]
+      },
+      "ResetPasswordDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "example": "reset-token",
+            "description": "Password reset token"
+          },
+          "newPassword": {
+            "type": "string",
+            "example": "NewPassword123!",
+            "description": "New password"
+          }
+        },
+        "required": [
+          "token",
+          "newPassword"
+        ]
+      },
+      "RefreshTokenDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "example": "refresh-token",
+            "description": "Refresh token (optional - can also be provided via HTTP-only cookie)"
+          }
+        }
+      },
+      "LogoutDto": {
+        "type": "object",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "example": "refresh-token",
+            "description": "Refresh token to revoke (optional, revokes all if not provided)"
+          }
+        }
+      },
+      "AdminLoginDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "admin@cyna.io",
+            "description": "Admin email address"
+          },
+          "password": {
+            "type": "string",
+            "example": "AdminPassword123!",
+            "description": "Admin password"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "Verify2FADto": {
+        "type": "object",
+        "properties": {
+          "tempToken": {
+            "type": "string",
+            "example": "temp-token",
+            "description": "Temporary token from login step 1"
+          },
+          "code": {
+            "type": "string",
+            "example": "123456",
+            "description": "6-digit verification code"
+          }
+        },
+        "required": [
+          "tempToken",
+          "code"
+        ]
+      },
+      "Resend2FADto": {
+        "type": "object",
+        "properties": {
+          "tempToken": {
+            "type": "string",
+            "example": "temp-token",
+            "description": "Temporary token from login step 1"
+          }
+        },
+        "required": [
+          "tempToken"
+        ]
+      },
+      "CreateAdminDto": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "example": "admin@cyna.io",
+            "description": "Admin email address"
+          },
+          "password": {
+            "type": "string",
+            "example": "SecurePass123!",
+            "description": "Admin password (min 8 characters)"
+          },
+          "firstName": {
+            "type": "string",
+            "example": "John",
+            "description": "First name"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe",
+            "description": "Last name"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "super_admin",
+              "commercial"
+            ],
+            "example": "commercial",
+            "description": "Admin role"
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "firstName",
+          "lastName",
+          "role"
+        ]
+      },
+      "UpdateAdminDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "example": "John",
+            "description": "First name"
+          },
+          "lastName": {
+            "type": "string",
+            "example": "Doe",
+            "description": "Last name"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "super_admin",
+              "commercial"
+            ],
+            "example": "commercial",
+            "description": "Admin role"
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true,
+            "description": "Whether the admin account is active"
+          }
+        }
+      },
+      "UpdateProfileDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string",
+            "description": "First name",
+            "maxLength": 100
+          },
+          "lastName": {
+            "type": "string",
+            "description": "Last name",
+            "maxLength": 100
+          },
+          "companyName": {
+            "type": "string",
+            "description": "Company name",
+            "maxLength": 255
+          },
+          "vatNumber": {
+            "type": "string",
+            "description": "VAT number",
+            "maxLength": 50
+          }
+        }
+      },
+      "UpdatePasswordDto": {
+        "type": "object",
+        "properties": {
+          "currentPassword": {
+            "type": "string",
+            "description": "Current password"
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "New password (min 8 chars, 1 uppercase, 1 lowercase, 1 digit, 1 special char)"
+          }
+        },
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ]
+      },
+      "UpdateLanguageDto": {
+        "type": "object",
+        "properties": {
+          "preferredLanguage": {
+            "type": "string",
+            "description": "Preferred language",
+            "enum": [
+              "fr",
+              "en"
+            ],
+            "example": "fr"
+          }
+        },
+        "required": [
+          "preferredLanguage"
+        ]
+      },
+      "DeleteAccountDto": {
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string",
+            "description": "Current password for confirmation",
+            "example": "MySecurePassword123!"
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "CreateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "description": "URL-friendly identifier",
+            "example": "soc-solutions"
+          },
+          "nameFr": {
+            "type": "string",
+            "description": "French name",
+            "example": "Solutions SOC"
+          },
+          "nameEn": {
+            "type": "string",
+            "description": "English name",
+            "example": "SOC Solutions"
+          },
+          "descriptionFr": {
+            "type": "string",
+            "description": "French description"
+          },
+          "descriptionEn": {
+            "type": "string",
+            "description": "English description"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Category image URL"
+          },
+          "displayOrder": {
+            "type": "number",
+            "description": "Display order",
+            "default": 0
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Active status",
+            "default": true
+          }
+        },
+        "required": [
+          "slug",
+          "nameFr",
+          "nameEn"
+        ]
+      },
+      "UpdateCategoryDto": {
+        "type": "object",
+        "properties": {
+          "slug": {
+            "type": "string",
+            "description": "URL-friendly identifier",
+            "example": "soc-solutions"
+          },
+          "nameFr": {
+            "type": "string",
+            "description": "French name",
+            "example": "Solutions SOC"
+          },
+          "nameEn": {
+            "type": "string",
+            "description": "English name",
+            "example": "SOC Solutions"
+          },
+          "descriptionFr": {
+            "type": "string",
+            "description": "French description"
+          },
+          "descriptionEn": {
+            "type": "string",
+            "description": "English description"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Category image URL"
+          },
+          "displayOrder": {
+            "type": "number",
+            "description": "Display order",
+            "default": 0
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Active status",
+            "default": true
+          }
+        }
+      },
+      "CreateProductCharacteristicDto": {
+        "type": "object",
+        "properties": {
+          "keyFr": {
+            "type": "string",
+            "description": "French key",
+            "example": "Utilisateurs"
+          },
+          "keyEn": {
+            "type": "string",
+            "description": "English key",
+            "example": "Users"
+          },
+          "valueFr": {
+            "type": "string",
+            "description": "French value",
+            "example": "Illimités"
+          },
+          "valueEn": {
+            "type": "string",
+            "description": "English value",
+            "example": "Unlimited"
+          },
+          "displayOrder": {
+            "type": "number",
+            "description": "Display order",
+            "default": 0
+          }
+        },
+        "required": [
+          "keyFr",
+          "keyEn",
+          "valueFr",
+          "valueEn"
+        ]
+      },
+      "CreateProductDto": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "description": "Category ID"
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-friendly identifier",
+            "example": "crowdstrike-falcon"
+          },
+          "sku": {
+            "type": "string",
+            "description": "Stock Keeping Unit",
+            "example": "CS-FALCON-001"
+          },
+          "nameFr": {
+            "type": "string",
+            "description": "French name"
+          },
+          "nameEn": {
+            "type": "string",
+            "description": "English name"
+          },
+          "descriptionFr": {
+            "type": "string",
+            "description": "French description"
+          },
+          "descriptionEn": {
+            "type": "string",
+            "description": "English description"
+          },
+          "shortDescriptionFr": {
+            "type": "string",
+            "description": "French short description"
+          },
+          "shortDescriptionEn": {
+            "type": "string",
+            "description": "English short description"
+          },
+          "productType": {
+            "type": "string",
+            "description": "Product type",
+            "enum": [
+              "saas",
+              "physical",
+              "license"
+            ]
+          },
+          "priceMonthly": {
+            "type": "number",
+            "description": "Monthly price (SaaS)"
+          },
+          "priceYearly": {
+            "type": "number",
+            "description": "Yearly price (SaaS)"
+          },
+          "priceUnit": {
+            "type": "number",
+            "description": "Unit price (physical/license)"
+          },
+          "stockQuantity": {
+            "type": "number",
+            "description": "Stock quantity (physical only)"
+          },
+          "stockAlertThreshold": {
+            "type": "number",
+            "description": "Stock alert threshold",
+            "default": 10
+          },
+          "isAvailable": {
+            "type": "boolean",
+            "description": "Availability status",
+            "default": true
+          },
+          "isFeatured": {
+            "type": "boolean",
+            "description": "Featured status",
+            "default": false
+          },
+          "displayOrder": {
+            "type": "number",
+            "description": "Display order",
+            "default": 0
+          },
+          "characteristics": {
+            "description": "Product characteristics",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateProductCharacteristicDto"
+            }
+          },
+          "stripeProductId": {
+            "type": "string",
+            "description": "Stripe Product ID"
+          },
+          "stripePriceIdMonthly": {
+            "type": "string",
+            "description": "Stripe Price ID (Monthly)"
+          },
+          "stripePriceIdYearly": {
+            "type": "string",
+            "description": "Stripe Price ID (Yearly)"
+          },
+          "stripePriceIdUnit": {
+            "type": "string",
+            "description": "Stripe Price ID (Unit)"
+          }
+        },
+        "required": [
+          "categoryId",
+          "slug",
+          "sku",
+          "nameFr",
+          "nameEn",
+          "descriptionFr",
+          "descriptionEn",
+          "productType"
+        ]
+      },
+      "UpdateProductDto": {
+        "type": "object",
+        "properties": {
+          "categoryId": {
+            "type": "string",
+            "description": "Category ID"
+          },
+          "slug": {
+            "type": "string",
+            "description": "URL-friendly identifier",
+            "example": "crowdstrike-falcon"
+          },
+          "sku": {
+            "type": "string",
+            "description": "Stock Keeping Unit",
+            "example": "CS-FALCON-001"
+          },
+          "nameFr": {
+            "type": "string",
+            "description": "French name"
+          },
+          "nameEn": {
+            "type": "string",
+            "description": "English name"
+          },
+          "descriptionFr": {
+            "type": "string",
+            "description": "French description"
+          },
+          "descriptionEn": {
+            "type": "string",
+            "description": "English description"
+          },
+          "shortDescriptionFr": {
+            "type": "string",
+            "description": "French short description"
+          },
+          "shortDescriptionEn": {
+            "type": "string",
+            "description": "English short description"
+          },
+          "productType": {
+            "type": "string",
+            "description": "Product type",
+            "enum": [
+              "saas",
+              "physical",
+              "license"
+            ]
+          },
+          "priceMonthly": {
+            "type": "number",
+            "description": "Monthly price (SaaS)"
+          },
+          "priceYearly": {
+            "type": "number",
+            "description": "Yearly price (SaaS)"
+          },
+          "priceUnit": {
+            "type": "number",
+            "description": "Unit price (physical/license)"
+          },
+          "stockQuantity": {
+            "type": "number",
+            "description": "Stock quantity (physical only)"
+          },
+          "stockAlertThreshold": {
+            "type": "number",
+            "description": "Stock alert threshold",
+            "default": 10
+          },
+          "isAvailable": {
+            "type": "boolean",
+            "description": "Availability status",
+            "default": true
+          },
+          "isFeatured": {
+            "type": "boolean",
+            "description": "Featured status",
+            "default": false
+          },
+          "displayOrder": {
+            "type": "number",
+            "description": "Display order",
+            "default": 0
+          },
+          "characteristics": {
+            "description": "Product characteristics",
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateProductCharacteristicDto"
+            }
+          },
+          "stripeProductId": {
+            "type": "string",
+            "description": "Stripe Product ID"
+          },
+          "stripePriceIdMonthly": {
+            "type": "string",
+            "description": "Stripe Price ID (Monthly)"
+          },
+          "stripePriceIdYearly": {
+            "type": "string",
+            "description": "Stripe Price ID (Yearly)"
+          },
+          "stripePriceIdUnit": {
+            "type": "string",
+            "description": "Stripe Price ID (Unit)"
+          }
+        }
+      },
+      "AddImageDto": {
+        "type": "object",
+        "properties": {
+          "imageUrl": {
+            "type": "string",
+            "description": "Image URL"
+          },
+          "altTextFr": {
+            "type": "string",
+            "description": "French alt text"
+          },
+          "altTextEn": {
+            "type": "string",
+            "description": "English alt text"
+          },
+          "isPrimary": {
+            "type": "boolean",
+            "description": "Set as primary image",
+            "default": false
+          }
+        },
+        "required": [
+          "imageUrl"
+        ]
+      },
+      "ReorderImagesDto": {
+        "type": "object",
+        "properties": {
+          "imageIds": {
+            "description": "Array of image IDs in desired order",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "imageIds"
+        ]
+      },
+      "RequestUploadUrlDto": {
+        "type": "object",
+        "properties": {
+          "fileName": {
+            "type": "string",
+            "description": "Original file name",
+            "example": "hero.jpg"
+          },
+          "contentType": {
+            "type": "string",
+            "description": "MIME type of the image",
+            "enum": [
+              "image/jpeg",
+              "image/png",
+              "image/webp"
+            ],
+            "example": "image/jpeg"
+          },
+          "fileSizeBytes": {
+            "type": "number",
+            "description": "File size in bytes",
+            "example": 2048000
+          }
+        },
+        "required": [
+          "fileName",
+          "contentType",
+          "fileSizeBytes"
+        ]
+      },
+      "ConfirmUploadDto": {
+        "type": "object",
+        "properties": {
+          "storageKey": {
+            "type": "string",
+            "description": "Storage key returned from upload-url endpoint"
+          },
+          "altTextFr": {
+            "type": "string",
+            "description": "Alt text in French"
+          },
+          "altTextEn": {
+            "type": "string",
+            "description": "Alt text in English"
+          },
+          "isPrimary": {
+            "type": "boolean",
+            "description": "Set as primary image",
+            "default": false
+          }
+        },
+        "required": [
+          "storageKey"
+        ]
+      },
+      "UpdateStockDto": {
+        "type": "object",
+        "properties": {
+          "stockQuantity": {
+            "type": "number",
+            "description": "New stock quantity"
+          },
+          "stockAlertThreshold": {
+            "type": "number",
+            "description": "Stock alert threshold"
+          }
+        },
+        "required": [
+          "stockQuantity"
+        ]
+      },
+      "AddCartItemDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "description": "Product UUID",
+            "example": "123e4567-e89b-12d3-a456-426614174000"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Quantity to add",
+            "example": 1,
+            "minimum": 1
+          },
+          "billingPeriod": {
+            "type": "string",
+            "description": "Billing period",
+            "enum": [
+              "monthly",
+              "yearly",
+              "one_time"
+            ],
+            "default": "one_time"
+          }
+        },
+        "required": [
+          "productId",
+          "quantity"
+        ]
+      },
+      "UpdateCartItemDto": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "number",
+            "description": "New quantity",
+            "example": 2,
+            "minimum": 1
+          }
+        },
+        "required": [
+          "quantity"
+        ]
+      },
+      "AddressDto": {
+        "type": "object",
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "street": {
+            "type": "string"
+          },
+          "city": {
+            "type": "string"
+          },
+          "postalCode": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string",
+            "description": "ISO 3166-1 alpha-2 country code",
+            "example": "FR"
+          },
+          "state": {
+            "type": "string"
+          },
+          "recipientName": {
+            "type": "string"
+          },
+          "phone": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "street",
+          "city",
+          "postalCode",
+          "country"
+        ]
+      },
+      "CheckoutPaymentIntentDto": {
+        "type": "object",
+        "properties": {
+          "cartId": {
+            "type": "string",
+            "description": "Cart identifier (UUID)"
+          },
+          "email": {
+            "type": "string",
+            "description": "Recipient email for the order (optional if user is authenticated or guestEmail is provided)"
+          },
+          "guestEmail": {
+            "type": "string",
+            "description": "Legacy alias for email used by older frontend builds"
+          },
+          "billingAddress": {
+            "$ref": "#/components/schemas/AddressDto"
+          },
+          "shippingAddress": {
+            "$ref": "#/components/schemas/AddressDto"
+          },
+          "preferredLanguage": {
+            "type": "string",
+            "enum": [
+              "fr",
+              "en"
+            ],
+            "default": "fr"
+          }
+        },
+        "required": [
+          "cartId",
+          "billingAddress"
+        ]
+      },
+      "PaymentIntentResponseDto": {
+        "type": "object",
+        "properties": {
+          "clientSecret": {
+            "type": "string",
+            "description": "Stripe client secret used by the frontend to confirm the payment"
+          },
+          "paymentIntentId": {
+            "type": "string",
+            "description": "Stripe PaymentIntent identifier"
+          },
+          "orderId": {
+            "type": "string",
+            "description": "Internal order identifier (UUID)"
+          },
+          "orderNumber": {
+            "type": "string",
+            "description": "Human-readable order number"
+          },
+          "amount": {
+            "type": "number",
+            "description": "Order total amount in the smallest currency unit"
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217 currency code",
+            "example": "EUR"
+          }
+        },
+        "required": [
+          "clientSecret",
+          "paymentIntentId",
+          "orderId",
+          "orderNumber",
+          "amount",
+          "currency"
+        ]
+      },
+      "UpdateOrderStatusDto": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "processing",
+              "shipped",
+              "delivered",
+              "completed",
+              "cancelled",
+              "refunded"
+            ],
+            "description": "New order status"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional admin notes about the status change"
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "CreateSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "productId": {
+            "type": "string",
+            "description": "Product identifier (UUID)"
+          },
+          "billingPeriod": {
+            "type": "string",
+            "enum": [
+              "monthly",
+              "yearly",
+              "one_time"
+            ]
+          },
+          "billingAddress": {
+            "$ref": "#/components/schemas/AddressDto"
+          }
+        },
+        "required": [
+          "productId",
+          "billingPeriod",
+          "billingAddress"
+        ]
+      },
+      "CancelSubscriptionDto": {
+        "type": "object",
+        "properties": {
+          "cancelAtPeriodEnd": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "UpdateSubscriptionStatusDto": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "cancel",
+              "reactivate",
+              "pause"
+            ]
+          }
+        },
+        "required": [
+          "action"
+        ]
+      },
+      "ProductSnapshotDto": {
+        "type": "object",
+        "properties": {
+          "nameFr": {
+            "type": "string"
+          },
+          "nameEn": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "nameFr",
+          "nameEn",
+          "slug"
+        ]
+      },
+      "LicenseResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "licenseKey": {
+            "type": "string"
+          },
+          "productSnapshot": {
+            "$ref": "#/components/schemas/ProductSnapshotDto"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "productId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "revoked",
+              "expired"
+            ]
+          },
+          "activatedAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "expiresAt": {
+            "format": "date-time",
+            "type": "string",
+            "nullable": true
+          },
+          "email": {
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "licenseKey",
+          "productSnapshot",
+          "orderId",
+          "productId",
+          "status",
+          "activatedAt",
+          "expiresAt",
+          "email",
+          "createdAt"
+        ]
+      },
+      "ActivateLicenseDto": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "One-shot activation token delivered by email"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
+      "UpdateUserStatusDto": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the user account is active"
+          }
+        },
+        "required": [
+          "isActive"
+        ]
+      },
+      "CreateContactMessageDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Sender name"
+          },
+          "email": {
+            "type": "string",
+            "description": "Sender email"
+          },
+          "subject": {
+            "type": "string",
+            "description": "Message subject"
+          },
+          "message": {
+            "type": "string",
+            "description": "Message body"
+          }
+        },
+        "required": [
+          "name",
+          "email",
+          "subject",
+          "message"
+        ]
+      },
+      "CreateSlideDto": {
+        "type": "object",
+        "properties": {
+          "titleFr": {
+            "type": "string",
+            "description": "Title in French"
+          },
+          "titleEn": {
+            "type": "string",
+            "description": "Title in English"
+          },
+          "subtitleFr": {
+            "type": "string",
+            "description": "Subtitle in French"
+          },
+          "subtitleEn": {
+            "type": "string",
+            "description": "Subtitle in English"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Image URL"
+          },
+          "linkUrl": {
+            "type": "string",
+            "description": "Link URL"
+          },
+          "linkTextFr": {
+            "type": "string",
+            "description": "Link text in French"
+          },
+          "linkTextEn": {
+            "type": "string",
+            "description": "Link text in English"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the slide is active",
+            "default": true
+          },
+          "displayOrder": {
+            "type": "number",
+            "description": "Display order",
+            "default": 0
+          }
+        },
+        "required": [
+          "titleFr",
+          "titleEn"
+        ]
+      },
+      "ReorderCarouselDto": {
+        "type": "object",
+        "properties": {
+          "slideIds": {
+            "description": "Ordered array of slide IDs",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "slideIds"
+        ]
+      },
+      "UpdateSlideDto": {
+        "type": "object",
+        "properties": {
+          "titleFr": {
+            "type": "string",
+            "description": "Title in French"
+          },
+          "titleEn": {
+            "type": "string",
+            "description": "Title in English"
+          },
+          "subtitleFr": {
+            "type": "string",
+            "description": "Subtitle in French"
+          },
+          "subtitleEn": {
+            "type": "string",
+            "description": "Subtitle in English"
+          },
+          "imageUrl": {
+            "type": "string",
+            "description": "Image URL"
+          },
+          "linkUrl": {
+            "type": "string",
+            "description": "Link URL"
+          },
+          "linkTextFr": {
+            "type": "string",
+            "description": "Link text in French"
+          },
+          "linkTextEn": {
+            "type": "string",
+            "description": "Link text in English"
+          },
+          "isActive": {
+            "type": "boolean",
+            "description": "Whether the slide is active",
+            "default": true
+          },
+          "displayOrder": {
+            "type": "number",
+            "description": "Display order",
+            "default": 0
+          }
+        }
+      },
+      "UpdateHeroTextDto": {
+        "type": "object",
+        "properties": {
+          "titleFr": {
+            "type": "string",
+            "description": "Hero title in French"
+          },
+          "titleEn": {
+            "type": "string",
+            "description": "Hero title in English"
+          },
+          "subtitleFr": {
+            "type": "string",
+            "description": "Hero subtitle in French"
+          },
+          "subtitleEn": {
+            "type": "string",
+            "description": "Hero subtitle in English"
+          }
+        },
+        "required": [
+          "titleFr",
+          "subtitleFr"
+        ]
+      },
+      "UpdateTopConfigDto": {
+        "type": "object",
+        "properties": {
+          "productIds": {
+            "description": "Ordered array of product IDs",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "productIds"
+        ]
+      },
+      "UpdateContactMessageDto": {
+        "type": "object",
+        "properties": {
+          "isRead": {
+            "type": "boolean",
+            "description": "Mark as read"
+          },
+          "isProcessed": {
+            "type": "boolean",
+            "description": "Mark as processed"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Admin notes"
+          }
+        }
+      }
+    }
+  }
+}

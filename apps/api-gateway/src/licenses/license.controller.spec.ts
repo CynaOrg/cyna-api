@@ -126,4 +126,35 @@ describe('LicenseController', () => {
       }
     });
   });
+
+  describe('activateLicense', () => {
+    it('forwards the token to the payment service and strips internal fields', async () => {
+      const rawLicense = buildRawLicense({ activatedAt: new Date('2026-04-23') });
+      paymentClient.send.mockReturnValueOnce(of(rawLicense));
+
+      const result = await controller.activateLicense({ token: 'raw-token-xyz' });
+
+      expect(paymentClient.send).toHaveBeenCalledWith(expect.any(Object), {
+        token: 'raw-token-xyz',
+      });
+      expect(result.id).toBe('lic-1');
+      expect(result.activatedAt).toEqual(new Date('2026-04-23'));
+      expect(result).not.toHaveProperty('userId');
+      expect(result).not.toHaveProperty('updatedAt');
+    });
+
+    it('maps an RPC 404 (expired/invalid token) to HttpException 404', async () => {
+      paymentClient.send.mockReturnValueOnce(
+        throwError(() => ({ statusCode: 404, message: 'Invalid or expired activation link' })),
+      );
+
+      try {
+        await controller.activateLicense({ token: 'bogus' });
+        fail('expected HttpException to be thrown');
+      } catch (err) {
+        expect(err).toBeInstanceOf(HttpException);
+        expect((err as HttpException).getStatus()).toBe(404);
+      }
+    });
+  });
 });

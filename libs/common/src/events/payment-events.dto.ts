@@ -65,3 +65,24 @@ export interface RefundedEvent {
   refundAmount: number;
   currency: string;
 }
+
+export interface IssuedLicense {
+  licenseId: string;
+  licenseKey: string;
+  productSnapshot: {
+    nameFr: string;
+    nameEn: string;
+    slug: string;
+  };
+  activationToken: string;
+  activationExpiresAt: string;
+}
+
+export interface LicensesIssuedEvent {
+  orderId: string;
+  orderNumber: string;
+  userId: string | null;
+  email: string;
+  language: Language;
+  licenses: IssuedLicense[];
+}

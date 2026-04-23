@@ -18,10 +18,16 @@ import {
   SubscriptionPastDueEvent,
   SubscriptionCancelledEvent,
   RefundedEvent,
+  LicensesIssuedEvent,
+  IssuedLicense as IssuedLicenseEvent,
 } from '@cyna-api/common';
 import { ProcessedWebhook } from '../entities/processed-webhook.entity';
 import { SubscriptionService } from './subscription.service';
-import { LicenseService, OrderItemWithProduct } from './license.service';
+import {
+  LicenseService,
+  OrderItemWithProduct,
+  IssuedLicense as ServiceIssuedLicense,
+} from './license.service';
 import { WebhookPayloadDto } from '../dto/webhook-payload.dto';
 import Stripe from 'stripe';
 
@@ -219,7 +225,7 @@ export class WebhookService {
       );
     }
 
-    await this.generateLicensesForOrder(order);
+    const issued = await this.generateLicensesForOrder(order);
 
     // 2. Emit event for Order Service to confirm the order
     this.orderClient.emit(EVENT_PATTERNS.PAYMENT.CONFIRMED, {
@@ -246,6 +252,25 @@ export class WebhookService {
       itemsSummary: ctx.itemsSummary,
     };
     this.notificationClient.emit(EVENT_PATTERNS.PAYMENT.CONFIRMED, event);
+
+    if (issued.length > 0) {
+      const licensesPayload: IssuedLicenseEvent[] = issued.map((i: ServiceIssuedLicense) => ({
+        licenseId: i.license.id,
+        licenseKey: i.license.licenseKey,
+        productSnapshot: i.license.productSnapshot,
+        activationToken: i.activationToken,
+        activationExpiresAt: i.license.activationTokenExpiresAt?.toISOString() ?? '',
+      }));
+      const licensesEvent: LicensesIssuedEvent = {
+        orderId: ctx.orderId,
+        orderNumber: ctx.orderNumber,
+        userId: ctx.userId,
+        email: ctx.email,
+        language: ctx.language,
+        licenses: licensesPayload,
+      };
+      this.notificationClient.emit(EVENT_PATTERNS.PAYMENT.LICENSES_ISSUED, licensesEvent);
+    }
   }
 
   private async fetchOrderByPaymentIntent(
@@ -278,7 +303,9 @@ export class WebhookService {
     );
   }
 
-  private async generateLicensesForOrder(order: OrderForLicenseGeneration): Promise<void> {
+  private async generateLicensesForOrder(
+    order: OrderForLicenseGeneration,
+  ): Promise<ServiceIssuedLicense[]> {
     const licenseItems: OrderItemWithProduct[] = order.items
       .filter((item) => {
         const snapshot = item.productSnapshot as { productType?: string };
@@ -306,7 +333,7 @@ export class WebhookService {
 
     if (licenseItems.length === 0) {
       this.logger.log(`Order ${order.id} has no license items — skipping generation`);
-      return;
+      return [];
     }
 
     // Idempotence guard: processed_webhooks dedupes same-eventId concurrent
@@ -317,13 +344,14 @@ export class WebhookService {
       this.logger.log(
         `Licenses already generated for order ${order.id} (${existing.length} existing) — skipping`,
       );
-      return;
+      return [];
     }
 
     const generated = await this.licenseService.generateForOrder(order.id, licenseItems);
     this.logger.log(
       `Generated ${generated.length} license(s) for order ${order.id} (userId=${order.userId ?? 'guest'})`,
     );
+    return generated;
   }
 
   private async handlePaymentIntentFailed(data: Record<string, unknown>): Promise<void> {

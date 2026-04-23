@@ -281,6 +281,65 @@ describe('WebhookService', () => {
         ]);
       });
 
+      it('emits LICENSES_ISSUED with raw activation tokens when licenses are generated', async () => {
+        orderClient.send.mockReturnValue(of(licenseOrder));
+        const expiresAt = new Date('2026-05-23T00:00:00Z');
+        (licenseService.generateForOrder as jest.Mock).mockResolvedValueOnce([
+          {
+            license: {
+              id: 'lic-1',
+              licenseKey: 'CYNA-AAAA-BBBB-CCCC-DDDD',
+              productSnapshot: { nameFr: 'Antivirus', nameEn: 'Antivirus EN', slug: 'antivirus' },
+              activationTokenExpiresAt: expiresAt,
+            },
+            activationToken: 'raw-token-xyz',
+          },
+        ]);
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_issued',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_issued', amount: 100, metadata: {} },
+          created: Date.now(),
+        });
+
+        expect(notificationClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.LICENSES_ISSUED,
+          expect.objectContaining({
+            orderId: 'order-1',
+            orderNumber: 'CYN-2026-00001',
+            userId: 'user-1',
+            email: 'user@example.com',
+            language: Language.EN,
+            licenses: [
+              expect.objectContaining({
+                licenseId: 'lic-1',
+                licenseKey: 'CYNA-AAAA-BBBB-CCCC-DDDD',
+                activationToken: 'raw-token-xyz',
+                activationExpiresAt: expiresAt.toISOString(),
+              }),
+            ],
+          }),
+        );
+      });
+
+      it('does NOT emit LICENSES_ISSUED when no licenses are generated (physical-only order)', async () => {
+        orderClient.send.mockReturnValue(of(licenseOrder));
+        (licenseService.generateForOrder as jest.Mock).mockResolvedValueOnce([]);
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_no_issue',
+          eventType: 'payment_intent.succeeded',
+          data: { id: 'pi_no_issue', amount: 100, metadata: {} },
+          created: Date.now(),
+        });
+
+        const issuedCalls = notificationClient.emit.mock.calls.filter(
+          (c) => c[0] === EVENT_PATTERNS.PAYMENT.LICENSES_ISSUED,
+        );
+        expect(issuedCalls).toHaveLength(0);
+      });
+
       it('should generate licenses for a guest order (userId null)', async () => {
         orderClient.send.mockReturnValueOnce(
           of({ ...licenseOrder, userId: null, customerEmail: 'guest@example.com' }),

@@ -111,6 +111,15 @@ export class PaymentController {
     }
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.PAYMENT.ACTIVATE_LICENSE)
+  async activateLicense(@Payload() data: { token: string }): Promise<LicenseKey> {
+    try {
+      return await this.licenseService.activate(data.token);
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
   /**
    * Handle account deletion event - cancel all active Stripe subscriptions
    * and revoke all active license keys for the deleted user

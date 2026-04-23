@@ -144,9 +144,34 @@ describe('LicenseService', () => {
           userId: 'user-123',
           email: 'user@example.com',
           status: LicenseKeyStatus.ACTIVE,
-          activatedAt: expect.any(Date),
+          activatedAt: null,
+          activationTokenHash: expect.any(String),
+          activationTokenExpiresAt: expect.any(Date),
         }),
       );
+    });
+
+    it('should return raw activation tokens alongside each generated license', async () => {
+      const items: OrderItemWithProduct[] = [
+        {
+          productId: 'prod-1',
+          productType: 'license',
+          quantity: 2,
+          email: 'user@example.com',
+          productSnapshot: TEST_SNAPSHOT,
+        },
+      ];
+
+      const result = await service.generateForOrder(orderId, items);
+
+      expect(result.length).toBe(2);
+      for (const issued of result) {
+        expect(typeof issued.activationToken).toBe('string');
+        expect(issued.activationToken.length).toBeGreaterThan(20);
+      }
+      // Tokens must be unique per license
+      const tokens = new Set(result.map((r) => r.activationToken));
+      expect(tokens.size).toBe(result.length);
     });
 
     it('should set userId to null when not provided', async () => {
@@ -323,6 +348,56 @@ describe('LicenseService', () => {
       expect(licenseKeyRepository.create).toHaveBeenCalledWith(
         expect.objectContaining({ productSnapshot: snapshot }),
       );
+    });
+  });
+
+  describe('activate', () => {
+    const items: OrderItemWithProduct[] = [
+      {
+        productId: 'prod-1',
+        productType: 'license',
+        quantity: 1,
+        email: 'user@example.com',
+        productSnapshot: TEST_SNAPSHOT,
+      },
+    ];
+
+    it('activates a license matching the raw token, clearing the hash/expiry', async () => {
+      const [issued] = await service.generateForOrder('order-123', items);
+      const persisted = issued.license as unknown as LicenseKey;
+      (licenseKeyRepository.findOne as jest.Mock).mockResolvedValueOnce(persisted);
+
+      const before = Date.now();
+      const result = await service.activate(issued.activationToken);
+      const after = Date.now();
+
+      expect(result.activatedAt).toBeInstanceOf(Date);
+      expect(result.activatedAt!.getTime()).toBeGreaterThanOrEqual(before);
+      expect(result.activatedAt!.getTime()).toBeLessThanOrEqual(after);
+      expect(result.activationTokenHash).toBeNull();
+      expect(result.activationTokenExpiresAt).toBeNull();
+      expect(licenseKeyRepository.save).toHaveBeenCalledWith(persisted);
+    });
+
+    it('throws NotFoundException when token does not match any license', async () => {
+      (licenseKeyRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+      await expect(service.activate('bogus-token')).rejects.toThrow(
+        'Invalid or expired activation link',
+      );
+    });
+
+    it('throws NotFoundException when the token has expired', async () => {
+      const expired = {
+        id: 'lic-1',
+        activationTokenHash: 'x',
+        activationTokenExpiresAt: new Date(Date.now() - 1000),
+      } as LicenseKey;
+      (licenseKeyRepository.findOne as jest.Mock).mockResolvedValueOnce(expired);
+
+      await expect(service.activate('any-token')).rejects.toThrow(
+        'Invalid or expired activation link',
+      );
+      expect(licenseKeyRepository.save).not.toHaveBeenCalled();
     });
   });
 });

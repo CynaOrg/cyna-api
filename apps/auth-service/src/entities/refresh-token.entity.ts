@@ -7,7 +7,6 @@ import {
   CreateDateColumn,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { User } from './user.entity';
 import { Admin } from './admin.entity';
 
 @Entity('refresh_tokens')
@@ -35,10 +34,6 @@ export class RefreshToken {
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
-
-  @ManyToOne(() => User, (user) => user.refreshTokens, { onDelete: 'CASCADE', nullable: true })
-  @JoinColumn({ name: 'user_id' })
-  user?: User;
 
   @ManyToOne(() => Admin, (admin) => admin.refreshTokens, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'admin_id' })

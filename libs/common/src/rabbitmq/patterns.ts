@@ -37,10 +37,6 @@ export const MESSAGE_PATTERNS = {
     ADMIN_RESEND_2FA: { cmd: 'auth.admin_resend_2fa' },
     ADMIN_REFRESH_TOKEN: { cmd: 'auth.admin_refresh_token' },
     ADMIN_LOGOUT: { cmd: 'auth.admin_logout' },
-    GET_USER_BY_ID: { cmd: 'auth.get_user_by_id' },
-    ADMIN_GET_USERS: { cmd: 'auth.admin_get_users' },
-    ADMIN_GET_USER: { cmd: 'auth.admin_get_user' },
-    ADMIN_UPDATE_USER_STATUS: { cmd: 'auth.admin_update_user_status' },
     ADMIN_GET_ADMINS: { cmd: 'auth.admin_get_admins' },
     ADMIN_GET_ADMIN: { cmd: 'auth.admin_get_admin' },
     ADMIN_CREATE_ADMIN: { cmd: 'auth.admin_create_admin' },
@@ -61,6 +57,16 @@ export const MESSAGE_PATTERNS = {
     UPDATE_ADDRESS: { cmd: 'user.update_address' },
     DELETE_ADDRESS: { cmd: 'user.delete_address' },
     GET_SUBSCRIPTIONS: { cmd: 'user.get_subscriptions' },
+    // Added for user-service extraction
+    CREATE: { cmd: 'user.create' },
+    FIND_BY_EMAIL: { cmd: 'user.find_by_email' },
+    GET_BY_ID: { cmd: 'user.get_by_id' },
+    MARK_VERIFIED: { cmd: 'user.mark_verified' },
+    UPDATE_PASSWORD_HASH: { cmd: 'user.update_password_hash' },
+    UPDATE_STRIPE_CUSTOMER_ID: { cmd: 'user.update_stripe_customer_id' },
+    ADMIN_LIST: { cmd: 'user.admin_list' },
+    ADMIN_GET: { cmd: 'user.admin_get' },
+    ADMIN_UPDATE_STATUS: { cmd: 'user.admin_update_status' },
   },
 
   // Catalog Service - Categories
@@ -215,6 +221,7 @@ export const EVENT_PATTERNS = {
   USER: {
     UPDATED: 'user.user.updated',
     DELETED: 'user.user.deleted',
+    PASSWORD_CHANGED: 'user.password.changed',
   },
 
   // Catalog Events

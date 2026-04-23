@@ -385,12 +385,12 @@ describe('WebhookService', () => {
           expect.objectContaining({
             paymentIntentId: 'pi_invoice',
             stripeInvoiceId: 'in_stub',
-            stripeInvoiceUrl: 'https://invoice.stripe.test/i/in_stub',
+            stripeInvoiceUrl: 'https://invoice.stripe.test/i/in_stub/pdf',
           }),
         );
         expect(notificationClient.emit).toHaveBeenCalledWith(
           EVENT_PATTERNS.PAYMENT.CONFIRMED,
-          expect.objectContaining({ invoiceUrl: 'https://invoice.stripe.test/i/in_stub' }),
+          expect.objectContaining({ invoiceUrl: 'https://invoice.stripe.test/i/in_stub/pdf' }),
         );
       });
 

@@ -52,7 +52,7 @@ import { AddStripeInvoiceUrlToSubscriptions1777300000001 } from './migrations/17
         transport: Transport.RMQ,
         options: {
           urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
-          queue: 'notification.queue',
+          queue: 'notification.emails',
           queueOptions: { durable: true },
         },
       },

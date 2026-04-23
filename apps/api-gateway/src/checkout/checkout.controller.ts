@@ -8,17 +8,20 @@ import {
   UseGuards,
   BadRequestException,
 } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import { OptionalJwtAuthGuard } from '../auth/guards';
 import { Request } from 'express';
 import { CheckoutPaymentIntentDto } from './dto/checkout-payment-intent.dto';
+import { PaymentIntentResponseDto } from './dto/payment-intent-response.dto';
 
 interface AuthenticatedRequest extends Request {
   user?: { id: string; email: string; type: string; role?: string };
 }
 
+@ApiTags('Payments')
 @Controller('checkout')
 export class CheckoutController {
   private readonly logger = new Logger(CheckoutController.name);
@@ -30,10 +33,12 @@ export class CheckoutController {
 
   @UseGuards(OptionalJwtAuthGuard)
   @Post('payment-intent')
+  @ApiOperation({ summary: 'Create a Stripe PaymentIntent for the current cart' })
+  @ApiResponse({ status: 201, type: PaymentIntentResponseDto })
   async createPaymentIntent(
     @Body() body: CheckoutPaymentIntentDto,
     @Req() req: AuthenticatedRequest,
-  ) {
+  ): Promise<PaymentIntentResponseDto> {
     const userId = req.user?.id;
     // Prefer JWT email (authoritative for authenticated users), then body variants
     // for guests or when the cookie did not travel to the gateway.

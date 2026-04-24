@@ -39,3 +39,6 @@ export * from './database';
 
 // Cache
 export * from './cache';
+
+// Shared types (cross-service DTO/view shapes)
+export * from './types';

@@ -22,6 +22,7 @@ interface TestJwtPayload {
 describe('Authorization (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let userDataSource: DataSource;
   let eventsSpy: MockAuthEventsPublisher;
 
   /**
@@ -35,6 +36,7 @@ describe('Authorization (e2e)', () => {
     const testApp = await setupTestApp();
     app = testApp.app;
     dataSource = testApp.dataSource;
+    userDataSource = testApp.userDataSource;
     eventsSpy = testApp.eventsSpy;
   });
 
@@ -43,7 +45,7 @@ describe('Authorization (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(dataSource);
+    await cleanDatabase(dataSource, userDataSource);
     eventsSpy.clear();
   });
 

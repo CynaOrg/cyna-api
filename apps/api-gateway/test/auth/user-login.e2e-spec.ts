@@ -8,12 +8,14 @@ import { cleanDatabase } from '../helpers/db.helper';
 describe('User Login (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let userDataSource: DataSource;
   let eventsSpy: MockAuthEventsPublisher;
 
   beforeAll(async () => {
     const testContext = await setupTestApp();
     app = testContext.app;
     dataSource = testContext.dataSource;
+    userDataSource = testContext.userDataSource;
     eventsSpy = testContext.eventsSpy;
   });
 
@@ -22,7 +24,7 @@ describe('User Login (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(dataSource);
+    await cleanDatabase(dataSource, userDataSource);
     eventsSpy.clear();
   });
 

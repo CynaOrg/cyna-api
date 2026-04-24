@@ -36,21 +36,6 @@ export class AdminAuthController {
     return this.adminAuthService.logout(data.adminId, data.refreshToken);
   }
 
-  @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_GET_USERS)
-  async adminGetUsers(@Payload() data: { search?: string; page?: number; limit?: number }) {
-    return this.adminAuthService.adminGetUsers(data);
-  }
-
-  @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_GET_USER)
-  async adminGetUser(@Payload() data: { userId: string }) {
-    return this.adminAuthService.adminGetUser(data.userId);
-  }
-
-  @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_UPDATE_USER_STATUS)
-  async adminUpdateUserStatus(@Payload() data: { userId: string; isActive: boolean }) {
-    return this.adminAuthService.adminUpdateUserStatus(data.userId, data.isActive);
-  }
-
   @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_GET_ADMINS)
   async getAdmins(@Payload() _data: Record<string, never>) {
     return this.adminAuthService.getAdmins();

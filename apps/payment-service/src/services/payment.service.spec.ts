@@ -4,14 +4,19 @@ import { of } from 'rxjs';
 import { PaymentService } from './payment.service';
 import { StripeService } from './stripe.service';
 import { SubscriptionService } from './subscription.service';
-import { SERVICE_NAMES, SubscriptionStatus, BillingPeriod } from '@cyna-api/common';
+import {
+  SERVICE_NAMES,
+  MESSAGE_PATTERNS,
+  SubscriptionStatus,
+  BillingPeriod,
+} from '@cyna-api/common';
 
 describe('PaymentService', () => {
   let service: PaymentService;
   let stripeService: Partial<StripeService>;
   let subscriptionService: Partial<SubscriptionService>;
   let catalogClient: { send: jest.Mock };
-  let authClient: { send: jest.Mock; emit: jest.Mock };
+  let userClient: { send: jest.Mock; emit: jest.Mock };
 
   const mockProduct = {
     id: 'prod-1',
@@ -63,7 +68,7 @@ describe('PaymentService', () => {
       send: jest.fn(),
     };
 
-    authClient = {
+    userClient = {
       send: jest.fn(),
       emit: jest.fn(),
     };
@@ -74,7 +79,7 @@ describe('PaymentService', () => {
         { provide: StripeService, useValue: stripeService },
         { provide: SubscriptionService, useValue: subscriptionService },
         { provide: SERVICE_NAMES.CATALOG, useValue: catalogClient },
-        { provide: SERVICE_NAMES.AUTH, useValue: authClient },
+        { provide: SERVICE_NAMES.USER, useValue: userClient },
       ],
     }).compile();
 
@@ -133,7 +138,7 @@ describe('PaymentService', () => {
 
   describe('createSubscription', () => {
     it('should create subscription when user has stripeCustomerId', async () => {
-      authClient.send.mockReturnValue(
+      userClient.send.mockReturnValue(
         of({
           id: 'user-1',
           email: 'user@test.com',
@@ -165,7 +170,7 @@ describe('PaymentService', () => {
     });
 
     it('should create Stripe customer when user has no stripeCustomerId', async () => {
-      authClient.send.mockReturnValue(
+      userClient.send.mockReturnValue(
         of({
           id: 'user-1',
           email: 'user@test.com',
@@ -190,14 +195,17 @@ describe('PaymentService', () => {
       expect(stripeService.createCustomer).toHaveBeenCalledWith('user@test.com', 'Test User', {
         userId: 'user-1',
       });
-      expect(authClient.emit).toHaveBeenCalledWith('auth.update_stripe_customer_id', {
-        userId: 'user-1',
-        stripeCustomerId: 'cus_new_123',
-      });
+      expect(userClient.emit).toHaveBeenCalledWith(
+        MESSAGE_PATTERNS.USER.UPDATE_STRIPE_CUSTOMER_ID,
+        {
+          userId: 'user-1',
+          stripeCustomerId: 'cus_new_123',
+        },
+      );
     });
 
     it('should use yearly price for yearly billing period', async () => {
-      authClient.send.mockReturnValue(
+      userClient.send.mockReturnValue(
         of({
           id: 'user-1',
           email: 'user@test.com',
@@ -226,7 +234,7 @@ describe('PaymentService', () => {
     });
 
     it('should throw when product not found', async () => {
-      authClient.send.mockReturnValue(
+      userClient.send.mockReturnValue(
         of({
           id: 'user-1',
           email: 'user@test.com',
@@ -251,7 +259,7 @@ describe('PaymentService', () => {
     });
 
     it('should throw when product has no stripePriceId', async () => {
-      authClient.send.mockReturnValue(
+      userClient.send.mockReturnValue(
         of({
           id: 'user-1',
           email: 'user@test.com',
@@ -283,7 +291,7 @@ describe('PaymentService', () => {
     });
 
     it('should throw when subscription has no clientSecret', async () => {
-      authClient.send.mockReturnValue(
+      userClient.send.mockReturnValue(
         of({
           id: 'user-1',
           email: 'user@test.com',
@@ -314,7 +322,7 @@ describe('PaymentService', () => {
     });
 
     it('should save subscription with correct data in database', async () => {
-      authClient.send.mockReturnValue(
+      userClient.send.mockReturnValue(
         of({
           id: 'user-1',
           email: 'user@test.com',

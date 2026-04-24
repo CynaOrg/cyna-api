@@ -15,8 +15,8 @@ export class ProfileService {
   private readonly TIMEOUT = 10000; // 10 seconds
 
   constructor(
-    @Inject(SERVICE_NAMES.AUTH)
-    private readonly authClient: ClientProxy,
+    @Inject(SERVICE_NAMES.USER)
+    private readonly userClient: ClientProxy,
   ) {}
 
   async getProfile(userId: string) {
@@ -53,7 +53,7 @@ export class ProfileService {
 
   private async sendMessage<T>(pattern: { cmd: string }, data: T) {
     return firstValueFrom(
-      this.authClient.send(pattern, data).pipe(
+      this.userClient.send(pattern, data).pipe(
         timeout(this.TIMEOUT),
         catchError((err) => {
           if (err && typeof err === 'object' && 'statusCode' in err) {

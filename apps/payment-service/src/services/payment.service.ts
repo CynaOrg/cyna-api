@@ -20,7 +20,7 @@ export class PaymentService {
     private readonly stripeService: StripeService,
     private readonly subscriptionService: SubscriptionService,
     @Inject(SERVICE_NAMES.CATALOG) private readonly catalogClient: ClientProxy,
-    @Inject(SERVICE_NAMES.AUTH) private readonly authClient: ClientProxy,
+    @Inject(SERVICE_NAMES.USER) private readonly userClient: ClientProxy,
   ) {}
 
   async createPaymentIntent(dto: CreatePaymentIntentDto): Promise<{
@@ -79,7 +79,7 @@ export class PaymentService {
     try {
       if (dto.userId) {
         const user = await firstValueFrom(
-          this.authClient.send(MESSAGE_PATTERNS.AUTH.GET_USER_BY_ID, { userId: dto.userId }).pipe(
+          this.userClient.send(MESSAGE_PATTERNS.USER.GET_BY_ID, { userId: dto.userId }).pipe(
             timeout(3000),
             catchError(() => throwError(() => null)),
           ),
@@ -92,7 +92,7 @@ export class PaymentService {
             { userId: dto.userId },
           );
           // Persist so subsequent purchases reuse the same Stripe Customer.
-          this.authClient.emit('auth.update_stripe_customer_id', {
+          this.userClient.emit(MESSAGE_PATTERNS.USER.UPDATE_STRIPE_CUSTOMER_ID, {
             userId: dto.userId,
             stripeCustomerId: customer.id,
           });
@@ -238,9 +238,9 @@ export class PaymentService {
     clientSecret: string;
     subscriptionId: string;
   }> {
-    // 1. Get the user from Auth Service (for stripeCustomerId)
+    // 1. Get the user from User Service (for stripeCustomerId)
     const user = await firstValueFrom(
-      this.authClient.send(MESSAGE_PATTERNS.AUTH.GET_USER_BY_ID, { userId: dto.userId }).pipe(
+      this.userClient.send(MESSAGE_PATTERNS.USER.GET_BY_ID, { userId: dto.userId }).pipe(
         timeout(5000),
         retry(2),
         catchError((err) => {
@@ -249,8 +249,8 @@ export class PaymentService {
               () =>
                 new RpcException({
                   statusCode: 503,
-                  message: 'Auth service timeout',
-                  code: 'AUTH_SERVICE_TIMEOUT',
+                  message: 'User service timeout',
+                  code: 'USER_SERVICE_TIMEOUT',
                 }),
             );
           }
@@ -269,8 +269,8 @@ export class PaymentService {
       );
       stripeCustomerId = customer.id;
 
-      // Update user with stripeCustomerId via Auth Service
-      this.authClient.emit('auth.update_stripe_customer_id', {
+      // Update user with stripeCustomerId via User Service
+      this.userClient.emit(MESSAGE_PATTERNS.USER.UPDATE_STRIPE_CUSTOMER_ID, {
         userId: dto.userId,
         stripeCustomerId,
       });

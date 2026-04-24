@@ -70,8 +70,10 @@ export const MESSAGE_PATTERNS = {
     CATEGORY_UPDATE: { cmd: 'catalog.category.update' },
     CATEGORY_DELETE: { cmd: 'catalog.category.delete' },
     CATEGORY_FIND_ALL: { cmd: 'catalog.category.findAll' },
+    CATEGORY_FIND_ALL_ADMIN: { cmd: 'catalog.category.findAllAdmin' },
     CATEGORY_FIND_BY_SLUG: { cmd: 'catalog.category.findBySlug' },
     CATEGORY_FIND_BY_ID: { cmd: 'catalog.category.findById' },
+    CATEGORY_REORDER: { cmd: 'catalog.category.reorder' },
     // Products
     PRODUCT_CREATE: { cmd: 'catalog.product.create' },
     PRODUCT_UPDATE: { cmd: 'catalog.product.update' },

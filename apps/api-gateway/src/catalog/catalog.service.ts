@@ -39,12 +39,20 @@ export class CatalogService {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_ALL, query);
   }
 
+  async findAllCategoriesAdmin(query: { isActive?: boolean }) {
+    return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_ALL_ADMIN, query);
+  }
+
   async findCategoryBySlug(slug: string, lang?: Language) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_BY_SLUG, { slug, lang });
   }
 
   async findCategoryById(id: string) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_BY_ID, { id });
+  }
+
+  async reorderCategories(categoryIds: string[]) {
+    return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_REORDER, { categoryIds });
   }
 
   // ==================== Products ====================

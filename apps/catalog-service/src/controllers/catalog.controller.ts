@@ -97,6 +97,13 @@ export class CatalogController {
     return { success: true };
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_BULK_DELETE)
+  async bulkDeleteProducts(
+    @Payload() data: { productIds: string[] },
+  ): Promise<{ deletedCount: number; failedIds: string[] }> {
+    return this.productService.bulkDelete(data.productIds);
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL)
   async findAllProducts(@Payload() data: ProductQueryDto) {
     const { data: products, meta } = await this.productService.findAll(data);

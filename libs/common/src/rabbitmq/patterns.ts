@@ -78,6 +78,7 @@ export const MESSAGE_PATTERNS = {
     PRODUCT_CREATE: { cmd: 'catalog.product.create' },
     PRODUCT_UPDATE: { cmd: 'catalog.product.update' },
     PRODUCT_DELETE: { cmd: 'catalog.product.delete' },
+    PRODUCT_BULK_DELETE: { cmd: 'catalog.product.bulk_delete' },
     PRODUCT_FIND_ALL: { cmd: 'catalog.product.findAll' },
     PRODUCT_FIND_BY_SLUG: { cmd: 'catalog.product.findBySlug' },
     PRODUCT_FIND_BY_ID: { cmd: 'catalog.product.findById' },

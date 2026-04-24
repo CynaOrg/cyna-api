@@ -38,6 +38,19 @@ export interface ProductTypeSalesEntry {
   count: number;
 }
 
+export type AverageCartProductType = 'saas' | 'physical' | 'license';
+
+export interface AverageCartByProductTypeEntry {
+  productType: AverageCartProductType;
+  averageCartValue: number;
+  orderCount: number;
+}
+
+export interface AverageCartByProductTypeResult {
+  period: string;
+  data: AverageCartByProductTypeEntry[];
+}
+
 export interface MrrHistory {
   month: string;
   mrr: number;
@@ -429,6 +442,106 @@ export class SalesService {
     this.logger.log(`Average cart computed for period: ${period}`);
 
     return result;
+  }
+
+  async getAverageCartByProductType(
+    period: string = SalesPeriod.MONTH,
+  ): Promise<AverageCartByProductTypeResult> {
+    const cacheKey = `average-cart-by-product-type:${period}`;
+    const ttl = this.configService.get<number>('analytics.cache.salesTtlSeconds', 300);
+
+    const cached = await this.getCachedMetric(cacheKey);
+    if (cached) {
+      return cached as AverageCartByProductTypeResult;
+    }
+
+    const dateRange = this.getDateRangeForPeriod(period);
+
+    const [ordersResult, productsResult] = await Promise.allSettled([
+      this.fetchOrders(),
+      this.sendMessage(this.catalogClient, MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL, {
+        page: 1,
+        limit: 1000,
+      }),
+    ]);
+
+    const orders = ordersResult.status === 'fulfilled' ? ordersResult.value : [];
+    const productsResponse =
+      productsResult.status === 'fulfilled' ? productsResult.value : { data: [] };
+    const products = Array.isArray(productsResponse)
+      ? productsResponse
+      : (productsResponse as PaginatedResponse)?.data || [];
+
+    // Build product -> type map
+    const productTypeMap = new Map<string, string>();
+    for (const product of products) {
+      productTypeMap.set(product.id, product.type || product.productType || 'unknown');
+    }
+
+    const paidStatuses = ['paid', 'completed', 'shipped', 'delivered'];
+    const filteredOrders = orders.filter((o: OrderRecord) => {
+      const orderDate = new Date(o.createdAt);
+      return (
+        orderDate >= dateRange.start &&
+        orderDate <= dateRange.end &&
+        paidStatuses.includes(o.status)
+      );
+    });
+
+    const supportedTypes: AverageCartProductType[] = ['saas', 'physical', 'license'];
+    const totals = new Map<AverageCartProductType, { sum: number; orders: number }>();
+    for (const type of supportedTypes) {
+      totals.set(type, { sum: 0, orders: 0 });
+    }
+
+    // For each order, compute subtotal per productType, then contribute to that type's running avg
+    for (const order of filteredOrders) {
+      const items = order.items || [];
+      const perTypeSubtotal = new Map<AverageCartProductType, number>();
+
+      for (const item of items) {
+        const rawType = productTypeMap.get(item.productId) || 'unknown';
+        const normalized = this.normalizeProductType(rawType);
+        if (!normalized) continue;
+
+        const itemTotal = (parseFloat(String(item.unitPrice)) || 0) * (item.quantity || 1);
+        perTypeSubtotal.set(normalized, (perTypeSubtotal.get(normalized) || 0) + itemTotal);
+      }
+
+      for (const [type, subtotal] of perTypeSubtotal) {
+        if (subtotal <= 0) continue;
+        const bucket = totals.get(type);
+        if (bucket) {
+          bucket.sum += subtotal;
+          bucket.orders += 1;
+        }
+      }
+    }
+
+    const data: AverageCartByProductTypeEntry[] = supportedTypes.map((type) => {
+      const bucket = totals.get(type) ?? { sum: 0, orders: 0 };
+      const avg = bucket.orders > 0 ? bucket.sum / bucket.orders : 0;
+      return {
+        productType: type,
+        averageCartValue: Math.round(avg * 100) / 100,
+        orderCount: bucket.orders,
+      };
+    });
+
+    const result: AverageCartByProductTypeResult = { period, data };
+
+    await this.setCachedMetric(cacheKey, result, ttl);
+    this.logger.log(`Average cart by product type computed for period: ${period}`);
+
+    return result;
+  }
+
+  private normalizeProductType(raw: string): AverageCartProductType | null {
+    const value = (raw || '').toLowerCase().trim();
+    if (value === 'saas' || value === 'subscription') return 'saas';
+    if (value === 'physical' || value === 'hardware') return 'physical';
+    if (value === 'license' || value === 'licence' || value === 'digital') return 'license';
+    return null;
   }
 
   async getMrr(): Promise<MrrResult> {

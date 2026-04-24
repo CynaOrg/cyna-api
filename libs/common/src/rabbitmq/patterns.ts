@@ -183,6 +183,7 @@ export const MESSAGE_PATTERNS = {
     GET_SALES_BY_CATEGORY: { cmd: 'analytics.get_sales_by_category' },
     GET_SALES_BY_PRODUCT_TYPE: { cmd: 'analytics.get_sales_by_product_type' },
     GET_AVERAGE_CART: { cmd: 'analytics.get_average_cart' },
+    GET_AVERAGE_CART_BY_PRODUCT_TYPE: { cmd: 'analytics.get_average_cart_by_product_type' },
     GET_MRR: { cmd: 'analytics.get_mrr' },
     GET_STOCK_STATUS: { cmd: 'analytics.get_stock_status' },
     EXPORT_SALES: { cmd: 'analytics.export_sales' },

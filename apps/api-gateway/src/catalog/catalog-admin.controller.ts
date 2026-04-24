@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { CatalogService } from './catalog.service';
-import { JwtAdminAuthGuard } from '../auth/guards';
+import { JwtAdminAuthGuard, SuperAdminGuard } from '../auth/guards';
 import {
   CategoryQueryDto,
   CreateCategoryDto,
@@ -22,6 +22,7 @@ import {
   UpdateProductDto,
   AddImageDto,
   ReorderImagesDto,
+  ReorderCategoriesDto,
   UpdateStockDto,
   RequestUploadUrlDto,
   ConfirmUploadDto,
@@ -38,9 +39,12 @@ export class CatalogAdminController {
 
   @Get('categories')
   @ApiOperation({ summary: 'Get all categories (admin)' })
-  @ApiResponse({ status: 200, description: 'List of categories' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of categories with both FR and EN fields exposed',
+  })
   async findAllCategories(@Query() query: CategoryQueryDto) {
-    return this.catalogService.findAllCategories(query);
+    return this.catalogService.findAllCategoriesAdmin(query);
   }
 
   @Post('categories')
@@ -49,6 +53,16 @@ export class CatalogAdminController {
   @ApiResponse({ status: 409, description: 'Category slug already exists' })
   async createCategory(@Body() dto: CreateCategoryDto) {
     return this.catalogService.createCategory(dto);
+  }
+
+  // IMPORTANT: Static routes must come before parameterized routes
+  @Patch('categories/reorder')
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: 'Reorder categories' })
+  @ApiResponse({ status: 200, description: 'Categories reordered' })
+  @ApiResponse({ status: 400, description: 'Invalid category IDs' })
+  async reorderCategories(@Body() dto: ReorderCategoriesDto) {
+    return this.catalogService.reorderCategories(dto.categoryIds);
   }
 
   @Patch('categories/:categoryId')

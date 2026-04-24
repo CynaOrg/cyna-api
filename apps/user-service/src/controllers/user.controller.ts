@@ -37,16 +37,19 @@ export class UserController {
   @MessagePattern(MESSAGE_PATTERNS.USER.MARK_VERIFIED)
   async markVerified(@Payload() data: { userId: string }) {
     await this.userService.markVerified(data.userId);
+    return { success: true };
   }
 
   @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_PASSWORD_HASH)
   async updatePasswordHash(@Payload() data: { userId: string; passwordHash: string }) {
     await this.userService.updatePasswordHash(data.userId, data.passwordHash);
+    return { success: true };
   }
 
   @MessagePattern(MESSAGE_PATTERNS.USER.UPDATE_STRIPE_CUSTOMER_ID)
   async updateStripeCustomerId(@Payload() data: { userId: string; stripeCustomerId: string }) {
     await this.userService.updateStripeCustomerId(data.userId, data.stripeCustomerId);
+    return { success: true };
   }
 
   @MessagePattern(MESSAGE_PATTERNS.USER.GET_PROFILE)

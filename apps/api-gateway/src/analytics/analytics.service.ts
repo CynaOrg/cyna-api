@@ -37,6 +37,10 @@ export class AnalyticsService {
     return this.sendMessage(MESSAGE_PATTERNS.ANALYTICS.GET_AVERAGE_CART, query);
   }
 
+  async getAverageCartByProductType(query: AnalyticsQueryDto) {
+    return this.sendMessage(MESSAGE_PATTERNS.ANALYTICS.GET_AVERAGE_CART_BY_PRODUCT_TYPE, query);
+  }
+
   // ==================== MRR ====================
 
   async getMrr(query: AnalyticsQueryDto) {

@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
+import { CynaLoggerService } from '@cyna-api/common';
 import { UserAddress } from '../entities/user-address.entity';
 import { CreateUserAddressDto, UpdateUserAddressDto } from '../dto';
 
@@ -14,6 +15,7 @@ export class UserAddressService {
     @InjectRepository(UserAddress)
     private readonly repo: Repository<UserAddress>,
     private readonly dataSource: DataSource,
+    private readonly logger: CynaLoggerService,
   ) {}
 
   list(userId: string): Promise<UserAddress[]> {
@@ -54,7 +56,9 @@ export class UserAddressService {
       }
 
       const entity = manager.create(UserAddress, { ...dto, userId });
-      return manager.save(UserAddress, entity);
+      const saved = await manager.save(UserAddress, entity);
+      this.logger.log(`Address created: ${saved.id} for user ${userId}`, 'UserAddressService');
+      return saved;
     });
   }
 
@@ -84,8 +88,21 @@ export class UserAddressService {
         );
       }
 
-      Object.assign(existing, dto);
-      return manager.save(UserAddress, existing);
+      if (dto.label !== undefined) existing.label = dto.label;
+      if (dto.recipientName !== undefined) existing.recipientName = dto.recipientName;
+      if (dto.street !== undefined) existing.street = dto.street;
+      if (dto.streetLine2 !== undefined) existing.streetLine2 = dto.streetLine2;
+      if (dto.city !== undefined) existing.city = dto.city;
+      if (dto.postalCode !== undefined) existing.postalCode = dto.postalCode;
+      if (dto.state !== undefined) existing.state = dto.state;
+      if (dto.country !== undefined) existing.country = dto.country;
+      if (dto.phone !== undefined) existing.phone = dto.phone;
+      if (dto.isDefaultShipping !== undefined) existing.isDefaultShipping = dto.isDefaultShipping;
+      if (dto.isDefaultBilling !== undefined) existing.isDefaultBilling = dto.isDefaultBilling;
+
+      const saved = await manager.save(UserAddress, existing);
+      this.logger.log(`Address updated: ${id} for user ${userId}`, 'UserAddressService');
+      return saved;
     });
   }
 
@@ -100,6 +117,7 @@ export class UserAddressService {
         });
       }
       await manager.delete(UserAddress, { id, userId });
+      this.logger.log(`Address deleted: ${id} for user ${userId}`, 'UserAddressService');
     });
   }
 }

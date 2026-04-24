@@ -101,7 +101,8 @@ export class UserAdminService {
   }
 
   private stripPasswordHash(user: User): Omit<User, 'passwordHash'> {
-    const { passwordHash: _passwordHash, ...rest } = user;
+    const rest = { ...user };
+    delete (rest as Partial<User>).passwordHash;
     return rest;
   }
 }

@@ -11,7 +11,6 @@ import { Language, CynaLoggerService } from '@cyna-api/common';
 describe('UserService', () => {
   let service: UserService;
   let userRepository: jest.Mocked<Repository<User>>;
-  let notificationClient: jest.Mocked<ClientProxy>;
   let authClient: jest.Mocked<ClientProxy>;
   const logger = {
     log: jest.fn(),
@@ -47,7 +46,6 @@ describe('UserService', () => {
 
     service = module.get<UserService>(UserService);
     userRepository = module.get(getRepositoryToken(User));
-    notificationClient = module.get('NOTIFICATION_SERVICE');
     authClient = module.get('AUTH_SERVICE');
   });
 

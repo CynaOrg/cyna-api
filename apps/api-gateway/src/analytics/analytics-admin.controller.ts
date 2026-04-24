@@ -51,6 +51,15 @@ export class AnalyticsAdminController {
     return this.analyticsService.getAverageCart(query);
   }
 
+  @Get('average-cart-by-product-type')
+  @ApiOperation({
+    summary: 'Get average cart value grouped by product type (SaaS, Physical, License)',
+  })
+  @ApiResponse({ status: 200, description: 'Average cart by product type' })
+  async getAverageCartByProductType(@Query() query: AnalyticsQueryDto) {
+    return this.analyticsService.getAverageCartByProductType(query);
+  }
+
   // ==================== MRR ====================
 
   @Get('mrr')

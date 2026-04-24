@@ -267,6 +267,14 @@ export class DashboardService {
         prevEnd.setUTCMilliseconds(-1);
         break;
       }
+      case DashboardPeriod.QUARTER: {
+        const quarterMonth = Math.floor(now.getUTCMonth() / 3) * 3;
+        start = new Date(Date.UTC(now.getUTCFullYear(), quarterMonth, 1));
+        prevStart = new Date(Date.UTC(now.getUTCFullYear(), quarterMonth - 3, 1));
+        prevEnd = new Date(start);
+        prevEnd.setUTCMilliseconds(-1);
+        break;
+      }
       case DashboardPeriod.YEAR: {
         start = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
         prevStart = new Date(Date.UTC(now.getUTCFullYear() - 1, 0, 1));

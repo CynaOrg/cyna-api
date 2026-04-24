@@ -4,6 +4,7 @@ export enum DashboardPeriod {
   TODAY = 'today',
   WEEK = 'week',
   MONTH = 'month',
+  QUARTER = 'quarter',
   YEAR = 'year',
 }
 

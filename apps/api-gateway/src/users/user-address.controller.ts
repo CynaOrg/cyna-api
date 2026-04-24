@@ -44,11 +44,12 @@ export class UserAddressController {
             );
           }
           if (err && typeof err === 'object' && 'statusCode' in err) {
+            const rpcErr = err as { statusCode: number; message?: string; code?: string };
             return throwError(
               () =>
                 new HttpException(
-                  { message: (err as any).message, error: (err as any).code },
-                  (err as any).statusCode as number,
+                  { message: rpcErr.message, error: rpcErr.code },
+                  rpcErr.statusCode,
                 ),
             );
           }

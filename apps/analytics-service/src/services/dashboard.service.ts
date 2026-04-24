@@ -84,13 +84,19 @@ export class DashboardService {
 
     // Fetch data from other services in parallel with graceful degradation
     const [ordersResult, subscriptionsResult] = await Promise.allSettled([
-      this.sendMessage(this.orderClient, MESSAGE_PATTERNS.ORDER.ADMIN_GET_ORDERS, {}),
+      this.sendMessage(this.orderClient, MESSAGE_PATTERNS.ORDER.ADMIN_GET_ORDERS, {
+        page: 1,
+        limit: 10000,
+      }),
       this.sendMessage(this.paymentClient, MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS, {
         adminMode: true,
       }),
     ]);
 
-    const allOrders = ordersResult.status === 'fulfilled' ? ordersResult.value : [];
+    const ordersValue = ordersResult.status === 'fulfilled' ? ordersResult.value : [];
+    const allOrders: OrderRecord[] = Array.isArray(ordersValue)
+      ? (ordersValue as OrderRecord[])
+      : ((ordersValue as { data?: OrderRecord[] })?.data ?? []);
     const allSubscriptions =
       subscriptionsResult.status === 'fulfilled' ? subscriptionsResult.value : [];
 
@@ -103,8 +109,9 @@ export class DashboardService {
       );
     }
 
-    // Ensure arrays
-    const orders = Array.isArray(allOrders) ? allOrders : [];
+    // Ensure arrays (the order endpoint now returns paginated payload by default,
+    // already unwrapped above)
+    const orders: OrderRecord[] = allOrders;
     const subscriptions = Array.isArray(allSubscriptions) ? allSubscriptions : [];
 
     // Filter orders by current period

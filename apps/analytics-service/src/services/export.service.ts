@@ -180,7 +180,7 @@ export class ExportService {
       const result = await this.sendMessage<OrderRecord[] | { data: OrderRecord[] }>(
         this.orderClient,
         MESSAGE_PATTERNS.ORDER.ADMIN_GET_ORDERS,
-        {},
+        { page: 1, limit: 10000 },
       );
 
       const orders = Array.isArray(result)

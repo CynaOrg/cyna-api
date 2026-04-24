@@ -166,6 +166,8 @@ export const MESSAGE_PATTERNS = {
     ADMIN_UPDATE_SLIDE: { cmd: 'content.admin_update_slide' },
     ADMIN_DELETE_SLIDE: { cmd: 'content.admin_delete_slide' },
     ADMIN_REORDER_CAROUSEL: { cmd: 'content.admin_reorder_carousel' },
+    // Admin - Carousel Image Upload
+    CAROUSEL_REQUEST_UPLOAD_URL: { cmd: 'content.admin_carousel_request_upload_url' },
     // Admin - Hero & Top Products
     ADMIN_UPDATE_HERO_TEXT: { cmd: 'content.admin_update_hero_text' },
     ADMIN_UPDATE_TOP_SERVICES: { cmd: 'content.admin_update_top_services' },

@@ -197,6 +197,9 @@ export class OrderController {
     data: {
       search?: string;
       status?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      orderType?: string;
       page?: number;
       limit?: number;
     },

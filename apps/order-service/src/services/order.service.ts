@@ -323,10 +323,13 @@ export class OrderService {
   async adminGetOrders(params: {
     search?: string;
     status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    orderType?: string;
     page?: number;
     limit?: number;
   }) {
-    const { search, status, page = 1, limit = 20 } = params;
+    const { search, status, dateFrom, dateTo, orderType, page = 1, limit = 20 } = params;
 
     const qb = this.orderRepository
       .createQueryBuilder('order')
@@ -341,6 +344,22 @@ export class OrderService {
       qb.andWhere('(order.orderNumber ILIKE :search OR order.guestEmail ILIKE :search)', {
         search: `%${search}%`,
       });
+    }
+
+    if (dateFrom) {
+      qb.andWhere('order.createdAt >= :dateFrom', { dateFrom: new Date(dateFrom) });
+    }
+
+    if (dateTo) {
+      // If the caller provides a plain date (YYYY-MM-DD), normalize to end of day
+      // so the filter is inclusive of the whole day from the UI perspective.
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateTo);
+      const dateToValue = isDateOnly ? new Date(`${dateTo}T23:59:59.999Z`) : new Date(dateTo);
+      qb.andWhere('order.createdAt <= :dateTo', { dateTo: dateToValue });
+    }
+
+    if (orderType) {
+      qb.andWhere('order.orderType = :orderType', { orderType });
     }
 
     const total = await qb.getCount();

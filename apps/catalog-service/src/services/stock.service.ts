@@ -3,7 +3,13 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, IsNull } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
-import { CynaLoggerService } from '@cyna-api/common';
+import {
+  CynaLoggerService,
+  CynaCacheService,
+  CACHE_PREFIXES,
+  CACHE_KEYS,
+  generateCacheKey,
+} from '@cyna-api/common';
 import { Product, ProductType, StockReservation } from '../entities';
 import {
   StockResponseDto,
@@ -25,6 +31,7 @@ export class StockService {
     private readonly logger: CynaLoggerService,
     private readonly eventsPublisher: CatalogEventsPublisher,
     private readonly configService: ConfigService,
+    private readonly cacheService: CynaCacheService,
   ) {
     this.reservationExpiryMinutes = this.configService.get<number>(
       'catalog.stock.reservationExpiryMinutes',
@@ -70,6 +77,8 @@ export class StockService {
 
     await this.productRepository.save(product);
     this.logger.log(`Stock updated for product ${productId}: ${stockQuantity}`);
+
+    await this.invalidateProductCache(product.id, product.slug);
 
     const threshold = product.stockAlertThreshold ?? 10;
     if (stockQuantity <= threshold) {
@@ -405,5 +414,13 @@ export class StockService {
 
   private getExpirationDate(): Date {
     return new Date(Date.now() + this.reservationExpiryMinutes * 60 * 1000);
+  }
+
+  private async invalidateProductCache(id: string, slug: string): Promise<void> {
+    await this.cacheService.delByPattern(`${CACHE_PREFIXES.PRODUCT}list:*`);
+    await this.cacheService.delByPattern(`${CACHE_KEYS.PRODUCTS_FEATURED}*`);
+    await this.cacheService.delByPattern(`${CACHE_KEYS.PRODUCTS_BY_CATEGORY}*`);
+    await this.cacheService.del(generateCacheKey.productById(id));
+    await this.cacheService.del(generateCacheKey.product(slug));
   }
 }

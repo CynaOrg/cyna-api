@@ -11,6 +11,7 @@ import { TransformInterceptor, SERVICE_NAMES } from '@cyna-api/common';
 import { S3Service } from '@cyna-api/s3';
 import { GatewayModule } from '../src/gateway.module';
 import { AuthModule } from '../../auth-service/src/auth.module';
+import { UserModule } from '../../user-service/src/user.module';
 import { AuthEventsPublisher } from '../../auth-service/src/events/auth-events.publisher';
 import {
   UserRegisteredEventData,
@@ -338,6 +339,7 @@ export class MockAuthEventsPublisher {
 
 let app: INestApplication;
 let authMicroservice: INestMicroservice;
+let userMicroservice: INestMicroservice;
 let catalogMicroservice: INestMicroservice;
 let orderMicroservice: INestMicroservice;
 let paymentMicroservice: INestMicroservice;
@@ -376,7 +378,33 @@ export async function setupTestApp(options?: SetupOptions): Promise<{
   const mockClientProxy = new MockClientProxy();
 
   // -----------------------------------------------------------------------
-  // 1. Bootstrap Auth Service microservice
+  // 1. Bootstrap User Service microservice (must start before auth-service
+  //    because auth-service registers an RMQ ClientProxy pointing to user.queue)
+  // -----------------------------------------------------------------------
+  const userModule: TestingModule = await Test.createTestingModule({
+    imports: [UserModule],
+  })
+    .overrideProvider(SERVICE_NAMES.NOTIFICATION)
+    .useValue(mockClientProxy)
+    .overrideProvider(SERVICE_NAMES.AUTH)
+    .useValue(mockClientProxy)
+    .compile();
+
+  userMicroservice = userModule.createNestMicroservice<MicroserviceOptions>({
+    transport: Transport.RMQ,
+    options: {
+      urls: [RABBITMQ_URL],
+      queue: 'user.queue',
+      queueOptions: { durable: true },
+      noAck: true,
+      prefetchCount: 10,
+    },
+  });
+
+  await userMicroservice.listen();
+
+  // -----------------------------------------------------------------------
+  // 2. Bootstrap Auth Service microservice
   // -----------------------------------------------------------------------
   const authModule: TestingModule = await Test.createTestingModule({
     imports: [AuthModule],
@@ -537,4 +565,5 @@ export async function teardownTestApp(): Promise<void> {
   if (orderMicroservice) await orderMicroservice.close();
   if (catalogMicroservice) await catalogMicroservice.close();
   if (authMicroservice) await authMicroservice.close();
+  if (userMicroservice) await userMicroservice.close();
 }

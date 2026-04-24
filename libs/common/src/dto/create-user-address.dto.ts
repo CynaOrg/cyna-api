@@ -1,4 +1,4 @@
-// cyna-api/apps/user-service/src/dto/create-user-address.dto.ts
+// cyna-api/libs/common/src/dto/create-user-address.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,

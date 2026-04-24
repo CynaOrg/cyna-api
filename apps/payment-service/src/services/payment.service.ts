@@ -115,8 +115,13 @@ export class PaymentService {
     return undefined;
   }
 
-  async getSubscriptionsForUser(userId: string): Promise<Record<string, unknown>[]> {
-    const subscriptions = await this.subscriptionService.findByUserId(userId);
+  async getSubscriptionsForUser(
+    userId: string | undefined,
+    adminMode = false,
+  ): Promise<Record<string, unknown>[]> {
+    const subscriptions = adminMode
+      ? await this.subscriptionService.findAll()
+      : await this.subscriptionService.findByUserId(userId as string);
 
     // Sync status with Stripe and enrich with product data
     const productIds = [...new Set(subscriptions.map((s) => s.productId))];

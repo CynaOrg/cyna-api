@@ -15,7 +15,7 @@ interface OrderRecord {
   orderNumber?: string;
   customerEmail?: string;
   userId?: string;
-  totalAmount?: string | number;
+  total?: string | number;
   subtotal?: string | number;
   taxAmount?: string | number;
   status?: string;
@@ -31,7 +31,7 @@ interface SubscriptionRecord {
   userId?: string;
   productName?: string;
   planName?: string;
-  amount?: string | number;
+  price?: string | number;
   billingPeriod?: string;
   status?: string;
 }
@@ -55,7 +55,7 @@ export class ExportService {
       new Date(order.createdAt).toISOString().slice(0, 10),
       order.id || order.orderNumber || '',
       order.customerEmail || order.userId || '',
-      (parseFloat(String(order.totalAmount)) || 0).toFixed(2),
+      (parseFloat(String(order.total)) || 0).toFixed(2),
       'EUR',
       order.status || '',
     ]);
@@ -101,7 +101,7 @@ export class ExportService {
         items.length.toString(),
         (parseFloat(String(order.subtotal)) || 0).toFixed(2),
         (parseFloat(String(order.taxAmount)) || 0).toFixed(2),
-        (parseFloat(String(order.totalAmount)) || 0).toFixed(2),
+        (parseFloat(String(order.total)) || 0).toFixed(2),
         'EUR',
         order.status || '',
         order.paymentStatus || '',
@@ -147,7 +147,7 @@ export class ExportService {
       sub.id || sub.subscriptionId || '',
       sub.customerEmail || sub.userId || '',
       sub.productName || sub.planName || '',
-      (parseFloat(String(sub.amount)) || 0).toFixed(2),
+      (parseFloat(String(sub.price)) || 0).toFixed(2),
       'EUR',
       sub.billingPeriod || 'monthly',
       sub.status || '',

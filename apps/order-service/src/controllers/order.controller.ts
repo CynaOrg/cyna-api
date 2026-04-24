@@ -209,9 +209,24 @@ export class OrderController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.ORDER.ADMIN_UPDATE_STATUS)
-  async adminUpdateStatus(@Payload() data: { orderId: string; status: string; notes?: string }) {
+  async adminUpdateStatus(
+    @Payload()
+    data: {
+      orderId: string;
+      status: string;
+      notes?: string;
+      trackingNumber?: string;
+      trackingUrl?: string;
+    },
+  ) {
     try {
-      return await this.orderService.adminUpdateOrderStatus(data.orderId, data.status, data.notes);
+      return await this.orderService.adminUpdateOrderStatus(
+        data.orderId,
+        data.status,
+        data.notes,
+        data.trackingNumber,
+        data.trackingUrl,
+      );
     } catch (error) {
       throw this.wrapError(error);
     }

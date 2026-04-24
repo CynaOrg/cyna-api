@@ -11,6 +11,7 @@ import { UserService } from './services/user.service';
 import { UserAdminService } from './services/user-admin.service';
 import { UserAddressService } from './services/user-address.service';
 import { CreateUserAddressesTable1745500000000 } from './migrations/1745500000000-CreateUserAddressesTable';
+import { AddDeletedAtToUserAddresses1745500000001 } from './migrations/1745500000001-AddDeletedAtToUserAddresses';
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -30,7 +31,7 @@ if (isProduction && !process.env.DATABASE_PASSWORD) {
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
       entities: [User, UserAddress],
-      migrations: [CreateUserAddressesTable1745500000000],
+      migrations: [CreateUserAddressesTable1745500000000, AddDeletedAtToUserAddresses1745500000001],
       migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
       synchronize: !isProduction && process.env.DATABASE_SYNC === 'true',
       logging: process.env.DATABASE_LOGGING === 'true',

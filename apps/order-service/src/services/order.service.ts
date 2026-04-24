@@ -41,7 +41,7 @@ export class OrderService {
     private readonly cartService: CartService,
     @Inject(SERVICE_NAMES.CATALOG) private readonly catalogClient: ClientProxy,
     @Inject(SERVICE_NAMES.NOTIFICATION) private readonly notificationClient: ClientProxy,
-    @Inject(SERVICE_NAMES.AUTH) private readonly authClient: ClientProxy,
+    @Inject(SERVICE_NAMES.USER) private readonly userClient: ClientProxy,
   ) {}
 
   async generateOrderNumber(): Promise<string> {

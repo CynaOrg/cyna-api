@@ -23,7 +23,7 @@ export class CartAbandonedCron {
   constructor(
     @InjectRepository(Cart) private readonly cartRepository: Repository<Cart>,
     @Inject(SERVICE_NAMES.NOTIFICATION) private readonly notificationClient: ClientProxy,
-    @Inject(SERVICE_NAMES.AUTH) private readonly authClient: ClientProxy,
+    @Inject(SERVICE_NAMES.USER) private readonly userClient: ClientProxy,
   ) {}
 
   // Run hourly — the 24h threshold is coarse so there's no value in tighter
@@ -48,7 +48,7 @@ export class CartAbandonedCron {
     for (const cart of withItems) {
       try {
         const user = await firstValueFrom(
-          this.authClient.send(MESSAGE_PATTERNS.AUTH.GET_USER_BY_ID, { userId: cart.userId }).pipe(
+          this.userClient.send(MESSAGE_PATTERNS.USER.GET_BY_ID, { userId: cart.userId }).pipe(
             timeout(3000),
             catchError((err) => throwError(() => err)),
           ),

@@ -66,11 +66,11 @@ import { AddStripeInvoiceUrlToSubscriptions1777300000001 } from './migrations/17
         },
       },
       {
-        name: SERVICE_NAMES.AUTH,
+        name: SERVICE_NAMES.USER,
         transport: Transport.RMQ,
         options: {
           urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
-          queue: 'auth.queue',
+          queue: 'user.queue',
           queueOptions: { durable: true },
         },
       },

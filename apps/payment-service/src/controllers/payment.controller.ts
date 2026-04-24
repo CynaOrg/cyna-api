@@ -61,9 +61,12 @@ export class PaymentController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS)
-  async getSubscriptions(@Payload() data: { userId: string }) {
+  async getSubscriptions(@Payload() data: { userId?: string; adminMode?: boolean }) {
     try {
-      return await this.paymentService.getSubscriptionsForUser(data.userId);
+      return await this.paymentService.getSubscriptionsForUser(
+        data.userId,
+        data.adminMode === true,
+      );
     } catch (error) {
       throw this.wrapError(error);
     }

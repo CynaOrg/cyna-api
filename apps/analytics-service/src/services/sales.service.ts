@@ -86,7 +86,7 @@ export interface StockStatusResult {
 interface OrderRecord {
   createdAt: string | Date;
   status: string;
-  totalAmount: string | number;
+  total: string | number;
   items?: Array<{
     productId: string;
     unitPrice: string | number;
@@ -99,7 +99,7 @@ interface SubscriptionRecord {
   createdAt: string | Date;
   cancelledAt?: string | Date | null;
   updatedAt?: string | Date;
-  amount: string | number;
+  price: string | number;
   billingPeriod?: string;
 }
 
@@ -108,7 +108,6 @@ interface ProductRecord {
   categoryId?: string;
   categoryName?: string;
   category?: { nameFr?: string };
-  type?: string;
   productType?: string;
   stockQuantity?: number;
   stock?: number;
@@ -179,7 +178,7 @@ export class SalesService {
       const bucket = this.getDateBucket(new Date(order.createdAt), groupBy);
       const entry = grouped.get(bucket);
       if (entry) {
-        entry.revenue += parseFloat(String(order.totalAmount)) || 0;
+        entry.revenue += parseFloat(String(order.total)) || 0;
         entry.orders += 1;
       }
     }
@@ -338,7 +337,7 @@ export class SalesService {
     // Build product -> type map
     const productTypeMap = new Map<string, string>();
     for (const product of products) {
-      productTypeMap.set(product.id, product.type || 'unknown');
+      productTypeMap.set(product.id, product.productType || 'unknown');
     }
 
     const paidStatuses = ['paid', 'completed', 'shipped', 'delivered'];
@@ -425,7 +424,7 @@ export class SalesService {
     });
 
     const totalRevenue = filteredOrders.reduce(
-      (sum: number, o: OrderRecord) => sum + (parseFloat(String(o.totalAmount)) || 0),
+      (sum: number, o: OrderRecord) => sum + (parseFloat(String(o.total)) || 0),
       0,
     );
 
@@ -475,7 +474,7 @@ export class SalesService {
     // Build product -> type map
     const productTypeMap = new Map<string, string>();
     for (const product of products) {
-      productTypeMap.set(product.id, product.type || product.productType || 'unknown');
+      productTypeMap.set(product.id, product.productType || 'unknown');
     }
 
     const paidStatuses = ['paid', 'completed', 'shipped', 'delivered'];
@@ -560,7 +559,7 @@ export class SalesService {
 
     // Calculate current MRR
     const currentMrr = activeSubscriptions.reduce((sum: number, s: SubscriptionRecord) => {
-      const amount = parseFloat(String(s.amount)) || 0;
+      const amount = parseFloat(String(s.price)) || 0;
       if (s.billingPeriod === 'yearly' || s.billingPeriod === 'annual') {
         return sum + amount / 12;
       }
@@ -598,7 +597,7 @@ export class SalesService {
             return false;
           })
           .reduce((sum: number, s: SubscriptionRecord) => {
-            const amount = parseFloat(String(s.amount)) || 0;
+            const amount = parseFloat(String(s.price)) || 0;
             if (s.billingPeriod === 'yearly' || s.billingPeriod === 'annual') {
               return sum + amount / 12;
             }

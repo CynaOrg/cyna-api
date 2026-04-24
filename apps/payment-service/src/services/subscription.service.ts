@@ -33,6 +33,12 @@ export class SubscriptionService {
     });
   }
 
+  async findAll(): Promise<Subscription[]> {
+    return this.subscriptionRepository.find({
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async findById(id: string): Promise<Subscription | null> {
     return this.subscriptionRepository.findOne({ where: { id } });
   }

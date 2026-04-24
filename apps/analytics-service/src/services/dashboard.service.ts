@@ -11,8 +11,8 @@ import { DashboardPeriod } from '../dto';
 interface OrderRecord {
   createdAt: string | Date;
   status: string;
-  totalAmount: string | number;
-  type?: string;
+  total: string | number;
+  orderType?: string;
 }
 
 interface SubscriptionRecord {
@@ -20,7 +20,7 @@ interface SubscriptionRecord {
   createdAt: string | Date;
   cancelledAt?: string | Date | null;
   updatedAt?: string | Date;
-  amount: string | number;
+  price: string | number;
   billingPeriod?: string;
 }
 
@@ -136,18 +136,18 @@ export class DashboardService {
     );
 
     const currentRevenue = currentPaidOrders.reduce(
-      (sum: number, o: OrderRecord) => sum + (parseFloat(String(o.totalAmount)) || 0),
+      (sum: number, o: OrderRecord) => sum + (parseFloat(String(o.total)) || 0),
       0,
     );
     const prevRevenue = prevPaidOrders.reduce(
-      (sum: number, o: OrderRecord) => sum + (parseFloat(String(o.totalAmount)) || 0),
+      (sum: number, o: OrderRecord) => sum + (parseFloat(String(o.total)) || 0),
       0,
     );
 
     // Calculate recurring vs one-time revenue
     const recurringRevenue = currentPaidOrders
-      .filter((o: OrderRecord) => o.type === 'subscription')
-      .reduce((sum: number, o: OrderRecord) => sum + (parseFloat(String(o.totalAmount)) || 0), 0);
+      .filter((o: OrderRecord) => o.orderType === 'subscription')
+      .reduce((sum: number, o: OrderRecord) => sum + (parseFloat(String(o.total)) || 0), 0);
     const oneTimeRevenue = currentRevenue - recurringRevenue;
 
     // Order stats
@@ -177,7 +177,7 @@ export class DashboardService {
 
     // MRR calculation
     const mrr = activeSubscriptions.reduce((sum: number, s: SubscriptionRecord) => {
-      const amount = parseFloat(String(s.amount)) || 0;
+      const amount = parseFloat(String(s.price)) || 0;
       if (s.billingPeriod === 'yearly' || s.billingPeriod === 'annual') {
         return sum + amount / 12;
       }

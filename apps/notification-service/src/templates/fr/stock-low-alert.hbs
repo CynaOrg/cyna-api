@@ -1,0 +1,35 @@
+<h1>⚠ Alerte stock bas</h1>
+
+<p>Bonjour,</p>
+
+<p>Le stock d'un produit du catalogue CYNA est passé sous le seuil d'alerte configuré. Une action
+  rapide est recommandée pour éviter toute rupture de stock.</p>
+
+<div
+  class='code-box'
+  style='background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px 20px; margin: 24px 0; border-radius: 6px;'
+>
+  <p style='margin: 0 0 8px 0; font-size: 14px; color: #78350f;'><strong>Produit :</strong>
+    {{productName}}</p>
+  <p style='margin: 0 0 8px 0; font-size: 14px; color: #78350f;'><strong>SKU :</strong> {{sku}}</p>
+  <p style='margin: 0 0 8px 0; font-size: 14px; color: #78350f;'><strong>Stock actuel :</strong>
+    {{currentStock}}</p>
+  <p style='margin: 0 0 8px 0; font-size: 14px; color: #78350f;'><strong>Seuil d'alerte :</strong>
+    {{alertThreshold}}</p>
+  <p style='margin: 0; font-size: 14px; color: #78350f;'><strong>Détection :</strong>
+    {{detectedAt}}</p>
+</div>
+
+<p style='text-align: center;'>
+  <a
+    href='{{backofficeUrl}}/products/{{productId}}'
+    class='button'
+    style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; margin: 24px 0;'
+  >Voir la fiche produit</a>
+</p>
+
+<p class='hint' style='color: #9ca3af; font-size: 13px; line-height: 1.5;'>Cette alerte est envoyée
+  automatiquement lorsque le stock d'un produit passe sous le seuil minimum. Pour éviter les
+  notifications répétées, une même alerte ne sera pas renvoyée pendant 6 heures.</p>
+
+<p>Cordialement,<br />L'équipe CYNA</p>

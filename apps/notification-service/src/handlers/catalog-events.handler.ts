@@ -1,7 +1,7 @@
 import { Controller, Optional } from '@nestjs/common';
 import { EventPattern, Payload } from '@nestjs/microservices';
 import { ConfigService } from '@nestjs/config';
-import { EVENT_PATTERNS, CynaLoggerService, CynaCacheService } from '@cyna-api/common';
+import { EVENT_PATTERNS, Language, CynaLoggerService, CynaCacheService } from '@cyna-api/common';
 import { EmailService } from '../email/email.service';
 import { EmailTemplateService } from '../email/email-template.service';
 import { StockLowEvent } from './interfaces/stock-low.event';
@@ -51,7 +51,7 @@ export class CatalogEventsHandler {
 
       const subject = `⚠ Stock bas — ${data.productName} (${data.sku})`;
 
-      const html = this.emailTemplateService.render('stock-low-alert', 'fr', {
+      const html = this.emailTemplateService.render('stock-low-alert', Language.FR, {
         productName: data.productName,
         sku: data.sku,
         currentStock: data.currentStock,

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
 import {
   CynaLoggerService,
@@ -217,6 +217,37 @@ export class CategoryService {
 
     // Invalidate cache
     await this.invalidateCategoryCache(id, slug);
+  }
+
+  async reorder(categoryIds: string[]): Promise<Category[]> {
+    const categories = await this.categoryRepository.find({
+      where: { id: In(categoryIds) },
+    });
+
+    if (categories.length !== categoryIds.length) {
+      this.logger.warn(`Some category IDs not found during reorder`);
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Some category IDs are invalid',
+        code: 'CATEGORY_INVALID_IDS',
+      });
+    }
+
+    for (let i = 0; i < categoryIds.length; i++) {
+      const category = categories.find((c) => c.id === categoryIds[i]);
+      if (category) {
+        category.displayOrder = i;
+      }
+    }
+
+    await this.categoryRepository.save(categories);
+    this.logger.log(`Categories reordered: ${categoryIds.length} categories`);
+
+    await this.invalidateCategoryCache();
+
+    return this.categoryRepository.find({
+      order: { displayOrder: 'ASC' },
+    });
   }
 
   /**

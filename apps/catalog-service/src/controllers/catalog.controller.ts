@@ -55,6 +55,11 @@ export class CatalogController {
     return CategoryResponseDto.fromEntities(categories, lang);
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_ALL_ADMIN)
+  async findAllCategoriesAdmin(@Payload() data: CategoryQueryDto) {
+    return this.categoryService.findAll(data);
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_BY_SLUG)
   async findCategoryBySlug(@Payload() data: { slug: string; lang?: Language }) {
     const category = await this.categoryService.findBySlug(data.slug);
@@ -64,6 +69,12 @@ export class CatalogController {
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_BY_ID)
   async findCategoryById(@Payload() data: { id: string }) {
     return this.categoryService.findById(data.id);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_REORDER)
+  async reorderCategories(@Payload() data: { categoryIds: string[] }) {
+    const categories = await this.categoryService.reorder(data.categoryIds);
+    return CategoryResponseDto.fromEntities(categories, Language.FR);
   }
 
   // ==================== Products ====================

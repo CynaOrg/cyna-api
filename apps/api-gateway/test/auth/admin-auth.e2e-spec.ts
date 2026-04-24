@@ -16,6 +16,7 @@ describe('Admin Auth (e2e)', () => {
     const testApp = await setupTestApp();
     app = testApp.app;
     dataSource = testApp.dataSource;
+    userDataSource = testApp.userDataSource;
     eventsSpy = testApp.eventsSpy;
   });
 

@@ -28,6 +28,7 @@ describe('Rate Limiting (e2e)', () => {
     const testApp = await setupTestApp({ enableThrottling: true });
     app = testApp.app;
     dataSource = testApp.dataSource;
+    userDataSource = testApp.userDataSource;
     eventsSpy = testApp.eventsSpy;
   });
 

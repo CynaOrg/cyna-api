@@ -30,6 +30,7 @@ describe('Cart Management (e2e)', () => {
     const ctx = await setupTestApp();
     app = ctx.app;
     dataSource = ctx.dataSource;
+    userDataSource = ctx.userDataSource;
     catalogDataSource = ctx.catalogDataSource;
     orderDataSource = ctx.orderDataSource;
     eventsSpy = ctx.eventsSpy;

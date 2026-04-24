@@ -40,6 +40,7 @@ describe('Subscription Flow (e2e)', () => {
     const ctx = await setupTestApp();
     app = ctx.app;
     dataSource = ctx.dataSource;
+    userDataSource = ctx.userDataSource;
     catalogDataSource = ctx.catalogDataSource;
     paymentDataSource = ctx.paymentDataSource;
     eventsSpy = ctx.eventsSpy;

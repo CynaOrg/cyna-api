@@ -15,6 +15,7 @@ describe('Auth - User Password Reset (e2e)', () => {
     const ctx = await setupTestApp();
     app = ctx.app;
     dataSource = ctx.dataSource;
+    userDataSource = ctx.userDataSource;
     eventsSpy = ctx.eventsSpy;
   });
 

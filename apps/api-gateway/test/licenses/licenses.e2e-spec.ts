@@ -63,6 +63,7 @@ describe('Licenses (e2e)', () => {
     const ctx = await setupTestApp();
     app = ctx.app;
     dataSource = ctx.dataSource;
+    userDataSource = ctx.userDataSource;
     paymentDataSource = ctx.paymentDataSource;
     eventsSpy = ctx.eventsSpy;
   });

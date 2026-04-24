@@ -6,6 +6,7 @@ import {
   HeroTextService,
   TopProductsService,
   ContactMessageService,
+  ContentImageService,
 } from '../services';
 import {
   CreateCarouselSlideDto,
@@ -16,6 +17,7 @@ import {
   CreateContactMessageDto,
   ContactMessageQueryDto,
   UpdateContactMessageDto,
+  RequestContentUploadUrlDto,
 } from '../dto';
 import { ContentEventsPublisher } from '../events';
 
@@ -26,6 +28,7 @@ export class ContentController {
     private readonly heroTextService: HeroTextService,
     private readonly topProductsService: TopProductsService,
     private readonly contactMessageService: ContactMessageService,
+    private readonly contentImageService: ContentImageService,
     private readonly eventsPublisher: ContentEventsPublisher,
   ) {}
 
@@ -110,6 +113,11 @@ export class ContentController {
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_REORDER_CAROUSEL)
   async adminReorderCarousel(@Payload() data: ReorderCarouselDto) {
     return this.carouselService.reorder(data.slideIds);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.CAROUSEL_REQUEST_UPLOAD_URL)
+  async adminCarouselRequestUploadUrl(@Payload() data: RequestContentUploadUrlDto) {
+    return this.contentImageService.requestCarouselUploadUrl(data);
   }
 
   // ==================== Admin - Hero Text ====================

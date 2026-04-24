@@ -20,6 +20,7 @@ import {
   UpdateTopConfigDto,
   ContactMessageQueryDto,
   UpdateContactMessageDto,
+  RequestContentUploadUrlDto,
 } from './dto';
 
 @ApiTags('Admin - Content')
@@ -53,6 +54,15 @@ export class ContentAdminController {
   @ApiResponse({ status: 200, description: 'Slides reordered' })
   async reorderCarousel(@Body() dto: ReorderCarouselDto) {
     return this.contentService.adminReorderCarousel(dto.slideIds);
+  }
+
+  @Post('carousel/upload-url')
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: 'Get a presigned URL to upload a carousel image' })
+  @ApiResponse({ status: 201, description: 'Presigned URL generated' })
+  @ApiResponse({ status: 400, description: 'Invalid file parameters' })
+  async requestCarouselUploadUrl(@Body() dto: RequestContentUploadUrlDto) {
+    return this.contentService.adminRequestCarouselUploadUrl(dto);
   }
 
   @Patch('carousel/:slideId')

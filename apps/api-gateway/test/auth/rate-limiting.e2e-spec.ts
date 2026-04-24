@@ -21,12 +21,14 @@ import { cleanDatabase } from '../helpers/db.helper';
 describe('Rate Limiting (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let userDataSource: DataSource;
   let eventsSpy: MockAuthEventsPublisher;
 
   beforeAll(async () => {
     const testApp = await setupTestApp({ enableThrottling: true });
     app = testApp.app;
     dataSource = testApp.dataSource;
+    userDataSource = testApp.userDataSource;
     eventsSpy = testApp.eventsSpy;
   });
 
@@ -35,7 +37,7 @@ describe('Rate Limiting (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(dataSource);
+    await cleanDatabase(dataSource, userDataSource);
     eventsSpy.clear();
   });
 

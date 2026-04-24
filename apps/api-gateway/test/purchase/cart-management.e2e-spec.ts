@@ -18,6 +18,7 @@ import { CartResponse } from '../helpers/purchase.interfaces';
 describe('Cart Management (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let userDataSource: DataSource;
   let catalogDataSource: DataSource;
   let orderDataSource: DataSource;
   let eventsSpy: MockAuthEventsPublisher;
@@ -29,6 +30,7 @@ describe('Cart Management (e2e)', () => {
     const ctx = await setupTestApp();
     app = ctx.app;
     dataSource = ctx.dataSource;
+    userDataSource = ctx.userDataSource;
     catalogDataSource = ctx.catalogDataSource;
     orderDataSource = ctx.orderDataSource;
     eventsSpy = ctx.eventsSpy;
@@ -68,7 +70,7 @@ describe('Cart Management (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(dataSource);
+    await cleanDatabase(dataSource, userDataSource);
     await cleanDatabase(orderDataSource);
     eventsSpy.clear();
   });

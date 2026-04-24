@@ -21,6 +21,7 @@ import {
 describe('Order Management (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let userDataSource: DataSource;
   let catalogDataSource: DataSource;
   let orderDataSource: DataSource;
   let paymentDataSource: DataSource;
@@ -41,6 +42,7 @@ describe('Order Management (e2e)', () => {
     const ctx = await setupTestApp();
     app = ctx.app;
     dataSource = ctx.dataSource;
+    userDataSource = ctx.userDataSource;
     catalogDataSource = ctx.catalogDataSource;
     orderDataSource = ctx.orderDataSource;
     paymentDataSource = ctx.paymentDataSource;
@@ -72,7 +74,7 @@ describe('Order Management (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(dataSource);
+    await cleanDatabase(dataSource, userDataSource);
     await cleanDatabase(orderDataSource);
     await cleanDatabase(paymentDataSource);
     eventsSpy.clear();

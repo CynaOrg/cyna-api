@@ -59,16 +59,16 @@ class UpdateUserStatusDto {
 @UseGuards(SuperAdminGuard)
 @ApiBearerAuth('JWT-auth')
 export class UserAdminController {
-  constructor(@Inject(SERVICE_NAMES.AUTH) private readonly authClient: ClientProxy) {}
+  constructor(@Inject(SERVICE_NAMES.USER) private readonly userClient: ClientProxy) {}
 
   private async sendMessage<T>(pattern: { cmd: string }, data: T) {
     return firstValueFrom(
-      this.authClient.send(pattern, data).pipe(
+      this.userClient.send(pattern, data).pipe(
         timeout(10000),
         catchError((err) => {
           if (err instanceof TimeoutError) {
             return throwError(
-              () => new HttpException('Auth service timeout', HttpStatus.SERVICE_UNAVAILABLE),
+              () => new HttpException('User service timeout', HttpStatus.SERVICE_UNAVAILABLE),
             );
           }
           if (err && typeof err === 'object' && 'statusCode' in err) {
@@ -90,7 +90,7 @@ export class UserAdminController {
   @ApiOperation({ summary: 'List all users (super_admin only)' })
   @ApiResponse({ status: 200, description: 'Paginated list of users' })
   async findAll(@Query() query: AdminUserQueryDto) {
-    return this.sendMessage(MESSAGE_PATTERNS.AUTH.ADMIN_GET_USERS, query);
+    return this.sendMessage(MESSAGE_PATTERNS.USER.ADMIN_LIST, query);
   }
 
   @Get(':userId')
@@ -99,7 +99,7 @@ export class UserAdminController {
   @ApiResponse({ status: 200, description: 'User details' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async findOne(@Param('userId') userId: string) {
-    return this.sendMessage(MESSAGE_PATTERNS.AUTH.ADMIN_GET_USER, { userId });
+    return this.sendMessage(MESSAGE_PATTERNS.USER.ADMIN_GET, { userId });
   }
 
   @Patch(':userId/status')
@@ -108,7 +108,7 @@ export class UserAdminController {
   @ApiResponse({ status: 200, description: 'User status updated' })
   @ApiResponse({ status: 404, description: 'User not found' })
   async updateStatus(@Param('userId') userId: string, @Body() dto: UpdateUserStatusDto) {
-    return this.sendMessage(MESSAGE_PATTERNS.AUTH.ADMIN_UPDATE_USER_STATUS, {
+    return this.sendMessage(MESSAGE_PATTERNS.USER.ADMIN_UPDATE_STATUS, {
       userId,
       isActive: dto.isActive,
     });

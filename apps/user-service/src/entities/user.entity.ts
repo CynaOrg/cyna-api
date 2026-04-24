@@ -1,8 +1,5 @@
-import { Entity, Column, Index, OneToMany } from 'typeorm';
+import { Entity, Column, Index } from 'typeorm';
 import { BaseEntity, Language } from '@cyna-api/common';
-import { RefreshToken } from './refresh-token.entity';
-import { EmailVerificationToken } from './email-verification-token.entity';
-import { PasswordResetToken } from './password-reset-token.entity';
 
 @Entity('users')
 export class User extends BaseEntity {
@@ -48,13 +45,4 @@ export class User extends BaseEntity {
   })
   @Index('idx_user_stripe')
   stripeCustomerId?: string;
-
-  @OneToMany(() => RefreshToken, (token) => token.user)
-  refreshTokens: RefreshToken[];
-
-  @OneToMany(() => EmailVerificationToken, (token) => token.user)
-  emailVerificationTokens: EmailVerificationToken[];
-
-  @OneToMany(() => PasswordResetToken, (token) => token.user)
-  passwordResetTokens: PasswordResetToken[];
 }

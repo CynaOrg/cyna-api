@@ -55,6 +55,7 @@ async function insertLicense(
 describe('Licenses (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let userDataSource: DataSource;
   let paymentDataSource: DataSource;
   let eventsSpy: MockAuthEventsPublisher;
 
@@ -62,6 +63,7 @@ describe('Licenses (e2e)', () => {
     const ctx = await setupTestApp();
     app = ctx.app;
     dataSource = ctx.dataSource;
+    userDataSource = ctx.userDataSource;
     paymentDataSource = ctx.paymentDataSource;
     eventsSpy = ctx.eventsSpy;
   });
@@ -71,7 +73,7 @@ describe('Licenses (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(dataSource);
+    await cleanDatabase(dataSource, userDataSource);
     await cleanDatabase(paymentDataSource);
     eventsSpy.clear();
   });

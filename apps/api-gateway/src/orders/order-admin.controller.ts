@@ -90,6 +90,8 @@ export class OrderAdminController {
           orderId,
           status: dto.status,
           notes: dto.notes,
+          trackingNumber: dto.trackingNumber,
+          trackingUrl: dto.trackingUrl,
         })
         .pipe(
           timeout(5000),

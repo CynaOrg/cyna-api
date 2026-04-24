@@ -326,15 +326,20 @@ export class OrderService {
     dateFrom?: string;
     dateTo?: string;
     orderType?: string;
+    userId?: string;
     page?: number;
     limit?: number;
   }) {
-    const { search, status, dateFrom, dateTo, orderType, page = 1, limit = 20 } = params;
+    const { search, status, dateFrom, dateTo, orderType, userId, page = 1, limit = 20 } = params;
 
     const qb = this.orderRepository
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.items', 'items')
       .orderBy('order.createdAt', 'DESC');
+
+    if (userId) {
+      qb.andWhere('order.userId = :userId', { userId });
+    }
 
     if (status) {
       qb.andWhere('order.status = :status', { status });

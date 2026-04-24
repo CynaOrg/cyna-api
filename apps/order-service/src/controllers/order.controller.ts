@@ -200,6 +200,7 @@ export class OrderController {
       dateFrom?: string;
       dateTo?: string;
       orderType?: string;
+      userId?: string;
       page?: number;
       limit?: number;
     },

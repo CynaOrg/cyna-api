@@ -6,6 +6,8 @@ export * from './create-product.dto';
 export * from './update-product.dto';
 export * from './add-image.dto';
 export * from './reorder-images.dto';
+export * from './reorder-categories.dto';
+export * from './bulk-delete-products.dto';
 export * from './update-stock.dto';
 export * from './request-upload-url.dto';
 export * from './confirm-upload.dto';

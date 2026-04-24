@@ -59,7 +59,10 @@ class UpdateUserStatusDto {
 @UseGuards(SuperAdminGuard)
 @ApiBearerAuth('JWT-auth')
 export class UserAdminController {
-  constructor(@Inject(SERVICE_NAMES.USER) private readonly userClient: ClientProxy) {}
+  constructor(
+    @Inject(SERVICE_NAMES.USER) private readonly userClient: ClientProxy,
+    @Inject(SERVICE_NAMES.ORDER) private readonly orderClient: ClientProxy,
+  ) {}
 
   private async sendMessage<T>(pattern: { cmd: string }, data: T) {
     return firstValueFrom(
@@ -112,5 +115,34 @@ export class UserAdminController {
       userId,
       isActive: dto.isActive,
     });
+  }
+
+  @Get(':userId/orders')
+  @ApiOperation({ summary: 'List orders of a given user (super_admin only)' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'Paginated list of orders' })
+  async getUserOrders(
+    @Param('userId') userId: string,
+    @Query() query: AdminUserQueryDto,
+  ): Promise<unknown> {
+    return firstValueFrom(
+      this.orderClient
+        .send(MESSAGE_PATTERNS.ORDER.ADMIN_GET_ORDERS, {
+          userId,
+          page: query.page,
+          limit: query.limit,
+        })
+        .pipe(
+          timeout(10000),
+          catchError((err) => {
+            if (err instanceof TimeoutError) {
+              return throwError(
+                () => new HttpException('Order service timeout', HttpStatus.SERVICE_UNAVAILABLE),
+              );
+            }
+            return throwError(() => err);
+          }),
+        ),
+    );
   }
 }

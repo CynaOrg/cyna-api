@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsUrl } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { OrderStatus } from '@cyna-api/common';
 
@@ -11,4 +11,21 @@ export class UpdateOrderStatusDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional({
+    description: 'Carrier tracking number, typically provided when status becomes "shipped"',
+    example: '1Z999AA10123456784',
+  })
+  @IsOptional()
+  @IsString()
+  trackingNumber?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Public tracking URL for the shipment, typically provided when status becomes "shipped"',
+    example: 'https://www.ups.com/track?tracknum=1Z999AA10123456784',
+  })
+  @IsOptional()
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true, require_tld: true })
+  trackingUrl?: string;
 }

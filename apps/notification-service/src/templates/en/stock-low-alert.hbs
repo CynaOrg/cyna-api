@@ -1,0 +1,35 @@
+<h1>⚠ Low stock alert</h1>
+
+<p>Hello,</p>
+
+<p>A product in the CYNA catalog has fallen below its configured alert threshold. Quick action is
+  recommended to avoid stock shortages.</p>
+
+<div
+  class='code-box'
+  style='background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px 20px; margin: 24px 0; border-radius: 6px;'
+>
+  <p style='margin: 0 0 8px 0; font-size: 14px; color: #78350f;'><strong>Product:</strong>
+    {{productName}}</p>
+  <p style='margin: 0 0 8px 0; font-size: 14px; color: #78350f;'><strong>SKU:</strong> {{sku}}</p>
+  <p style='margin: 0 0 8px 0; font-size: 14px; color: #78350f;'><strong>Current stock:</strong>
+    {{currentStock}}</p>
+  <p style='margin: 0 0 8px 0; font-size: 14px; color: #78350f;'><strong>Alert threshold:</strong>
+    {{alertThreshold}}</p>
+  <p style='margin: 0; font-size: 14px; color: #78350f;'><strong>Detected at:</strong>
+    {{detectedAt}}</p>
+</div>
+
+<p style='text-align: center;'>
+  <a
+    href='{{backofficeUrl}}/products/{{productId}}'
+    class='button'
+    style='display: inline-block; background-color: #4f39f6 !important; color: #ffffff !important; padding: 14px 36px; text-decoration: none; border-radius: 50px; font-weight: 600; font-size: 15px; margin: 24px 0;'
+  >View product details</a>
+</p>
+
+<p class='hint' style='color: #9ca3af; font-size: 13px; line-height: 1.5;'>This alert is sent
+  automatically when a product's stock falls below the minimum threshold. To prevent repeated
+  notifications, the same alert will not be re-sent within a 6 hour window.</p>
+
+<p>Best regards,<br />The CYNA Team</p>

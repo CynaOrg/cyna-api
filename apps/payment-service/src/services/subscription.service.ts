@@ -142,6 +142,69 @@ export class SubscriptionService {
   }
 
   /**
+   * Admin: update subscription terms (cancel_at_period_end, trial_end).
+   * Applies the changes on Stripe first, then syncs the relevant fields locally.
+   */
+  async adminUpdateTerms(
+    subscriptionId: string,
+    params: { cancelAtPeriodEnd?: boolean; trialEnd?: 'now' | number },
+  ): Promise<Subscription> {
+    const subscription = await this.findById(subscriptionId);
+    if (!subscription) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Subscription not found',
+        code: 'SUBSCRIPTION_NOT_FOUND',
+      });
+    }
+
+    const stripeParams: Stripe.SubscriptionUpdateParams = {};
+    if (params.cancelAtPeriodEnd !== undefined) {
+      stripeParams.cancel_at_period_end = params.cancelAtPeriodEnd;
+    }
+    if (params.trialEnd !== undefined) {
+      stripeParams.trial_end = params.trialEnd;
+    }
+
+    let stripeSub: Stripe.Subscription;
+    try {
+      stripeSub = await this.stripeService.updateSubscription(
+        subscription.stripeSubscriptionId,
+        stripeParams,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Stripe update failed';
+      this.logger.error(
+        `Failed to update subscription terms on Stripe: ${message}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw new RpcException({
+        statusCode: 502,
+        message,
+        code: 'STRIPE_UPDATE_FAILED',
+      });
+    }
+
+    // Sync relevant fields locally
+    const statusMap: Record<string, SubscriptionStatus> = {
+      active: SubscriptionStatus.ACTIVE,
+      past_due: SubscriptionStatus.PAST_DUE,
+      canceled: SubscriptionStatus.CANCELLED,
+      unpaid: SubscriptionStatus.UNPAID,
+      paused: SubscriptionStatus.PAUSED,
+    };
+    subscription.status = statusMap[stripeSub.status] || subscription.status;
+    subscription.cancelAtPeriodEnd = stripeSub.cancel_at_period_end;
+
+    const rawSub = stripeSub as unknown as Record<string, number | null | undefined>;
+    if (typeof rawSub.current_period_end === 'number') {
+      subscription.currentPeriodEnd = new Date(rawSub.current_period_end * 1000);
+    }
+
+    return this.subscriptionRepository.save(subscription);
+  }
+
+  /**
    * Cancel all active subscriptions for a Stripe customer (used when account is deleted)
    */
   async cancelAllForCustomer(stripeCustomerId: string): Promise<number> {

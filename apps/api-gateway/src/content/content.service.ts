@@ -9,6 +9,7 @@ import {
   UpdateHeroTextDto,
   ContactMessageQueryDto,
   UpdateContactMessageDto,
+  RequestContentUploadUrlDto,
 } from './dto';
 
 @Injectable()
@@ -62,6 +63,10 @@ export class ContentService {
 
   async adminReorderCarousel(slideIds: string[]) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_REORDER_CAROUSEL, { slideIds });
+  }
+
+  async adminRequestCarouselUploadUrl(dto: RequestContentUploadUrlDto) {
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.CAROUSEL_REQUEST_UPLOAD_URL, dto);
   }
 
   // ==================== Admin - Hero & Top Products ====================

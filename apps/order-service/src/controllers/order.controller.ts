@@ -208,6 +208,10 @@ export class OrderController {
     data: {
       search?: string;
       status?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      orderType?: string;
+      userId?: string;
       page?: number;
       limit?: number;
     },
@@ -220,9 +224,24 @@ export class OrderController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.ORDER.ADMIN_UPDATE_STATUS)
-  async adminUpdateStatus(@Payload() data: { orderId: string; status: string; notes?: string }) {
+  async adminUpdateStatus(
+    @Payload()
+    data: {
+      orderId: string;
+      status: string;
+      notes?: string;
+      trackingNumber?: string;
+      trackingUrl?: string;
+    },
+  ) {
     try {
-      return await this.orderService.adminUpdateOrderStatus(data.orderId, data.status, data.notes);
+      return await this.orderService.adminUpdateOrderStatus(
+        data.orderId,
+        data.status,
+        data.notes,
+        data.trackingNumber,
+        data.trackingUrl,
+      );
     } catch (error) {
       throw this.wrapError(error);
     }

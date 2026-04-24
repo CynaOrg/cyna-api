@@ -39,12 +39,20 @@ export class CatalogService {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_ALL, query);
   }
 
+  async findAllCategoriesAdmin(query: { isActive?: boolean }) {
+    return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_ALL_ADMIN, query);
+  }
+
   async findCategoryBySlug(slug: string, lang?: Language) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_BY_SLUG, { slug, lang });
   }
 
   async findCategoryById(id: string) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_BY_ID, { id });
+  }
+
+  async reorderCategories(categoryIds: string[]) {
+    return this.sendMessage(MESSAGE_PATTERNS.CATALOG.CATEGORY_REORDER, { categoryIds });
   }
 
   // ==================== Products ====================
@@ -59,6 +67,12 @@ export class CatalogService {
 
   async deleteProduct(id: string) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_DELETE, { id });
+  }
+
+  async bulkDeleteProducts(
+    productIds: string[],
+  ): Promise<{ deletedCount: number; failedIds: string[] }> {
+    return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_BULK_DELETE, { productIds });
   }
 
   async findAllProducts(query: ProductQueryDto) {

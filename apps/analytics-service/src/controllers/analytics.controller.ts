@@ -41,6 +41,11 @@ export class AnalyticsController {
     return this.salesService.getAverageCart(data.period);
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.ANALYTICS.GET_AVERAGE_CART_BY_PRODUCT_TYPE)
+  async getAverageCartByProductType(@Payload() data: SalesQueryDto) {
+    return this.salesService.getAverageCartByProductType(data.period);
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.ANALYTICS.GET_MRR)
   async getMrr() {
     return this.salesService.getMrr();

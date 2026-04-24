@@ -36,6 +36,17 @@ import { UserAdminService } from './services/user-admin.service';
           },
         },
       },
+      {
+        name: SERVICE_NAMES.AUTH,
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
+          queue: 'auth.queue',
+          queueOptions: {
+            durable: true,
+          },
+        },
+      },
     ]),
   ],
   controllers: [UserController, UserAdminController],

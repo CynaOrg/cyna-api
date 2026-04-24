@@ -11,7 +11,8 @@ import { Language, CynaLoggerService } from '@cyna-api/common';
 describe('UserService', () => {
   let service: UserService;
   let userRepository: jest.Mocked<Repository<User>>;
-  let eventsClient: jest.Mocked<ClientProxy>;
+  let notificationClient: jest.Mocked<ClientProxy>;
+  let authClient: jest.Mocked<ClientProxy>;
   const logger = {
     log: jest.fn(),
     warn: jest.fn(),
@@ -36,13 +37,18 @@ describe('UserService', () => {
           provide: 'NOTIFICATION_SERVICE',
           useValue: { emit: jest.fn().mockReturnValue(of(undefined)) },
         },
+        {
+          provide: 'AUTH_SERVICE',
+          useValue: { emit: jest.fn().mockReturnValue(of(undefined)) },
+        },
         { provide: CynaLoggerService, useValue: logger },
       ],
     }).compile();
 
     service = module.get<UserService>(UserService);
     userRepository = module.get(getRepositoryToken(User));
-    eventsClient = module.get('NOTIFICATION_SERVICE');
+    notificationClient = module.get('NOTIFICATION_SERVICE');
+    authClient = module.get('AUTH_SERVICE');
   });
 
   describe('create', () => {
@@ -276,7 +282,7 @@ describe('UserService', () => {
       expect(userRepository.save).toHaveBeenCalledWith(
         expect.objectContaining({ isActive: false }),
       );
-      expect(eventsClient.emit).toHaveBeenCalled();
+      expect(authClient.emit).toHaveBeenCalled();
     });
   });
 });

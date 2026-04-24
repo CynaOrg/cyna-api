@@ -27,6 +27,8 @@ export class UserService {
     private readonly userRepository: Repository<User>,
     @Inject(SERVICE_NAMES.NOTIFICATION)
     private readonly notificationClient: ClientProxy,
+    @Inject(SERVICE_NAMES.AUTH)
+    private readonly authClient: ClientProxy,
     private readonly logger: CynaLoggerService,
   ) {}
 
@@ -137,7 +139,7 @@ export class UserService {
     user.passwordHash = await bcrypt.hash(dto.newPassword, BCRYPT_COST);
     await this.userRepository.save(user);
 
-    this.notificationClient.emit(EVENT_PATTERNS.USER.PASSWORD_CHANGED, {
+    this.authClient.emit(EVENT_PATTERNS.USER.PASSWORD_CHANGED, {
       userId: user.id,
       email: user.email,
       language: user.preferredLanguage,
@@ -174,7 +176,7 @@ export class UserService {
     user.isActive = false;
     await this.userRepository.save(user);
 
-    this.notificationClient.emit(EVENT_PATTERNS.USER.DELETED, {
+    this.authClient.emit(EVENT_PATTERNS.USER.DELETED, {
       userId: user.id,
       email: user.email,
       stripeCustomerId: user.stripeCustomerId,

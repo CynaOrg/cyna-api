@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
+import { of } from 'rxjs';
 import { UserAdminService } from './user-admin.service';
 import { User } from '../entities/user.entity';
 import { CynaLoggerService } from '@cyna-api/common';
@@ -31,6 +32,10 @@ describe('UserAdminService', () => {
             findOne: jest.fn(),
             save: jest.fn(),
           },
+        },
+        {
+          provide: 'AUTH_SERVICE',
+          useValue: { emit: jest.fn().mockReturnValue(of(undefined)) },
         },
         { provide: CynaLoggerService, useValue: { log: jest.fn(), error: jest.fn() } },
       ],

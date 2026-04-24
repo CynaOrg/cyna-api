@@ -209,12 +209,12 @@ describe('AuthService', () => {
       password: 'Password123!',
     };
 
-    it('should validate user via USER_SERVICE.FIND_BY_EMAIL and return auth response', async () => {
+    it('should validate user via USER_SERVICE.FIND_BY_EMAIL_FOR_LOGIN and return auth response', async () => {
       userClient.send.mockReturnValueOnce(of(credentialsView));
 
       const result = await service.validateUser(loginDto);
 
-      expect(userClient.send).toHaveBeenCalledWith(MESSAGE_PATTERNS.USER.FIND_BY_EMAIL, {
+      expect(userClient.send).toHaveBeenCalledWith(MESSAGE_PATTERNS.USER.FIND_BY_EMAIL_FOR_LOGIN, {
         email: loginDto.email,
       });
       expect(result.accessToken).toBe('access-token');

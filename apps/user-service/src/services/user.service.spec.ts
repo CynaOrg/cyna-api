@@ -82,7 +82,7 @@ describe('UserService', () => {
   });
 
   describe('findByEmail', () => {
-    it('returns user with passwordHash when found', async () => {
+    it('returns profile view without passwordHash when found', async () => {
       const user = {
         id: 'u1',
         email: 'a@b.c',
@@ -94,12 +94,36 @@ describe('UserService', () => {
 
       const result = await service.findByEmail('a@b.c');
 
-      expect(result).toMatchObject({ id: 'u1', email: 'a@b.c', passwordHash: 'hash' });
+      expect(result).toMatchObject({ id: 'u1', email: 'a@b.c' });
+      expect(result).not.toHaveProperty('passwordHash');
     });
 
     it('returns null when not found', async () => {
       userRepository.findOne.mockResolvedValue(null);
       const result = await service.findByEmail('nobody@x.x');
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('findByEmailForLogin', () => {
+    it('returns credentials view including passwordHash when found', async () => {
+      const user = {
+        id: 'u1',
+        email: 'a@b.c',
+        passwordHash: 'hash',
+        isActive: true,
+        isVerified: true,
+      } as User;
+      userRepository.findOne.mockResolvedValue(user);
+
+      const result = await service.findByEmailForLogin('a@b.c');
+
+      expect(result).toMatchObject({ id: 'u1', email: 'a@b.c', passwordHash: 'hash' });
+    });
+
+    it('returns null when not found', async () => {
+      userRepository.findOne.mockResolvedValue(null);
+      const result = await service.findByEmailForLogin('nobody@x.x');
       expect(result).toBeNull();
     });
   });

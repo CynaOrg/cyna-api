@@ -60,6 +60,7 @@ export const MESSAGE_PATTERNS = {
     // Added for user-service extraction
     CREATE: { cmd: 'user.create' },
     FIND_BY_EMAIL: { cmd: 'user.find_by_email' },
+    FIND_BY_EMAIL_FOR_LOGIN: { cmd: 'user.find_by_email_for_login' },
     GET_BY_ID: { cmd: 'user.get_by_id' },
     MARK_VERIFIED: { cmd: 'user.mark_verified' },
     UPDATE_PASSWORD_HASH: { cmd: 'user.update_password_hash' },

@@ -24,6 +24,11 @@ export class UserController {
     return this.userService.findByEmail(data.email);
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.USER.FIND_BY_EMAIL_FOR_LOGIN)
+  async findByEmailForLogin(@Payload() data: { email: string }) {
+    return this.userService.findByEmailForLogin(data.email);
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.USER.GET_BY_ID)
   async getById(@Payload() data: { userId: string }) {
     return this.userService.getById(data.userId);

@@ -55,11 +55,17 @@ export class UserService {
     });
 
     const saved = await this.userRepository.save(user);
-    this.logger.log(`User created: ${saved.email}`, 'UserService');
+    this.logger.log(`User created: ${saved.id}`, 'UserService');
     return this.toProfileView(saved);
   }
 
-  async findByEmail(email: string): Promise<UserCredentialsView | null> {
+  async findByEmail(email: string): Promise<UserProfileView | null> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) return null;
+    return this.toProfileView(user);
+  }
+
+  async findByEmailForLogin(email: string): Promise<UserCredentialsView | null> {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) return null;
     return {
@@ -115,7 +121,7 @@ export class UserService {
     if (dto.companyName !== undefined) user.companyName = dto.companyName;
     if (dto.vatNumber !== undefined) user.vatNumber = dto.vatNumber;
     const saved = await this.userRepository.save(user);
-    this.logger.log(`Profile updated for user: ${saved.email}`, 'UserService');
+    this.logger.log(`Profile updated for user: ${saved.id}`, 'UserService');
     return { message: 'Profile updated successfully', user: this.toProfileView(saved) };
   }
 
@@ -145,7 +151,7 @@ export class UserService {
       language: user.preferredLanguage,
     });
 
-    this.logger.log(`Password updated for user: ${user.email}`, 'UserService');
+    this.logger.log(`Password updated for user: ${user.id}`, 'UserService');
     return { message: 'Password updated successfully' };
   }
 
@@ -157,7 +163,7 @@ export class UserService {
     user.preferredLanguage = dto.preferredLanguage;
     const saved = await this.userRepository.save(user);
     this.logger.log(
-      `Language updated for user: ${saved.email} to ${dto.preferredLanguage}`,
+      `Language updated for user: ${saved.id} to ${dto.preferredLanguage}`,
       'UserService',
     );
     return { message: 'Language preference updated successfully', user: this.toProfileView(saved) };
@@ -182,7 +188,7 @@ export class UserService {
       stripeCustomerId: user.stripeCustomerId,
     });
 
-    this.logger.log(`Account soft-deleted for user: ${user.email}`, 'UserService');
+    this.logger.log(`Account soft-deleted for user: ${user.id}`, 'UserService');
     return { message: 'Account deleted successfully' };
   }
 

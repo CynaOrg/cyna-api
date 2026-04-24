@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { RpcException } from '@nestjs/microservices';
-import { CynaLoggerService } from '@cyna-api/common';
+import { RpcException, ClientProxy } from '@nestjs/microservices';
+import { CynaLoggerService, SERVICE_NAMES, EVENT_PATTERNS } from '@cyna-api/common';
 import { User } from '../entities/user.entity';
 import { AdminUpdateStatusDto } from '../dto/admin-update-status.dto';
 
@@ -26,11 +26,13 @@ export class UserAdminService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @Inject(SERVICE_NAMES.AUTH)
+    private readonly authClient: ClientProxy,
     private readonly logger: CynaLoggerService,
   ) {}
 
   async adminList(query: AdminListQuery): Promise<AdminListResult> {
-    const page = query.page ?? 1;
+    const page = Math.min(Math.max(query.page ?? 1, 1), 10000);
     const limit = Math.min(query.limit ?? 20, 100);
     const offset = (page - 1) * limit;
 
@@ -81,10 +83,18 @@ export class UserAdminService {
         code: 'USER_NOT_FOUND',
       });
     }
+    const wasActive = user.isActive;
     user.isActive = dto.isActive;
     const saved = await this.userRepository.save(user);
+
+    if (wasActive && !dto.isActive) {
+      this.authClient.emit(EVENT_PATTERNS.USER.DELETED, {
+        userId: saved.id,
+      });
+    }
+
     this.logger.log(
-      `Admin ${dto.isActive ? 'activated' : 'deactivated'} user: ${saved.email}`,
+      `Admin ${dto.isActive ? 'activated' : 'deactivated'} user: ${saved.id}`,
       'UserAdminService',
     );
     return this.stripPasswordHash(saved);

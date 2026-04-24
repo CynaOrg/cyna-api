@@ -8,6 +8,12 @@ import { UserAdminController } from './controllers/user-admin.controller';
 import { UserService } from './services/user.service';
 import { UserAdminService } from './services/user-admin.service';
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction && !process.env.DATABASE_PASSWORD) {
+  throw new Error('DATABASE_PASSWORD must be set in production');
+}
+
 @Module({
   imports: [
     CynaConfigModule,
@@ -20,7 +26,7 @@ import { UserAdminService } from './services/user-admin.service';
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
       entities: [User],
-      synchronize: process.env.DATABASE_SYNC === 'true',
+      synchronize: !isProduction && process.env.DATABASE_SYNC === 'true',
       logging: process.env.DATABASE_LOGGING === 'true',
     }),
     TypeOrmModule.forFeature([User]),

@@ -1,5 +1,7 @@
-import { IsEmail, IsString, IsOptional, IsEnum, MinLength, MaxLength } from 'class-validator';
+import { IsEmail, IsString, IsOptional, IsEnum, Matches, MaxLength } from 'class-validator';
 import { Language } from '@cyna-api/common';
+
+const BCRYPT_HASH_PATTERN = /^\$2[aby]\$\d{2}\$.{53}$/;
 
 export class CreateUserDto {
   @IsEmail()
@@ -7,8 +9,7 @@ export class CreateUserDto {
   email: string;
 
   @IsString()
-  @MinLength(60) // bcrypt hashes are always 60 chars
-  @MaxLength(255)
+  @Matches(BCRYPT_HASH_PATTERN, { message: 'passwordHash must be a valid bcrypt hash' })
   passwordHash: string;
 
   @IsString()

@@ -118,7 +118,7 @@ export class AuthService {
       language: user.preferredLanguage,
     });
 
-    this.logger.log(`User registered: ${user.email}`, 'AuthService');
+    this.logger.log(`User registered: ${user.id}`, 'AuthService');
 
     return {
       message: 'Registration successful. Please check your email to verify your account.',
@@ -128,7 +128,7 @@ export class AuthService {
 
   async validateUser(dto: LoginUserDto): Promise<AuthResponseDto> {
     const user = await this.callUserService<UserCredentialsView | null>(
-      MESSAGE_PATTERNS.USER.FIND_BY_EMAIL,
+      MESSAGE_PATTERNS.USER.FIND_BY_EMAIL_FOR_LOGIN,
       { email: dto.email },
     );
 
@@ -175,7 +175,7 @@ export class AuthService {
 
     await this.authEventsPublisher.emitUserLogin(user.id);
 
-    this.logger.log(`User logged in: ${user.email}`, 'AuthService');
+    this.logger.log(`User logged in: ${user.id}`, 'AuthService');
 
     return {
       accessToken,
@@ -224,7 +224,7 @@ export class AuthService {
 
     await this.authEventsPublisher.emitUserVerified(user.id, user.email, user.preferredLanguage);
 
-    this.logger.log(`Email verified for user: ${user.email}`, 'AuthService');
+    this.logger.log(`Email verified for user: ${user.id}`, 'AuthService');
 
     return {
       success: true,
@@ -233,7 +233,7 @@ export class AuthService {
   }
 
   async resendVerification(email: string): Promise<{ success: boolean; message: string }> {
-    const user = await this.callUserService<UserCredentialsView | null>(
+    const user = await this.callUserService<UserProfileView | null>(
       MESSAGE_PATTERNS.USER.FIND_BY_EMAIL,
       { email },
     );
@@ -272,7 +272,7 @@ export class AuthService {
       language: user.preferredLanguage,
     });
 
-    this.logger.log(`Verification email resent for user: ${user.email}`, 'AuthService');
+    this.logger.log(`Verification email resent for user: ${user.id}`, 'AuthService');
 
     return {
       success: true,
@@ -281,7 +281,7 @@ export class AuthService {
   }
 
   async forgotPassword(email: string): Promise<{ success: boolean; message: string }> {
-    const user = await this.callUserService<UserCredentialsView | null>(
+    const user = await this.callUserService<UserProfileView | null>(
       MESSAGE_PATTERNS.USER.FIND_BY_EMAIL,
       { email },
     );
@@ -318,7 +318,7 @@ export class AuthService {
       language: user.preferredLanguage,
     });
 
-    this.logger.log(`Password reset requested for user: ${user.email}`, 'AuthService');
+    this.logger.log(`Password reset requested for user: ${user.id}`, 'AuthService');
 
     return {
       success: true,
@@ -381,7 +381,7 @@ export class AuthService {
       user.preferredLanguage,
     );
 
-    this.logger.log(`Password reset completed for user: ${user.email}`, 'AuthService');
+    this.logger.log(`Password reset completed for user: ${user.id}`, 'AuthService');
 
     return {
       success: true,
@@ -443,7 +443,7 @@ export class AuthService {
 
         const newRefreshToken = await this.createRefreshToken(user.id, 'user');
 
-        this.logger.log(`Token refresh (grace period) for user: ${user.email}`, 'AuthService');
+        this.logger.log(`Token refresh (grace period) for user: ${user.id}`, 'AuthService');
 
         return {
           accessToken,
@@ -499,7 +499,7 @@ export class AuthService {
 
     const newRefreshToken = await this.createRefreshToken(user.id, 'user');
 
-    this.logger.log(`Token refreshed for user: ${user.email}`, 'AuthService');
+    this.logger.log(`Token refreshed for user: ${user.id}`, 'AuthService');
 
     return {
       accessToken,

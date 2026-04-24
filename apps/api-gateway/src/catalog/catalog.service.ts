@@ -69,6 +69,12 @@ export class CatalogService {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_DELETE, { id });
   }
 
+  async bulkDeleteProducts(
+    productIds: string[],
+  ): Promise<{ deletedCount: number; failedIds: string[] }> {
+    return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_BULK_DELETE, { productIds });
+  }
+
   async findAllProducts(query: ProductQueryDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL, query);
   }

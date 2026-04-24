@@ -1,6 +1,13 @@
 // cyna-api/apps/user-service/src/dto/create-user-address.dto.ts
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, Length, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsISO31661Alpha2,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateUserAddressDto {
   @ApiProperty({ example: 'Siège' })
@@ -47,7 +54,7 @@ export class CreateUserAddressDto {
 
   @ApiProperty({ description: 'ISO 3166-1 alpha-2 country code', example: 'FR' })
   @IsString()
-  @Length(2, 2)
+  @IsISO31661Alpha2()
   country: string;
 
   @ApiPropertyOptional()

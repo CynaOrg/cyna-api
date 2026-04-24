@@ -735,7 +735,7 @@ export class SalesService {
       const result = await this.sendMessage<OrderRecord[] | { data: OrderRecord[] }>(
         this.orderClient,
         MESSAGE_PATTERNS.ORDER.ADMIN_GET_ORDERS,
-        {},
+        { page: 1, limit: 10000 },
       );
       return Array.isArray(result) ? result : (result as { data: OrderRecord[] })?.data || [];
     } catch {

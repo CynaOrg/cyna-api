@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
+import { CynaLoggerService } from '@cyna-api/common';
 import { UserAddress } from '../entities/user-address.entity';
 import { UserAddressService } from './user-address.service';
 import { CreateUserAddressDto } from '../dto';
@@ -40,6 +41,10 @@ describe('UserAddressService', () => {
           useValue: {
             transaction: jest.fn((cb: any) => cb({ ...mockTxManager })),
           },
+        },
+        {
+          provide: CynaLoggerService,
+          useValue: { log: jest.fn(), warn: jest.fn(), error: jest.fn() },
         },
       ],
     }).compile();

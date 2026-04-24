@@ -369,6 +369,49 @@ export class ProductService {
     });
   }
 
+  async bulkDelete(ids: string[]): Promise<{ deletedCount: number; failedIds: string[] }> {
+    const failedIds: string[] = [];
+    let deletedCount = 0;
+
+    for (const id of ids) {
+      try {
+        const product = await this.productRepository.findOne({ where: { id } });
+        if (!product) {
+          failedIds.push(id);
+          continue;
+        }
+
+        const deletedProductData = {
+          productId: product.id,
+          sku: product.sku,
+          productName: product.nameEn || product.nameFr,
+        };
+
+        await this.productRepository.remove(product);
+        deletedCount += 1;
+
+        await this.eventsPublisher.emitProductDeleted({
+          ...deletedProductData,
+          deletedAt: new Date(),
+        });
+      } catch (error) {
+        this.logger.warn(
+          `Failed to delete product ${id}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        failedIds.push(id);
+      }
+    }
+
+    // Invalidate product caches once at the end
+    if (deletedCount > 0) {
+      await this.invalidateProductCache();
+    }
+
+    this.logger.log(`Bulk delete completed: ${deletedCount} deleted, ${failedIds.length} failed`);
+
+    return { deletedCount, failedIds };
+  }
+
   async search(searchTerm: string, query: ProductQueryDto): Promise<PaginatedResult<Product>> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;

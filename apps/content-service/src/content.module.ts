@@ -4,12 +4,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { CynaConfigModule, LoggerModule, SERVICE_NAMES, CynaCacheModule } from '@cyna-api/common';
+import { S3Module } from '@cyna-api/s3';
 import { CarouselSlide, HeroText, TopProductConfig, ContactMessage } from './entities';
 import {
   CarouselService,
   HeroTextService,
   TopProductsService,
   ContactMessageService,
+  ContentImageService,
 } from './services';
 import { ContentController } from './controllers';
 import { ContentEventsPublisher } from './events';
@@ -23,6 +25,7 @@ import { ContentDataSeeder } from './seeds';
     LoggerModule,
     ScheduleModule.forRoot(),
     CynaCacheModule.forRoot({ useMemoryFallback: true }),
+    S3Module,
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',
@@ -66,6 +69,7 @@ import { ContentDataSeeder } from './seeds';
     HeroTextService,
     TopProductsService,
     ContactMessageService,
+    ContentImageService,
     ContentEventsPublisher,
     ContentDataSeeder,
   ],

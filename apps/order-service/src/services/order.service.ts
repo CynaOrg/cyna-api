@@ -366,15 +366,23 @@ export class OrderService {
   async adminGetOrders(params: {
     search?: string;
     status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    orderType?: string;
+    userId?: string;
     page?: number;
     limit?: number;
   }) {
-    const { search, status, page = 1, limit = 20 } = params;
+    const { search, status, dateFrom, dateTo, orderType, userId, page = 1, limit = 20 } = params;
 
     const qb = this.orderRepository
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.items', 'items')
       .orderBy('order.createdAt', 'DESC');
+
+    if (userId) {
+      qb.andWhere('order.userId = :userId', { userId });
+    }
 
     if (status) {
       qb.andWhere('order.status = :status', { status });
@@ -384,6 +392,22 @@ export class OrderService {
       qb.andWhere('(order.orderNumber ILIKE :search OR order.customerEmail ILIKE :search)', {
         search: `%${search}%`,
       });
+    }
+
+    if (dateFrom) {
+      qb.andWhere('order.createdAt >= :dateFrom', { dateFrom: new Date(dateFrom) });
+    }
+
+    if (dateTo) {
+      // If the caller provides a plain date (YYYY-MM-DD), normalize to end of day
+      // so the filter is inclusive of the whole day from the UI perspective.
+      const isDateOnly = /^\d{4}-\d{2}-\d{2}$/.test(dateTo);
+      const dateToValue = isDateOnly ? new Date(`${dateTo}T23:59:59.999Z`) : new Date(dateTo);
+      qb.andWhere('order.createdAt <= :dateTo', { dateTo: dateToValue });
+    }
+
+    if (orderType) {
+      qb.andWhere('order.orderType = :orderType', { orderType });
     }
 
     const total = await qb.getCount();
@@ -401,7 +425,13 @@ export class OrderService {
     };
   }
 
-  async adminUpdateOrderStatus(orderId: string, status: string, notes?: string): Promise<Order> {
+  async adminUpdateOrderStatus(
+    orderId: string,
+    status: string,
+    notes?: string,
+    trackingNumber?: string,
+    trackingUrl?: string,
+  ): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
       relations: ['items'],
@@ -418,8 +448,16 @@ export class OrderService {
     const previousStatus = order.status;
     order.status = status as OrderStatus;
 
-    if (notes) {
+    if (notes !== undefined) {
       order.notes = notes;
+    }
+
+    if (trackingNumber !== undefined) {
+      order.trackingNumber = trackingNumber;
+    }
+
+    if (trackingUrl !== undefined) {
+      order.trackingUrl = trackingUrl;
     }
 
     // Set timestamps based on status transitions

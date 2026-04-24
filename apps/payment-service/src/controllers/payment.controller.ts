@@ -120,6 +120,25 @@ export class PaymentController {
     }
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.PAYMENT.ADMIN_UPDATE_SUBSCRIPTION_TERMS)
+  async adminUpdateSubscriptionTerms(
+    @Payload()
+    data: {
+      subscriptionId: string;
+      cancelAtPeriodEnd?: boolean;
+      trialEnd?: 'now' | number;
+    },
+  ) {
+    try {
+      return await this.subscriptionService.adminUpdateTerms(data.subscriptionId, {
+        cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+        trialEnd: data.trialEnd,
+      });
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
   /**
    * Handle account deletion event - cancel all active Stripe subscriptions
    * and revoke all active license keys for the deleted user

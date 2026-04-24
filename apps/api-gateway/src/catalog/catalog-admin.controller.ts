@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam, ApiBearerAuth } from '@nestjs/swagger';
 import { CatalogService } from './catalog.service';
-import { JwtAdminAuthGuard } from '../auth/guards';
+import { JwtAdminAuthGuard, SuperAdminGuard } from '../auth/guards';
 import {
   CategoryQueryDto,
   CreateCategoryDto,
@@ -22,9 +22,11 @@ import {
   UpdateProductDto,
   AddImageDto,
   ReorderImagesDto,
+  ReorderCategoriesDto,
   UpdateStockDto,
   RequestUploadUrlDto,
   ConfirmUploadDto,
+  BulkDeleteProductsDto,
 } from './dto';
 
 @ApiTags('Admin - Catalog')
@@ -38,9 +40,12 @@ export class CatalogAdminController {
 
   @Get('categories')
   @ApiOperation({ summary: 'Get all categories (admin)' })
-  @ApiResponse({ status: 200, description: 'List of categories' })
+  @ApiResponse({
+    status: 200,
+    description: 'List of categories with both FR and EN fields exposed',
+  })
   async findAllCategories(@Query() query: CategoryQueryDto) {
-    return this.catalogService.findAllCategories(query);
+    return this.catalogService.findAllCategoriesAdmin(query);
   }
 
   @Post('categories')
@@ -49,6 +54,16 @@ export class CatalogAdminController {
   @ApiResponse({ status: 409, description: 'Category slug already exists' })
   async createCategory(@Body() dto: CreateCategoryDto) {
     return this.catalogService.createCategory(dto);
+  }
+
+  // IMPORTANT: Static routes must come before parameterized routes
+  @Patch('categories/reorder')
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: 'Reorder categories' })
+  @ApiResponse({ status: 200, description: 'Categories reordered' })
+  @ApiResponse({ status: 400, description: 'Invalid category IDs' })
+  async reorderCategories(@Body() dto: ReorderCategoriesDto) {
+    return this.catalogService.reorderCategories(dto.categoryIds);
   }
 
   @Patch('categories/:categoryId')
@@ -87,6 +102,21 @@ export class CatalogAdminController {
   @ApiResponse({ status: 409, description: 'Product slug or SKU already exists' })
   async createProduct(@Body() dto: CreateProductDto) {
     return this.catalogService.createProduct(dto);
+  }
+
+  // IMPORTANT: Static routes must come before parameterized routes
+  @Post('products/bulk-delete')
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: 'Bulk delete products' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the number of deleted products and the list of failed IDs',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid product IDs' })
+  async bulkDeleteProducts(
+    @Body() dto: BulkDeleteProductsDto,
+  ): Promise<{ deletedCount: number; failedIds: string[] }> {
+    return this.catalogService.bulkDeleteProducts(dto.productIds);
   }
 
   @Get('products/:productId')

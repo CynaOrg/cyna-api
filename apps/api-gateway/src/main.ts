@@ -31,7 +31,7 @@ async function bootstrap() {
   const port = configService.get<number>('APP_PORT', 3000);
   const apiPrefix = configService.get<string>('API_PREFIX', 'api');
   const apiVersion = configService.get<string>('API_VERSION', 'v1');
-  const swaggerEnabled = configService.get<boolean>('SWAGGER_ENABLED', true);
+  const swaggerEnabled = configService.get<boolean>('SWAGGER_ENABLED', false);
   const swaggerPath = configService.get<string>('SWAGGER_PATH', 'docs');
   const corsOrigins = configService.get<string>('CORS_ORIGINS', 'http://localhost:4200');
 

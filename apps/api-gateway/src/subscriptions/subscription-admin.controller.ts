@@ -30,8 +30,36 @@ import {
 } from '@nestjs/swagger';
 import { SERVICE_NAMES, MESSAGE_PATTERNS, SubscriptionStatus } from '@cyna-api/common';
 import { JwtAdminAuthGuard, SuperAdminGuard } from '../auth/guards';
-import { IsOptional, IsEnum, IsInt, Min, IsString } from 'class-validator';
+import {
+  IsOptional,
+  IsEnum,
+  IsInt,
+  Min,
+  IsString,
+  IsBoolean,
+  Validate,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  ValidationArguments,
+} from 'class-validator';
 import { Type } from 'class-transformer';
+
+// ---------------------------------------------------------------------------
+// Custom validators
+// ---------------------------------------------------------------------------
+
+@ValidatorConstraint({ name: 'trialEndValid', async: false })
+class TrialEndValid implements ValidatorConstraintInterface {
+  validate(value: unknown): boolean {
+    if (value === undefined || value === null) return true;
+    if (value === 'now') return true;
+    if (typeof value === 'number' && Number.isInteger(value) && value > 0) return true;
+    return false;
+  }
+  defaultMessage(_args: ValidationArguments): string {
+    return "trialEnd must be the string 'now' or a positive UNIX timestamp (seconds)";
+  }
+}
 
 // ---------------------------------------------------------------------------
 // DTOs
@@ -62,6 +90,24 @@ class UpdateSubscriptionStatusDto {
   @ApiProperty({ enum: ['cancel', 'reactivate', 'pause'] })
   @IsString()
   action: 'cancel' | 'reactivate' | 'pause';
+}
+
+export class UpdateSubscriptionTermsDto {
+  @ApiPropertyOptional({
+    description: 'Whether to cancel the subscription at the end of the current period',
+  })
+  @IsOptional()
+  @IsBoolean()
+  cancelAtPeriodEnd?: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      "UNIX timestamp (seconds) for trial end, or the string 'now' to end the trial immediately",
+    oneOf: [{ type: 'number' }, { type: 'string', enum: ['now'] }],
+  })
+  @IsOptional()
+  @Validate(TrialEndValid)
+  trialEnd?: 'now' | number;
 }
 
 // ---------------------------------------------------------------------------
@@ -143,6 +189,34 @@ export class SubscriptionAdminController {
     return firstValueFrom(
       this.paymentClient
         .send(pattern, { subscriptionId: id, cancelAtPeriodEnd: false })
+        .pipe(timeout(10000), retry(1), catchError(rpcToHttpError)),
+    );
+  }
+
+  @Patch(':subscriptionId/terms')
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: 'Update subscription terms (super_admin only)' })
+  @ApiParam({ name: 'subscriptionId', description: 'Subscription ID' })
+  @ApiResponse({ status: 200, description: 'Subscription terms updated' })
+  @ApiResponse({ status: 400, description: 'Invalid payload' })
+  async updateTerms(
+    @Param('subscriptionId') subscriptionId: string,
+    @Body() dto: UpdateSubscriptionTermsDto,
+  ) {
+    if (dto.cancelAtPeriodEnd === undefined && dto.trialEnd === undefined) {
+      throw new HttpException(
+        'At least one of cancelAtPeriodEnd or trialEnd must be provided',
+        400,
+      );
+    }
+
+    return firstValueFrom(
+      this.paymentClient
+        .send(MESSAGE_PATTERNS.PAYMENT.ADMIN_UPDATE_SUBSCRIPTION_TERMS, {
+          subscriptionId,
+          cancelAtPeriodEnd: dto.cancelAtPeriodEnd,
+          trialEnd: dto.trialEnd,
+        })
         .pipe(timeout(10000), retry(1), catchError(rpcToHttpError)),
     );
   }

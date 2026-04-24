@@ -55,6 +55,11 @@ export class CatalogController {
     return CategoryResponseDto.fromEntities(categories, lang);
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_ALL_ADMIN)
+  async findAllCategoriesAdmin(@Payload() data: CategoryQueryDto) {
+    return this.categoryService.findAll(data);
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_BY_SLUG)
   async findCategoryBySlug(@Payload() data: { slug: string; lang?: Language }) {
     const category = await this.categoryService.findBySlug(data.slug);
@@ -64,6 +69,12 @@ export class CatalogController {
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_FIND_BY_ID)
   async findCategoryById(@Payload() data: { id: string }) {
     return this.categoryService.findById(data.id);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.CATEGORY_REORDER)
+  async reorderCategories(@Payload() data: { categoryIds: string[] }) {
+    const categories = await this.categoryService.reorder(data.categoryIds);
+    return CategoryResponseDto.fromEntities(categories, Language.FR);
   }
 
   // ==================== Products ====================
@@ -84,6 +95,13 @@ export class CatalogController {
   async deleteProduct(@Payload() data: { id: string }) {
     await this.productService.delete(data.id);
     return { success: true };
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_BULK_DELETE)
+  async bulkDeleteProducts(
+    @Payload() data: { productIds: string[] },
+  ): Promise<{ deletedCount: number; failedIds: string[] }> {
+    return this.productService.bulkDelete(data.productIds);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL)

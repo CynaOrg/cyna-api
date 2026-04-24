@@ -147,6 +147,7 @@ export const MESSAGE_PATTERNS = {
     UPDATE_BILLING_PERIOD: { cmd: 'payment.update_billing_period' },
     CANCEL_SUBSCRIPTION: { cmd: 'payment.cancel_subscription' },
     REACTIVATE_SUBSCRIPTION: { cmd: 'payment.reactivate_subscription' },
+    ADMIN_UPDATE_SUBSCRIPTION_TERMS: { cmd: 'payment.admin_update_subscription_terms' },
     CREATE_CHECKOUT_SESSION: { cmd: 'payment.create_checkout_session' },
     CREATE_PAYMENT_INTENT: { cmd: 'payment.create_payment_intent' },
     CREATE_SUBSCRIPTION: { cmd: 'payment.create_subscription' },

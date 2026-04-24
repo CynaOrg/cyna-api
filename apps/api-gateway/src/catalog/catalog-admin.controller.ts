@@ -26,6 +26,7 @@ import {
   UpdateStockDto,
   RequestUploadUrlDto,
   ConfirmUploadDto,
+  BulkDeleteProductsDto,
 } from './dto';
 
 @ApiTags('Admin - Catalog')
@@ -101,6 +102,21 @@ export class CatalogAdminController {
   @ApiResponse({ status: 409, description: 'Product slug or SKU already exists' })
   async createProduct(@Body() dto: CreateProductDto) {
     return this.catalogService.createProduct(dto);
+  }
+
+  // IMPORTANT: Static routes must come before parameterized routes
+  @Post('products/bulk-delete')
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: 'Bulk delete products' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns the number of deleted products and the list of failed IDs',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid product IDs' })
+  async bulkDeleteProducts(
+    @Body() dto: BulkDeleteProductsDto,
+  ): Promise<{ deletedCount: number; failedIds: string[] }> {
+    return this.catalogService.bulkDeleteProducts(dto.productIds);
   }
 
   @Get('products/:productId')

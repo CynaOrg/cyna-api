@@ -8,6 +8,7 @@ import { cleanDatabase } from '../helpers/db.helper';
 describe('Admin Auth (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let userDataSource: DataSource;
   let eventsSpy: MockAuthEventsPublisher;
   let adminId: string;
 
@@ -23,7 +24,7 @@ describe('Admin Auth (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(dataSource);
+    await cleanDatabase(dataSource, userDataSource);
     eventsSpy.clear();
     const admin = await createAdmin(dataSource);
     adminId = admin.id;

@@ -30,6 +30,7 @@ interface LicenseKeyRow {
 describe('License Generation via Webhook (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let userDataSource: DataSource;
   let catalogDataSource: DataSource;
   let orderDataSource: DataSource;
   let paymentDataSource: DataSource;
@@ -85,7 +86,7 @@ describe('License Generation via Webhook (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(dataSource);
+    await cleanDatabase(dataSource, userDataSource);
     await cleanDatabase(orderDataSource);
     await cleanDatabase(paymentDataSource);
     eventsSpy.clear();

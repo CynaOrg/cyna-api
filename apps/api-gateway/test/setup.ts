@@ -344,6 +344,7 @@ let catalogMicroservice: INestMicroservice;
 let orderMicroservice: INestMicroservice;
 let paymentMicroservice: INestMicroservice;
 let dataSource: DataSource;
+let userDataSource: DataSource;
 let catalogDataSource: DataSource;
 let orderDataSource: DataSource;
 let paymentDataSource: DataSource;
@@ -366,6 +367,7 @@ const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5
 export async function setupTestApp(options?: SetupOptions): Promise<{
   app: INestApplication;
   dataSource: DataSource;
+  userDataSource: DataSource;
   catalogDataSource: DataSource;
   orderDataSource: DataSource;
   paymentDataSource: DataSource;
@@ -542,6 +544,7 @@ export async function setupTestApp(options?: SetupOptions): Promise<{
   // 6. Get DataSources for direct DB access in tests
   // -----------------------------------------------------------------------
   dataSource = authModule.get<DataSource>(DataSource);
+  userDataSource = userModule.get<DataSource>(DataSource);
   catalogDataSource = catalogModule.get<DataSource>(DataSource);
   orderDataSource = orderModule.get<DataSource>(DataSource);
   paymentDataSource = paymentModule.get<DataSource>(DataSource);
@@ -550,6 +553,7 @@ export async function setupTestApp(options?: SetupOptions): Promise<{
   return {
     app,
     dataSource,
+    userDataSource,
     catalogDataSource,
     orderDataSource,
     paymentDataSource,

@@ -21,6 +21,7 @@ import { cleanDatabase } from '../helpers/db.helper';
 describe('Rate Limiting (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let userDataSource: DataSource;
   let eventsSpy: MockAuthEventsPublisher;
 
   beforeAll(async () => {
@@ -35,7 +36,7 @@ describe('Rate Limiting (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(dataSource);
+    await cleanDatabase(dataSource, userDataSource);
     eventsSpy.clear();
   });
 

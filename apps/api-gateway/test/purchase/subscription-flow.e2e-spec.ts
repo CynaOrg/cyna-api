@@ -20,6 +20,7 @@ import {
 describe('Subscription Flow (e2e)', () => {
   let app: INestApplication;
   let dataSource: DataSource;
+  let userDataSource: DataSource;
   let catalogDataSource: DataSource;
   let paymentDataSource: DataSource;
   let eventsSpy: MockAuthEventsPublisher;
@@ -70,7 +71,7 @@ describe('Subscription Flow (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await cleanDatabase(dataSource);
+    await cleanDatabase(dataSource, userDataSource);
     await cleanDatabase(paymentDataSource);
     eventsSpy.clear();
   });

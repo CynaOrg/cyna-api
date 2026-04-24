@@ -358,7 +358,13 @@ export class OrderService {
     };
   }
 
-  async adminUpdateOrderStatus(orderId: string, status: string, notes?: string): Promise<Order> {
+  async adminUpdateOrderStatus(
+    orderId: string,
+    status: string,
+    notes?: string,
+    trackingNumber?: string,
+    trackingUrl?: string,
+  ): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
       relations: ['items'],
@@ -374,8 +380,16 @@ export class OrderService {
 
     order.status = status as OrderStatus;
 
-    if (notes) {
+    if (notes !== undefined) {
       order.notes = notes;
+    }
+
+    if (trackingNumber !== undefined) {
+      order.trackingNumber = trackingNumber;
+    }
+
+    if (trackingUrl !== undefined) {
+      order.trackingUrl = trackingUrl;
     }
 
     // Set timestamps based on status transitions

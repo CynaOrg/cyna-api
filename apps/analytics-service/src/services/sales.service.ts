@@ -109,8 +109,8 @@ interface ProductRecord {
   categoryName?: string;
   category?: { nameFr?: string };
   productType?: string;
-  stockQuantity?: number;
-  stock?: number;
+  stockQuantity?: number | null;
+  stock?: number | null;
   stockAlertThreshold?: number;
 }
 
@@ -689,15 +689,16 @@ export class SalesService {
       this.logger.warn(`Failed to fetch products for stock status: ${productsResult.reason}`);
     }
 
-    // Calculate stock summary
-    const totalProducts = products.length;
+    // Stock counts only apply to physical products — SaaS/licenses have stockQuantity=null
+    const physicalProducts = products.filter((p) => p.productType === 'physical');
+    const totalProducts = physicalProducts.length;
     const lowStockIds = new Set(alerts.map((a: StockAlertRecord) => a.productId || a.id));
 
     let inStock = 0;
     let lowStock = 0;
     let outOfStock = 0;
 
-    for (const product of products) {
+    for (const product of physicalProducts) {
       const qty = product.stockQuantity ?? product.stock ?? 0;
       if (qty <= 0) {
         outOfStock++;

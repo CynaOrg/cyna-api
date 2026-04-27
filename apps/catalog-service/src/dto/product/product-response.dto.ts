@@ -48,10 +48,13 @@ export class ProductListResponseDto {
   priceMonthly?: number;
   priceYearly?: number;
   priceUnit?: number;
+  stockQuantity?: number;
+  stockAlertThreshold?: number;
   isAvailable: boolean;
   isFeatured: boolean;
   displayOrder: number;
   primaryImageUrl?: string;
+  categoryId?: string;
   categorySlug?: string;
   categoryName?: string;
 
@@ -67,10 +70,13 @@ export class ProductListResponseDto {
     dto.priceMonthly = product.priceMonthly ? Number(product.priceMonthly) : undefined;
     dto.priceYearly = product.priceYearly ? Number(product.priceYearly) : undefined;
     dto.priceUnit = product.priceUnit ? Number(product.priceUnit) : undefined;
+    dto.stockQuantity = product.stockQuantity;
+    dto.stockAlertThreshold = product.stockAlertThreshold;
     dto.isAvailable = product.isAvailable;
     dto.isFeatured = product.isFeatured;
     dto.displayOrder = product.displayOrder;
     dto.primaryImageUrl = product.images?.find((img) => img.isPrimary)?.imageUrl;
+    dto.categoryId = product.categoryId;
     dto.categorySlug = product.category?.slug;
     dto.categoryName = product.category
       ? lang === Language.EN

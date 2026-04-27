@@ -118,7 +118,10 @@ interface StockAlertRecord {
   id?: string;
   productId?: string;
   name?: string;
+  nameFr?: string;
+  nameEn?: string;
   productName?: string;
+  sku?: string;
   stockQuantity?: number;
   currentStock?: number;
   stockAlertThreshold?: number;
@@ -231,7 +234,7 @@ export class SalesService {
       this.fetchOrders(),
       this.sendMessage(this.catalogClient, MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL, {
         page: 1,
-        limit: 1000,
+        limit: 100,
       }),
     ]);
 
@@ -323,7 +326,7 @@ export class SalesService {
       this.fetchOrders(),
       this.sendMessage(this.catalogClient, MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL, {
         page: 1,
-        limit: 1000,
+        limit: 100,
       }),
     ]);
 
@@ -460,7 +463,7 @@ export class SalesService {
       this.fetchOrders(),
       this.sendMessage(this.catalogClient, MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL, {
         page: 1,
-        limit: 1000,
+        limit: 100,
       }),
     ]);
 
@@ -663,7 +666,7 @@ export class SalesService {
       this.sendMessage(this.catalogClient, MESSAGE_PATTERNS.CATALOG.STOCK_GET_ALERTS, {}),
       this.sendMessage(this.catalogClient, MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL, {
         page: 1,
-        limit: 1000,
+        limit: 100,
       }),
     ]);
 
@@ -714,7 +717,7 @@ export class SalesService {
       },
       products: alerts.map((a: StockAlertRecord) => ({
         productId: a.productId || a.id || '',
-        name: a.name || a.productName || 'Unknown',
+        name: a.nameFr || a.nameEn || a.name || a.productName || 'Unknown',
         currentStock: a.stockQuantity ?? a.currentStock ?? 0,
         threshold: a.stockAlertThreshold ?? a.threshold ?? 0,
         status: (a.stockQuantity ?? a.currentStock ?? 0) <= 0 ? 'out_of_stock' : 'low_stock',

@@ -27,6 +27,8 @@ import {
   RequestUploadUrlDto,
   ConfirmUploadDto,
   BulkDeleteProductsDto,
+  AdminProductResponse,
+  PaginatedAdminProductResponse,
 } from './dto';
 
 @ApiTags('Admin - Catalog')
@@ -92,9 +94,14 @@ export class CatalogAdminController {
 
   @Get('products')
   @ApiOperation({ summary: 'Get all products (admin)' })
-  @ApiResponse({ status: 200, description: 'Paginated list of products' })
-  async findAllProducts(@Query() query: ProductQueryDto) {
-    return this.catalogService.findAllProducts(query);
+  @ApiResponse({
+    status: 200,
+    description: 'Paginated list of products with both FR and EN fields and full images[]',
+  })
+  async findAllProducts(
+    @Query() query: ProductQueryDto,
+  ): Promise<PaginatedAdminProductResponse> {
+    return this.catalogService.findAllProductsAdmin(query);
   }
 
   @Post('products')
@@ -123,10 +130,15 @@ export class CatalogAdminController {
   @Get('products/:productId')
   @ApiOperation({ summary: 'Get product by ID (admin)' })
   @ApiParam({ name: 'productId', description: 'Product ID' })
-  @ApiResponse({ status: 200, description: 'Product details' })
+  @ApiResponse({
+    status: 200,
+    description: 'Product details with both FR and EN fields and full images[]',
+  })
   @ApiResponse({ status: 404, description: 'Product not found' })
-  async findProductById(@Param('productId', ParseUUIDPipe) productId: string) {
-    return this.catalogService.findProductById(productId);
+  async findProductById(
+    @Param('productId', ParseUUIDPipe) productId: string,
+  ): Promise<AdminProductResponse> {
+    return this.catalogService.findProductByIdAdmin(productId);
   }
 
   @Patch('products/:productId')

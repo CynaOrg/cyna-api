@@ -13,6 +13,8 @@ import {
   ProductListResponseDto,
   ProductDetailResponseDto,
   PaginatedProductResponseDto,
+  AdminProductResponseDto,
+  PaginatedAdminProductResponseDto,
   UpdateStockDto,
   ReserveStockDto,
   RequestUploadUrlDto,
@@ -111,6 +113,14 @@ export class CatalogController {
     return PaginatedProductResponseDto.create(products, meta.total, meta.page, meta.limit, lang);
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL_ADMIN)
+  async findAllProductsAdmin(
+    @Payload() data: ProductQueryDto,
+  ): Promise<PaginatedAdminProductResponseDto> {
+    const { data: products, meta } = await this.productService.findAllAdmin(data);
+    return PaginatedAdminProductResponseDto.create(products, meta.total, meta.page, meta.limit);
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_SLUG)
   async findProductBySlug(@Payload() data: { slug: string; lang?: Language }) {
     const product = await this.productService.findBySlug(data.slug);
@@ -120,6 +130,14 @@ export class CatalogController {
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID)
   async findProductById(@Payload() data: { id: string }) {
     return this.productService.findById(data.id);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID_ADMIN)
+  async findProductByIdAdmin(
+    @Payload() data: { id: string },
+  ): Promise<AdminProductResponseDto> {
+    const product = await this.productService.findByIdAdmin(data.id);
+    return AdminProductResponseDto.fromEntity(product);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_SEARCH)

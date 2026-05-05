@@ -10,6 +10,8 @@ export enum DashboardPeriod {
 
 export class DashboardQueryDto {
   @IsOptional()
-  @IsEnum(DashboardPeriod)
+  @IsEnum(DashboardPeriod, {
+    message: `period must be one of: ${Object.values(DashboardPeriod).join(', ')}`,
+  })
   period?: DashboardPeriod = DashboardPeriod.MONTH;
 }

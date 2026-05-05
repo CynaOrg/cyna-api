@@ -59,11 +59,18 @@ export class CatalogService {
 
   // ==================== Products ====================
 
-  async createProduct(dto: CreateProductDto) {
+  /**
+   * PROD-15: returns the admin DTO shape so the back-office state can
+   * be refreshed from the response without an extra GET.
+   */
+  async createProduct(dto: CreateProductDto): Promise<AdminProductResponse> {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_CREATE, dto);
   }
 
-  async updateProduct(id: string, dto: UpdateProductDto) {
+  /**
+   * PROD-15: returns the admin DTO shape (see createProduct above).
+   */
+  async updateProduct(id: string, dto: UpdateProductDto): Promise<AdminProductResponse> {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_UPDATE, { id, dto });
   }
 

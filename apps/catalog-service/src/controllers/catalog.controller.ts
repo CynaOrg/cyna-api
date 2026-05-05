@@ -82,15 +82,21 @@ export class CatalogController {
   // ==================== Products ====================
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_CREATE)
-  async createProduct(@Payload() data: CreateProductDto) {
+  async createProduct(@Payload() data: CreateProductDto): Promise<AdminProductResponseDto> {
+    // PROD-15: return the admin DTO (same shape as GET admin) so the
+    // back-office can refresh state from the response without a follow-up
+    // GET. Public catalog endpoints continue to use ProductDetailResponseDto.
     const product = await this.productService.create(data);
-    return ProductDetailResponseDto.fromEntity(product);
+    return AdminProductResponseDto.fromEntity(product);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_UPDATE)
-  async updateProduct(@Payload() data: { id: string; dto: UpdateProductDto }) {
+  async updateProduct(
+    @Payload() data: { id: string; dto: UpdateProductDto },
+  ): Promise<AdminProductResponseDto> {
+    // PROD-15: see createProduct above.
     const product = await this.productService.update(data.id, data.dto);
-    return ProductDetailResponseDto.fromEntity(product);
+    return AdminProductResponseDto.fromEntity(product);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_DELETE)

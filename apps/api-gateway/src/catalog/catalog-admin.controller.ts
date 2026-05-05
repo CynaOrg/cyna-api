@@ -106,10 +106,13 @@ export class CatalogAdminController {
 
   @Post('products')
   @ApiOperation({ summary: 'Create a new product' })
-  @ApiResponse({ status: 201, description: 'Product created' })
+  @ApiResponse({
+    status: 201,
+    description: 'Product created — same admin DTO shape as GET admin (PROD-15)',
+  })
   @ApiResponse({ status: 404, description: 'Category not found' })
   @ApiResponse({ status: 409, description: 'Product slug or SKU already exists' })
-  async createProduct(@Body() dto: CreateProductDto) {
+  async createProduct(@Body() dto: CreateProductDto): Promise<AdminProductResponse> {
     return this.catalogService.createProduct(dto);
   }
 
@@ -144,13 +147,16 @@ export class CatalogAdminController {
   @Patch('products/:productId')
   @ApiOperation({ summary: 'Update a product' })
   @ApiParam({ name: 'productId', description: 'Product ID' })
-  @ApiResponse({ status: 200, description: 'Product updated' })
+  @ApiResponse({
+    status: 200,
+    description: 'Product updated — same admin DTO shape as GET admin (PROD-15)',
+  })
   @ApiResponse({ status: 404, description: 'Product not found' })
   @ApiResponse({ status: 409, description: 'Product slug or SKU already exists' })
   async updateProduct(
     @Param('productId', ParseUUIDPipe) productId: string,
     @Body() dto: UpdateProductDto,
-  ) {
+  ): Promise<AdminProductResponse> {
     return this.catalogService.updateProduct(productId, dto);
   }
 

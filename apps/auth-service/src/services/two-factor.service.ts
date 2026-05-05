@@ -46,6 +46,7 @@ export class TwoFactorService {
         adminId,
         usedAt: IsNull(),
       },
+      order: { createdAt: 'DESC' },
     });
 
     if (!twoFactorCode) {

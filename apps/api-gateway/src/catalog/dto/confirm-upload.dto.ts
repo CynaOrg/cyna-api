@@ -8,8 +8,7 @@ import {
   IsIn,
 } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-
-export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+import { ALLOWED_IMAGE_MIME_TYPES } from '@cyna-api/common';
 
 export class ConfirmUploadDto {
   @ApiProperty({ description: 'Storage key returned from upload-url endpoint' })

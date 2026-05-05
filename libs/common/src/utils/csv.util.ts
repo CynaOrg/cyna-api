@@ -10,7 +10,7 @@
  *    or `\r` is wrapped in double quotes with internal quotes doubled.
  */
 
-const FORMULA_TRIGGER_CHARS = ['=', '+', '-', '@', '\t', '\r'];
+const FORMULA_TRIGGER_CHARS = ['=', '+', '-', '@', '\t', '\r', '\v'];
 
 export function escapeCsvCell(value: string | number | null | undefined): string {
   if (value === null || value === undefined) {

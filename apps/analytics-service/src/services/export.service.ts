@@ -1,12 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, TimeoutError } from 'rxjs';
-import {
-  CynaLoggerService,
-  SERVICE_NAMES,
-  MESSAGE_PATTERNS,
-  buildCsvRow,
-} from '@cyna-api/common';
+import { CynaLoggerService, SERVICE_NAMES, MESSAGE_PATTERNS, buildCsvRow } from '@cyna-api/common';
 
 export interface ExportResult {
   data: string;
@@ -205,9 +200,9 @@ export class ExportService {
         const orderDate = new Date(o.createdAt);
         return orderDate >= from && orderDate <= to;
       });
-    } catch {
-      this.logger.warn('Failed to fetch orders for export');
-      return [];
+    } catch (err) {
+      this.logger.error(`Failed to fetch orders for export: ${(err as Error).message ?? err}`);
+      throw err;
     }
   }
 
@@ -231,9 +226,11 @@ export class ExportService {
         const subDate = new Date(s.createdAt);
         return subDate >= from && subDate <= to;
       });
-    } catch {
-      this.logger.warn('Failed to fetch subscriptions for export');
-      return [];
+    } catch (err) {
+      this.logger.error(
+        `Failed to fetch subscriptions for export: ${(err as Error).message ?? err}`,
+      );
+      throw err;
     }
   }
 

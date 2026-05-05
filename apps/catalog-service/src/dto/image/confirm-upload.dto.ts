@@ -8,8 +8,7 @@ import {
   IsNumber,
   IsIn,
 } from 'class-validator';
-
-export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
+import { ALLOWED_IMAGE_MIME_TYPES } from '@cyna-api/common';
 
 export class ConfirmUploadDto {
   @IsUUID()

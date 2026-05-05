@@ -141,6 +141,13 @@ export class PaymentService {
         page,
         limit,
       });
+      // `enrichSubscriptions` populates `productName` from the catalog (and
+      // persists it on the entity) so the admin UI can render a human-readable
+      // product name instead of the raw productId UUID — see audit SUB-3.
+      // TODO(SUB-3): also denormalize `customerEmail` here. Subscriptions only
+      // hold `userId` + `stripeCustomerId`; the customer's email lives in
+      // user-service. The current scope keeps the cross-service lookup out
+      // (would require a batched USER.GET_BY_IDS or a snapshot column).
       const enriched = await this.enrichSubscriptions(items);
       const totalPages = Math.max(Math.ceil(total / limit), 1);
       return { data: enriched, total, page, limit, totalPages };

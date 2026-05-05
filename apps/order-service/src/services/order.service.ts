@@ -29,6 +29,39 @@ interface CatalogProduct {
   images?: Array<{ imageUrl?: string }>;
 }
 
+/**
+ * Stable shape returned by `adminGetOrders`. Explicitly exposes
+ * `customerEmail` (populated for both guest and authenticated orders since the
+ * `RenameGuestEmailToCustomerEmail` migration) so the back-office can render
+ * a human-readable identifier instead of the raw user UUID — see audit ORD-1.
+ */
+export interface AdminOrderListItem {
+  id: string;
+  orderNumber: string;
+  userId: string | null;
+  customerEmail: string;
+  notificationEmail: string | null;
+  status: OrderStatus;
+  orderType: OrderType;
+  subtotal: number;
+  taxAmount: number;
+  shippingAmount: number;
+  discountAmount: number;
+  total: number;
+  currency: string;
+  stripePaymentIntentId: string | null;
+  stripeInvoiceUrl: string | null;
+  paidAt: Date | null;
+  shippedAt: Date | null;
+  deliveredAt: Date | null;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  notes: string | null;
+  items: OrderItem[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 @Injectable()
 export class OrderService {
   private readonly logger = new Logger(OrderService.name);
@@ -372,7 +405,13 @@ export class OrderService {
     userId?: string;
     page?: number;
     limit?: number;
-  }) {
+  }): Promise<{
+    data: AdminOrderListItem[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     const { search, status, dateFrom, dateTo, orderType, userId, page = 1, limit = 20 } = params;
 
     const qb = this.orderRepository
@@ -416,12 +455,46 @@ export class OrderService {
       .take(limit)
       .getMany();
 
+    // ORD-1: explicitly surface `customerEmail` (populated for both guest and
+    // logged-in orders since the RenameGuestEmailToCustomerEmail migration) so
+    // the admin UI can show a meaningful identifier instead of the raw user
+    // UUID. We map to a stable, typed shape rather than leaking the entity
+    // directly so future column additions stay opt-in.
     return {
-      data: orders,
+      data: orders.map((o) => this.toAdminListItem(o)),
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  private toAdminListItem(order: Order): AdminOrderListItem {
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      userId: order.userId,
+      customerEmail: order.customerEmail,
+      notificationEmail: order.notificationEmail,
+      status: order.status,
+      orderType: order.orderType,
+      subtotal: order.subtotal,
+      taxAmount: order.taxAmount,
+      shippingAmount: order.shippingAmount,
+      discountAmount: order.discountAmount,
+      total: order.total,
+      currency: order.currency,
+      stripePaymentIntentId: order.stripePaymentIntentId,
+      stripeInvoiceUrl: order.stripeInvoiceUrl,
+      paidAt: order.paidAt,
+      shippedAt: order.shippedAt,
+      deliveredAt: order.deliveredAt,
+      trackingNumber: order.trackingNumber,
+      trackingUrl: order.trackingUrl,
+      notes: order.notes,
+      items: order.items,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
     };
   }
 

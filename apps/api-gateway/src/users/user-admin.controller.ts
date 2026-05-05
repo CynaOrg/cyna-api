@@ -25,8 +25,10 @@ import {
 } from '@nestjs/swagger';
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import { SuperAdminGuard } from '../auth/guards';
-import { IsOptional, IsBoolean, IsString, IsInt, Min } from 'class-validator';
+import { IsOptional, IsBoolean, IsString, IsInt, IsEnum, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+
+type AdminUserStatusFilter = 'active' | 'inactive';
 
 class AdminUserQueryDto {
   @ApiPropertyOptional()
@@ -47,6 +49,11 @@ class AdminUserQueryDto {
   @Min(1)
   @Type(() => Number)
   limit?: number = 20;
+
+  @ApiPropertyOptional({ enum: ['active', 'inactive'] })
+  @IsOptional()
+  @IsEnum(['active', 'inactive'])
+  status?: AdminUserStatusFilter;
 }
 
 class UpdateUserStatusDto {
@@ -93,8 +100,13 @@ export class UserAdminController {
   @Get()
   @ApiOperation({ summary: 'List all users (super_admin only)' })
   @ApiResponse({ status: 200, description: 'Paginated list of users' })
-  async findAll(@Query() query: AdminUserQueryDto) {
-    return this.sendMessage(MESSAGE_PATTERNS.USER.ADMIN_LIST, query);
+  async findAll(@Query() query: AdminUserQueryDto): Promise<unknown> {
+    const { status, ...rest } = query;
+    const forwarded: Record<string, unknown> = { ...rest };
+    if (status !== undefined) {
+      forwarded.isActive = status === 'active';
+    }
+    return this.sendMessage(MESSAGE_PATTERNS.USER.ADMIN_LIST, forwarded);
   }
 
   @Get(':userId')

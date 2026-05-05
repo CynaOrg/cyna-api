@@ -138,7 +138,7 @@ function rpcToHttpError(err: unknown): Observable<never> {
 
 @ApiTags('Admin - Subscriptions')
 @Controller('admin/payments/subscriptions')
-@UseGuards(JwtAdminAuthGuard)
+@UseGuards(JwtAdminAuthGuard, SuperAdminGuard)
 @ApiBearerAuth('JWT-auth')
 export class SubscriptionAdminController {
   constructor(

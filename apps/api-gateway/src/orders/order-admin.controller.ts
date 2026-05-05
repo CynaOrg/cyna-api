@@ -44,7 +44,7 @@ function rpcToHttpError(err: unknown): Observable<never> {
 
 @ApiTags('Admin - Orders')
 @Controller('admin/orders')
-@UseGuards(JwtAdminAuthGuard)
+@UseGuards(JwtAdminAuthGuard, SuperAdminGuard)
 @ApiBearerAuth('JWT-auth')
 export class OrderAdminController {
   constructor(@Inject(SERVICE_NAMES.ORDER) private readonly orderClient: ClientProxy) {}

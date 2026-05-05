@@ -31,7 +31,7 @@ import {
 
 @ApiTags('Admin - Catalog')
 @Controller('admin/catalog')
-@UseGuards(JwtAdminAuthGuard)
+@UseGuards(JwtAdminAuthGuard, SuperAdminGuard)
 @ApiBearerAuth('JWT-auth')
 export class CatalogAdminController {
   constructor(private readonly catalogService: CatalogService) {}

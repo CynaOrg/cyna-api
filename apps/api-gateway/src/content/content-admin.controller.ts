@@ -91,6 +91,13 @@ export class ContentAdminController {
 
   // ==================== Hero & Top Products ====================
 
+  @Get('hero-text')
+  @ApiOperation({ summary: 'Get current hero section text' })
+  @ApiResponse({ status: 200, description: 'Hero text returned' })
+  async getHeroText() {
+    return this.contentService.adminGetHeroText();
+  }
+
   @Patch('hero-text')
   @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Update hero section text' })
@@ -99,12 +106,26 @@ export class ContentAdminController {
     return this.contentService.adminUpdateHeroText(dto);
   }
 
+  @Get('top-services')
+  @ApiOperation({ summary: 'Get top services configuration (SaaS productIds)' })
+  @ApiResponse({ status: 200, description: 'Top services configuration returned' })
+  async getTopServices() {
+    return this.contentService.adminGetTopServices();
+  }
+
   @Patch('top-services')
   @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Configure top services (SaaS products displayed on homepage)' })
   @ApiResponse({ status: 200, description: 'Top services updated' })
   async updateTopServices(@Body() dto: UpdateTopConfigDto) {
     return this.contentService.adminUpdateTopServices(dto.productIds);
+  }
+
+  @Get('top-products')
+  @ApiOperation({ summary: 'Get top products configuration (physical productIds)' })
+  @ApiResponse({ status: 200, description: 'Top products configuration returned' })
+  async getTopProducts() {
+    return this.contentService.adminGetTopProducts();
   }
 
   @Patch('top-products')

@@ -71,12 +71,24 @@ export class ContentService {
 
   // ==================== Admin - Hero & Top Products ====================
 
+  async adminGetHeroText() {
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_HERO_TEXT, {});
+  }
+
   async adminUpdateHeroText(dto: UpdateHeroTextDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_HERO_TEXT, dto);
   }
 
+  async adminGetTopServices() {
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_SERVICES, {});
+  }
+
   async adminUpdateTopServices(productIds: string[]) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_SERVICES, { productIds });
+  }
+
+  async adminGetTopProducts() {
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_PRODUCTS, {});
   }
 
   async adminUpdateTopProducts(productIds: string[]) {

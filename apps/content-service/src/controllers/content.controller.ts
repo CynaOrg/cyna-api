@@ -122,6 +122,11 @@ export class ContentController {
 
   // ==================== Admin - Hero Text ====================
 
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_HERO_TEXT)
+  async adminGetHeroText() {
+    return this.heroTextService.get();
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_HERO_TEXT)
   async adminUpdateHeroText(@Payload() data: UpdateHeroTextDto) {
     return this.heroTextService.update(data);
@@ -129,9 +134,19 @@ export class ContentController {
 
   // ==================== Admin - Top Services/Products ====================
 
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_SERVICES)
+  async adminGetTopServices() {
+    return this.topProductsService.getTopServices();
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_SERVICES)
   async adminUpdateTopServices(@Payload() data: UpdateTopProductsDto) {
     return this.topProductsService.updateTopServices(data);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_PRODUCTS)
+  async adminGetTopProducts() {
+    return this.topProductsService.getTopProducts();
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_PRODUCTS)

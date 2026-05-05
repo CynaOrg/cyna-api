@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsEnum } from 'class-validator';
+import { IsOptional, IsEnum, IsDateString } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AnalyticsQueryDto {
@@ -8,7 +8,9 @@ export class AnalyticsQueryDto {
     default: 'month',
   })
   @IsOptional()
-  @IsEnum(['today', 'week', 'month', 'quarter', 'year'])
+  @IsEnum(['today', 'week', 'month', 'quarter', 'year'], {
+    message: 'period must be one of: today, week, month, quarter, year',
+  })
   period?: string;
 
   @ApiPropertyOptional({
@@ -17,16 +19,16 @@ export class AnalyticsQueryDto {
     default: 'day',
   })
   @IsOptional()
-  @IsEnum(['day', 'week', 'month'])
+  @IsEnum(['day', 'week', 'month'], { message: 'groupBy must be one of: day, week, month' })
   groupBy?: string;
 
   @ApiPropertyOptional({ description: 'Start date (ISO 8601)', example: '2024-01-01' })
   @IsOptional()
-  @IsString()
+  @IsDateString()
   dateFrom?: string;
 
   @ApiPropertyOptional({ description: 'End date (ISO 8601)', example: '2024-12-31' })
   @IsOptional()
-  @IsString()
+  @IsDateString()
   dateTo?: string;
 }

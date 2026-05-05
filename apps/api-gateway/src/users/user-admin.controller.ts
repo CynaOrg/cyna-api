@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Param,
+  ParseUUIDPipe,
   Query,
   Body,
   Inject,
@@ -101,7 +102,7 @@ export class UserAdminController {
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User details' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async findOne(@Param('userId') userId: string) {
+  async findOne(@Param('userId', ParseUUIDPipe) userId: string) {
     return this.sendMessage(MESSAGE_PATTERNS.USER.ADMIN_GET, { userId });
   }
 
@@ -110,7 +111,10 @@ export class UserAdminController {
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User status updated' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async updateStatus(@Param('userId') userId: string, @Body() dto: UpdateUserStatusDto) {
+  async updateStatus(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() dto: UpdateUserStatusDto,
+  ) {
     return this.sendMessage(MESSAGE_PATTERNS.USER.ADMIN_UPDATE_STATUS, {
       userId,
       isActive: dto.isActive,
@@ -122,7 +126,7 @@ export class UserAdminController {
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Paginated list of orders' })
   async getUserOrders(
-    @Param('userId') userId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @Query() query: AdminUserQueryDto,
   ): Promise<unknown> {
     return firstValueFrom(

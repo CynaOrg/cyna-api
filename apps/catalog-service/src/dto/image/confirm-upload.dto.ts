@@ -6,7 +6,10 @@ import {
   IsOptional,
   IsBoolean,
   IsNumber,
+  IsIn,
 } from 'class-validator';
+
+export const ALLOWED_IMAGE_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const;
 
 export class ConfirmUploadDto {
   @IsUUID()
@@ -37,5 +40,6 @@ export class ConfirmUploadDto {
 
   @IsOptional()
   @IsString()
+  @IsIn(ALLOWED_IMAGE_MIME_TYPES)
   mimeType?: string;
 }

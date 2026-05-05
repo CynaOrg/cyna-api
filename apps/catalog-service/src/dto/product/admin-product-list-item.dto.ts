@@ -42,9 +42,9 @@ export class AdminProductListItemDto {
     dto.shortDescriptionFr = product.shortDescriptionFr;
     dto.shortDescriptionEn = product.shortDescriptionEn;
     dto.productType = product.productType;
-    dto.priceMonthly = product.priceMonthly ? Number(product.priceMonthly) : undefined;
-    dto.priceYearly = product.priceYearly ? Number(product.priceYearly) : undefined;
-    dto.priceUnit = product.priceUnit ? Number(product.priceUnit) : undefined;
+    dto.priceMonthly = product.priceMonthly != null ? Number(product.priceMonthly) : undefined;
+    dto.priceYearly = product.priceYearly != null ? Number(product.priceYearly) : undefined;
+    dto.priceUnit = product.priceUnit != null ? Number(product.priceUnit) : undefined;
     dto.stockQuantity = product.stockQuantity;
     dto.stockAlertThreshold = product.stockAlertThreshold;
     dto.isAvailable = product.isAvailable;

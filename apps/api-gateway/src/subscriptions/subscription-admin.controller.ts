@@ -216,8 +216,7 @@ export class SubscriptionAdminController {
       this.paymentClient
         .send(MESSAGE_PATTERNS.PAYMENT.CANCEL_SUBSCRIPTION, {
           subscriptionId: id,
-          // userId omitted intentionally: admin (super_admin) bypasses
-          // the ownership check in subscription.service.cancel().
+          actor: 'admin',
           cancelAtPeriodEnd: false,
         })
         .pipe(timeout(10000), retry(1), catchError(rpcToHttpError)),

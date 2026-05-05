@@ -1,6 +1,12 @@
-import { IsString, IsOptional, IsBoolean, IsInt, IsUrl, Min } from 'class-validator';
+import { IsString, IsOptional, IsBoolean, IsInt, IsUrl, Matches, Min } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
+
+/**
+ * Allow either an absolute http(s) URL or a root-relative path (e.g. "/products/123").
+ * Explicitly rejects unsafe schemes (javascript:, data:, vbscript:, file:, etc.).
+ */
+const LINK_URL_PATTERN = /^(?:https?:\/\/[^\s]+|\/[^\s]*)$/;
 
 export class CreateSlideDto {
   @ApiProperty({ description: 'Title in French' })
@@ -26,9 +32,14 @@ export class CreateSlideDto {
   @IsUrl()
   imageUrl?: string;
 
-  @ApiPropertyOptional({ description: 'Link URL' })
+  @ApiPropertyOptional({
+    description: 'Link URL: absolute http(s) URL or root-relative path (e.g. /products/123)',
+  })
   @IsOptional()
-  @IsUrl()
+  @IsString()
+  @Matches(LINK_URL_PATTERN, {
+    message: 'linkUrl must be an absolute http(s) URL or a root-relative path (e.g. /products/123)',
+  })
   linkUrl?: string;
 
   @ApiPropertyOptional({ description: 'Link text in French' })

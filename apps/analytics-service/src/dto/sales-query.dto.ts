@@ -1,6 +1,7 @@
 import { IsOptional, IsEnum } from 'class-validator';
 
 export enum SalesPeriod {
+  TODAY = 'today',
   WEEK = 'week',
   MONTH = 'month',
   QUARTER = 'quarter',

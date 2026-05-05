@@ -410,8 +410,14 @@ export class ProductService {
     };
 
     const slug = product.slug;
-    await this.productRepository.remove(product);
-    this.logger.log(`Product deleted: ${id}`);
+    // Soft delete: TypeORM sets deleted_at via the @DeleteDateColumn on
+    // BaseEntity. Subsequent find()/findOne()/QueryBuilder calls exclude
+    // soft-deleted rows by default, so the product disappears from the
+    // catalog while order history and license keys keep their FK target.
+    // TODO(PROD-10): expose an admin "trash" endpoint with `withDeleted: true`
+    // and a restore action when product recovery is needed.
+    await this.productRepository.softDelete(id);
+    this.logger.log(`Product soft-deleted: ${id}`);
 
     // Invalidate caches
     await this.invalidateProductCache(id, slug);
@@ -440,7 +446,8 @@ export class ProductService {
           productName: product.nameEn || product.nameFr,
         };
 
-        await this.productRepository.remove(product);
+        // Soft delete (see delete() for rationale).
+        await this.productRepository.softDelete(id);
         deletedCount += 1;
 
         await this.eventsPublisher.emitProductDeleted({
@@ -460,7 +467,9 @@ export class ProductService {
       await this.invalidateProductCache();
     }
 
-    this.logger.log(`Bulk delete completed: ${deletedCount} deleted, ${failedIds.length} failed`);
+    this.logger.log(
+      `Bulk soft-delete completed: ${deletedCount} deleted, ${failedIds.length} failed`,
+    );
 
     return { deletedCount, failedIds };
   }

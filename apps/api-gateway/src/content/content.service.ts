@@ -71,27 +71,27 @@ export class ContentService {
 
   // ==================== Admin - Hero & Top Products ====================
 
-  async adminGetHeroText() {
+  async adminGetHeroText(): Promise<unknown> {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_HERO_TEXT, {});
   }
 
-  async adminUpdateHeroText(dto: UpdateHeroTextDto) {
+  async adminUpdateHeroText(dto: UpdateHeroTextDto): Promise<unknown> {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_HERO_TEXT, dto);
   }
 
-  async adminGetTopServices() {
+  async adminGetTopServices(): Promise<unknown> {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_SERVICES, {});
   }
 
-  async adminUpdateTopServices(productIds: string[]) {
+  async adminUpdateTopServices(productIds: string[]): Promise<unknown> {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_SERVICES, { productIds });
   }
 
-  async adminGetTopProducts() {
+  async adminGetTopProducts(): Promise<unknown> {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_PRODUCTS, {});
   }
 
-  async adminUpdateTopProducts(productIds: string[]) {
+  async adminUpdateTopProducts(productIds: string[]): Promise<unknown> {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_PRODUCTS, { productIds });
   }
 

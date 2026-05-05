@@ -20,6 +20,7 @@ import {
   RequestContentUploadUrlDto,
 } from '../dto';
 import { ContentEventsPublisher } from '../events';
+import { HeroText, TopProductConfig } from '../entities';
 
 @Controller()
 export class ContentController {
@@ -123,7 +124,7 @@ export class ContentController {
   // ==================== Admin - Hero Text ====================
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_HERO_TEXT)
-  async adminGetHeroText() {
+  async adminGetHeroText(): Promise<HeroText> {
     return this.heroTextService.get();
   }
 
@@ -135,7 +136,7 @@ export class ContentController {
   // ==================== Admin - Top Services/Products ====================
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_SERVICES)
-  async adminGetTopServices() {
+  async adminGetTopServices(): Promise<TopProductConfig> {
     return this.topProductsService.getTopServices();
   }
 
@@ -145,7 +146,7 @@ export class ContentController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_PRODUCTS)
-  async adminGetTopProducts() {
+  async adminGetTopProducts(): Promise<TopProductConfig> {
     return this.topProductsService.getTopProducts();
   }
 

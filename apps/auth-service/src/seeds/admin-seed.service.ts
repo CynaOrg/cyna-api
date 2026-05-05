@@ -33,10 +33,10 @@ export class AdminSeedService implements OnModuleInit {
     const lastName = process.env.ADMIN_SEED_LASTNAME ?? '';
 
     if (!email || !password) {
-      this.logger.fatal(
-        'ADMIN_SEED_ENABLED is true but ADMIN_SEED_EMAIL and/or ADMIN_SEED_PASSWORD are not set. Refusing to seed.',
-      );
-      return;
+      const message =
+        'ADMIN_SEED_ENABLED is true but ADMIN_SEED_EMAIL and/or ADMIN_SEED_PASSWORD are not set. Refusing to seed.';
+      this.logger.fatal(message);
+      throw new Error(message);
     }
 
     const existingAdmin = await this.adminRepository.findOne({

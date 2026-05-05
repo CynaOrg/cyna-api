@@ -78,7 +78,6 @@ export class OrderAdminController {
   }
 
   @Patch(':orderId/status')
-  @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Update order status (super admin only)' })
   @ApiParam({ name: 'orderId', description: 'Order ID' })
   @ApiResponse({ status: 200, description: 'Order status updated' })

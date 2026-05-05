@@ -176,7 +176,6 @@ export class SubscriptionAdminController {
   }
 
   @Patch(':id/status')
-  @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Update subscription status (super_admin only)' })
   @ApiParam({ name: 'id', description: 'Subscription ID' })
   @ApiResponse({ status: 200, description: 'Subscription status updated' })
@@ -194,7 +193,6 @@ export class SubscriptionAdminController {
   }
 
   @Patch(':subscriptionId/terms')
-  @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Update subscription terms (super_admin only)' })
   @ApiParam({ name: 'subscriptionId', description: 'Subscription ID' })
   @ApiResponse({ status: 200, description: 'Subscription terms updated' })

@@ -131,6 +131,53 @@ describe('TwoFactorService', () => {
 
       expect(result).toBe(false);
     });
+
+    it('should increment attempts on wrong code and persist', async () => {
+      const stored = {
+        id: 'code-123',
+        adminId: 'admin-123',
+        code: '999999',
+        expiresAt: new Date(Date.now() + 60000),
+        usedAt: null,
+        attempts: 0,
+      };
+      (mockRepository.findOne as jest.Mock).mockResolvedValueOnce(stored);
+
+      const result = await service.validateCode('admin-123', '111111');
+
+      expect(result).toBe(false);
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ attempts: 1, usedAt: null }),
+      );
+    });
+
+    it('should lock the code (set usedAt) after MAX_2FA_ATTEMPTS failures', async () => {
+      const stored = {
+        id: 'code-123',
+        adminId: 'admin-123',
+        code: '999999',
+        expiresAt: new Date(Date.now() + 60000),
+        usedAt: null,
+        attempts: 4,
+      };
+      (mockRepository.findOne as jest.Mock).mockResolvedValueOnce(stored);
+
+      const result = await service.validateCode('admin-123', '111111');
+
+      expect(result).toBe(false);
+      expect(mockRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ attempts: 5, usedAt: expect.any(Date) }),
+      );
+    });
+
+    it('should return false when correct code is submitted after lockout (no active code)', async () => {
+      // After lockout, usedAt is set so the unused-code lookup returns null
+      (mockRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+
+      const result = await service.validateCode('admin-123', '999999');
+
+      expect(result).toBe(false);
+    });
   });
 
   describe('invalidatePreviousCodes', () => {

@@ -302,6 +302,30 @@ export class AdminAuthService {
     return { success: true };
   }
 
+  async getMe(adminId: string): Promise<AdminResponseDto> {
+    const admin = await this.adminRepository.findOne({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Admin not found',
+        code: 'ADMIN_NOT_FOUND',
+      });
+    }
+
+    if (!admin.isActive) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Admin account is disabled',
+        code: 'ACCOUNT_DISABLED',
+      });
+    }
+
+    return AdminResponseDto.fromEntity(admin);
+  }
+
   async getAdmins() {
     const admins = await this.adminRepository.find({
       select: [

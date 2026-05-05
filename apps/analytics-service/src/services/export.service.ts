@@ -1,7 +1,12 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, TimeoutError } from 'rxjs';
-import { CynaLoggerService, SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
+import {
+  CynaLoggerService,
+  SERVICE_NAMES,
+  MESSAGE_PATTERNS,
+  buildCsvRow,
+} from '@cyna-api/common';
 
 export interface ExportResult {
   data: string;
@@ -51,16 +56,18 @@ export class ExportService {
     const paidOrders = orders.filter((o: OrderRecord) => paidStatuses.includes(o.status || ''));
 
     const headers = ['Date', 'Order ID', 'Customer', 'Amount', 'Currency', 'Status'];
-    const rows = paidOrders.map((order: OrderRecord) => [
-      new Date(order.createdAt).toISOString().slice(0, 10),
-      order.id || order.orderNumber || '',
-      order.customerEmail || order.userId || '',
-      (parseFloat(String(order.total)) || 0).toFixed(2),
-      'EUR',
-      order.status || '',
-    ]);
+    const rows: Array<Array<string | number | null | undefined>> = paidOrders.map(
+      (order: OrderRecord) => [
+        new Date(order.createdAt).toISOString().slice(0, 10),
+        order.id || order.orderNumber || '',
+        order.customerEmail || order.userId || '',
+        (parseFloat(String(order.total)) || 0).toFixed(2),
+        'EUR',
+        order.status || '',
+      ],
+    );
 
-    const csv = [headers.join(','), ...rows.map((r: string[]) => r.join(','))].join('\n');
+    const csv = [buildCsvRow(headers), ...rows.map((r) => buildCsvRow(r))].join('\n');
 
     const fromDate = dateFrom.slice(0, 7);
     const toDate = dateTo.slice(0, 7);
@@ -92,23 +99,25 @@ export class ExportService {
       'Payment Status',
     ];
 
-    const rows = orders.map((order: OrderRecord) => {
-      const items = order.items || [];
-      return [
-        new Date(order.createdAt).toISOString().slice(0, 10),
-        order.id || order.orderNumber || '',
-        order.customerEmail || order.userId || '',
-        items.length.toString(),
-        (parseFloat(String(order.subtotal)) || 0).toFixed(2),
-        (parseFloat(String(order.taxAmount)) || 0).toFixed(2),
-        (parseFloat(String(order.total)) || 0).toFixed(2),
-        'EUR',
-        order.status || '',
-        order.paymentStatus || '',
-      ];
-    });
+    const rows: Array<Array<string | number | null | undefined>> = orders.map(
+      (order: OrderRecord) => {
+        const items = order.items || [];
+        return [
+          new Date(order.createdAt).toISOString().slice(0, 10),
+          order.id || order.orderNumber || '',
+          order.customerEmail || order.userId || '',
+          items.length.toString(),
+          (parseFloat(String(order.subtotal)) || 0).toFixed(2),
+          (parseFloat(String(order.taxAmount)) || 0).toFixed(2),
+          (parseFloat(String(order.total)) || 0).toFixed(2),
+          'EUR',
+          order.status || '',
+          order.paymentStatus || '',
+        ];
+      },
+    );
 
-    const csv = [headers.join(','), ...rows.map((r: string[]) => r.join(','))].join('\n');
+    const csv = [buildCsvRow(headers), ...rows.map((r) => buildCsvRow(r))].join('\n');
 
     const fromDate = dateFrom.slice(0, 7);
     const toDate = dateTo.slice(0, 7);
@@ -142,18 +151,20 @@ export class ExportService {
       'Status',
     ];
 
-    const rows = subscriptions.map((sub: SubscriptionRecord) => [
-      new Date(sub.createdAt).toISOString().slice(0, 10),
-      sub.id || sub.subscriptionId || '',
-      sub.customerEmail || sub.userId || '',
-      sub.productName || sub.planName || '',
-      (parseFloat(String(sub.price)) || 0).toFixed(2),
-      'EUR',
-      sub.billingPeriod || 'monthly',
-      sub.status || '',
-    ]);
+    const rows: Array<Array<string | number | null | undefined>> = subscriptions.map(
+      (sub: SubscriptionRecord) => [
+        new Date(sub.createdAt).toISOString().slice(0, 10),
+        sub.id || sub.subscriptionId || '',
+        sub.customerEmail || sub.userId || '',
+        sub.productName || sub.planName || '',
+        (parseFloat(String(sub.price)) || 0).toFixed(2),
+        'EUR',
+        sub.billingPeriod || 'monthly',
+        sub.status || '',
+      ],
+    );
 
-    const csv = [headers.join(','), ...rows.map((r: string[]) => r.join(','))].join('\n');
+    const csv = [buildCsvRow(headers), ...rows.map((r) => buildCsvRow(r))].join('\n');
 
     const fromDate = dateFrom.slice(0, 7);
     const toDate = dateTo.slice(0, 7);

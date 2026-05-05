@@ -52,17 +52,17 @@ export class SubscriptionService {
     const limit = Math.min(Math.max(query.limit ?? 20, 1), 100);
     const offset = (page - 1) * limit;
 
-    const qb = this.subscriptionRepository
-      .createQueryBuilder('subscription')
-      .orderBy('subscription.createdAt', 'DESC')
-      .skip(offset)
-      .take(limit);
+    // BaseEntity carries a @DeleteDateColumn — repository.findAndCount honors it
+    // automatically (soft-deleted rows are excluded). Switching from QueryBuilder
+    // to findAndCount avoids leaking soft-deleted subscriptions in the admin list.
+    const where = query.status !== undefined ? { status: query.status } : {};
+    const [items, total] = await this.subscriptionRepository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: offset,
+      take: limit,
+    });
 
-    if (query.status !== undefined) {
-      qb.andWhere('subscription.status = :status', { status: query.status });
-    }
-
-    const [items, total] = await qb.getManyAndCount();
     return { items, total, page, limit };
   }
 

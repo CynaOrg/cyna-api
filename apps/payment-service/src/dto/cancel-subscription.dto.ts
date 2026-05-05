@@ -4,8 +4,14 @@ export class CancelSubscriptionDto {
   @IsUUID()
   subscriptionId: string;
 
+  /**
+   * Owner check is enforced when `userId` is provided (user-initiated cancel).
+   * Admin-initiated cancels (super_admin) omit `userId`, which bypasses the
+   * ownership check intentionally.
+   */
   @IsUUID()
-  userId: string;
+  @IsOptional()
+  userId?: string;
 
   @IsBoolean()
   @IsOptional()

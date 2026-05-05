@@ -67,7 +67,7 @@ export class SubscriptionService {
 
   async cancel(
     subscriptionId: string,
-    userId: string,
+    userId: string | undefined,
     cancelAtPeriodEnd: boolean,
   ): Promise<Subscription> {
     const subscription = await this.findById(subscriptionId);
@@ -79,7 +79,10 @@ export class SubscriptionService {
       });
     }
 
-    if (subscription.userId !== userId) {
+    // When `userId` is provided (user-initiated cancel), enforce ownership.
+    // Admin-initiated cancels intentionally pass `undefined` to skip the
+    // ownership check (see CancelSubscriptionDto).
+    if (userId !== undefined && subscription.userId !== userId) {
       throw new RpcException({
         statusCode: 403,
         message: 'Not authorized to cancel this subscription',

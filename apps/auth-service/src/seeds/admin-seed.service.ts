@@ -59,7 +59,7 @@ export class AdminSeedService implements OnModuleInit {
       isActive: true,
     });
 
-    await this.adminRepository.save(admin);
-    this.logger.log(`Super admin seeded successfully (${email})`);
+    const savedAdmin = await this.adminRepository.save(admin);
+    this.logger.log(`Super admin seeded successfully (id: ${savedAdmin.id})`);
   }
 }

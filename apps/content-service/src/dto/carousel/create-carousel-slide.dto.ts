@@ -18,7 +18,7 @@ import { Transform } from 'class-transformer';
  *   - protocol-relative URLs (//evil.com or \\evil.com) which browsers
  *     resolve as cross-origin → open-redirect / phishing vector.
  */
-const LINK_URL_PATTERN = /^(?:https?:\/\/[^\s]+|\/(?![\/\\])[^\s]*)$/;
+const LINK_URL_PATTERN = /^(?:https?:\/\/[^\s]+|\/(?![/\\])[^\s]*)$/;
 
 export class CreateCarouselSlideDto {
   @IsNotEmpty({ message: 'validation.titleFr.required' })

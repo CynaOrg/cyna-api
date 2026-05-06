@@ -20,6 +20,7 @@ import {
   RequestContentUploadUrlDto,
 } from '../dto';
 import { ContentEventsPublisher } from '../events';
+import { HeroText, TopProductConfig } from '../entities';
 
 @Controller()
 export class ContentController {
@@ -122,6 +123,11 @@ export class ContentController {
 
   // ==================== Admin - Hero Text ====================
 
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_HERO_TEXT)
+  async adminGetHeroText(): Promise<HeroText> {
+    return this.heroTextService.get();
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_HERO_TEXT)
   async adminUpdateHeroText(@Payload() data: UpdateHeroTextDto) {
     return this.heroTextService.update(data);
@@ -129,9 +135,19 @@ export class ContentController {
 
   // ==================== Admin - Top Services/Products ====================
 
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_SERVICES)
+  async adminGetTopServices(): Promise<TopProductConfig> {
+    return this.topProductsService.getTopServices();
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_SERVICES)
   async adminUpdateTopServices(@Payload() data: UpdateTopProductsDto) {
     return this.topProductsService.updateTopServices(data);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_PRODUCTS)
+  async adminGetTopProducts(): Promise<TopProductConfig> {
+    return this.topProductsService.getTopProducts();
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_PRODUCTS)

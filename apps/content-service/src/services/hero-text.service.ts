@@ -57,7 +57,7 @@ export class HeroTextService {
     });
 
     if (!heroText) {
-      // Create new hero text if none exists
+      // Create new hero text if none exists, falling back to defaults for missing fields.
       heroText = this.heroTextRepository.create({
         titleFr: dto.titleFr ?? DEFAULT_HERO_TEXT.titleFr,
         titleEn: dto.titleEn ?? DEFAULT_HERO_TEXT.titleEn,
@@ -65,7 +65,12 @@ export class HeroTextService {
         subtitleEn: dto.subtitleEn ?? DEFAULT_HERO_TEXT.subtitleEn,
       });
     } else {
-      Object.assign(heroText, dto);
+      // Partial update: only overwrite fields explicitly provided. Skip
+      // undefined keys so the existing record values are preserved.
+      if (dto.titleFr !== undefined) heroText.titleFr = dto.titleFr;
+      if (dto.titleEn !== undefined) heroText.titleEn = dto.titleEn;
+      if (dto.subtitleFr !== undefined) heroText.subtitleFr = dto.subtitleFr;
+      if (dto.subtitleEn !== undefined) heroText.subtitleEn = dto.subtitleEn;
     }
 
     await this.heroTextRepository.save(heroText);

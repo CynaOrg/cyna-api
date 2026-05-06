@@ -5,6 +5,7 @@ import {
   Patch,
   Delete,
   Param,
+  ParseUUIDPipe,
   Query,
   Body,
   UseGuards,
@@ -71,7 +72,10 @@ export class ContentAdminController {
   @ApiParam({ name: 'slideId', description: 'Slide ID' })
   @ApiResponse({ status: 200, description: 'Slide updated' })
   @ApiResponse({ status: 404, description: 'Slide not found' })
-  async updateSlide(@Param('slideId') slideId: string, @Body() dto: UpdateSlideDto) {
+  async updateSlide(
+    @Param('slideId', ParseUUIDPipe) slideId: string,
+    @Body() dto: UpdateSlideDto,
+  ) {
     return this.contentService.adminUpdateSlide(slideId, dto);
   }
 
@@ -81,11 +85,18 @@ export class ContentAdminController {
   @ApiParam({ name: 'slideId', description: 'Slide ID' })
   @ApiResponse({ status: 200, description: 'Slide deleted' })
   @ApiResponse({ status: 404, description: 'Slide not found' })
-  async deleteSlide(@Param('slideId') slideId: string) {
+  async deleteSlide(@Param('slideId', ParseUUIDPipe) slideId: string) {
     return this.contentService.adminDeleteSlide(slideId);
   }
 
   // ==================== Hero & Top Products ====================
+
+  @Get('hero-text')
+  @ApiOperation({ summary: 'Get current hero section text' })
+  @ApiResponse({ status: 200, description: 'Hero text returned' })
+  async getHeroText() {
+    return this.contentService.adminGetHeroText();
+  }
 
   @Patch('hero-text')
   @UseGuards(SuperAdminGuard)
@@ -95,12 +106,26 @@ export class ContentAdminController {
     return this.contentService.adminUpdateHeroText(dto);
   }
 
+  @Get('top-services')
+  @ApiOperation({ summary: 'Get top services configuration (SaaS productIds)' })
+  @ApiResponse({ status: 200, description: 'Top services configuration returned' })
+  async getTopServices() {
+    return this.contentService.adminGetTopServices();
+  }
+
   @Patch('top-services')
   @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Configure top services (SaaS products displayed on homepage)' })
   @ApiResponse({ status: 200, description: 'Top services updated' })
   async updateTopServices(@Body() dto: UpdateTopConfigDto) {
     return this.contentService.adminUpdateTopServices(dto.productIds);
+  }
+
+  @Get('top-products')
+  @ApiOperation({ summary: 'Get top products configuration (physical productIds)' })
+  @ApiResponse({ status: 200, description: 'Top products configuration returned' })
+  async getTopProducts() {
+    return this.contentService.adminGetTopProducts();
   }
 
   @Patch('top-products')
@@ -126,7 +151,7 @@ export class ContentAdminController {
   @ApiResponse({ status: 200, description: 'Message updated' })
   @ApiResponse({ status: 404, description: 'Message not found' })
   async updateContactMessage(
-    @Param('messageId') messageId: string,
+    @Param('messageId', ParseUUIDPipe) messageId: string,
     @Body() dto: UpdateContactMessageDto,
   ) {
     return this.contentService.adminUpdateContactMessage(messageId, dto);
@@ -138,7 +163,7 @@ export class ContentAdminController {
   @ApiParam({ name: 'messageId', description: 'Contact message ID' })
   @ApiResponse({ status: 200, description: 'Message deleted' })
   @ApiResponse({ status: 404, description: 'Message not found' })
-  async deleteContactMessage(@Param('messageId') messageId: string) {
+  async deleteContactMessage(@Param('messageId', ParseUUIDPipe) messageId: string) {
     return this.contentService.adminDeleteContactMessage(messageId);
   }
 }

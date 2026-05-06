@@ -181,8 +181,11 @@ export const MESSAGE_PATTERNS = {
     // Admin - Carousel Image Upload
     CAROUSEL_REQUEST_UPLOAD_URL: { cmd: 'content.admin_carousel_request_upload_url' },
     // Admin - Hero & Top Products
+    ADMIN_GET_HERO_TEXT: { cmd: 'content.admin_get_hero_text' },
     ADMIN_UPDATE_HERO_TEXT: { cmd: 'content.admin_update_hero_text' },
+    ADMIN_GET_TOP_SERVICES: { cmd: 'content.admin_get_top_services' },
     ADMIN_UPDATE_TOP_SERVICES: { cmd: 'content.admin_update_top_services' },
+    ADMIN_GET_TOP_PRODUCTS: { cmd: 'content.admin_get_top_products' },
     ADMIN_UPDATE_TOP_PRODUCTS: { cmd: 'content.admin_update_top_products' },
     // Admin - Contact Messages
     ADMIN_GET_CONTACT_MESSAGES: { cmd: 'content.admin_get_contact_messages' },

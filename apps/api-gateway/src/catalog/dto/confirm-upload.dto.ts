@@ -1,5 +1,14 @@
-import { IsString, IsNotEmpty, MaxLength, IsOptional, IsBoolean } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  MaxLength,
+  IsOptional,
+  IsBoolean,
+  IsNumber,
+  IsIn,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ALLOWED_IMAGE_MIME_TYPES } from '@cyna-api/common';
 
 export class ConfirmUploadDto {
   @ApiProperty({ description: 'Storage key returned from upload-url endpoint' })
@@ -24,4 +33,18 @@ export class ConfirmUploadDto {
   @IsOptional()
   @IsBoolean()
   isPrimary?: boolean;
+
+  @ApiPropertyOptional({ description: 'Original file size in bytes' })
+  @IsOptional()
+  @IsNumber()
+  fileSizeBytes?: number;
+
+  @ApiPropertyOptional({
+    description: 'MIME type of the uploaded image',
+    enum: ALLOWED_IMAGE_MIME_TYPES,
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(ALLOWED_IMAGE_MIME_TYPES)
+  mimeType?: string;
 }

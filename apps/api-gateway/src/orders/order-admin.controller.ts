@@ -44,7 +44,7 @@ function rpcToHttpError(err: unknown): Observable<never> {
 
 @ApiTags('Admin - Orders')
 @Controller('admin/orders')
-@UseGuards(JwtAdminAuthGuard)
+@UseGuards(JwtAdminAuthGuard, SuperAdminGuard)
 @ApiBearerAuth('JWT-auth')
 export class OrderAdminController {
   constructor(@Inject(SERVICE_NAMES.ORDER) private readonly orderClient: ClientProxy) {}
@@ -78,7 +78,6 @@ export class OrderAdminController {
   }
 
   @Patch(':orderId/status')
-  @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Update order status (super admin only)' })
   @ApiParam({ name: 'orderId', description: 'Order ID' })
   @ApiResponse({ status: 200, description: 'Order status updated' })

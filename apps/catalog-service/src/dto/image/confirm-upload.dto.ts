@@ -6,7 +6,9 @@ import {
   IsOptional,
   IsBoolean,
   IsNumber,
+  IsIn,
 } from 'class-validator';
+import { ALLOWED_IMAGE_MIME_TYPES } from '@cyna-api/common';
 
 export class ConfirmUploadDto {
   @IsUUID()
@@ -37,5 +39,6 @@ export class ConfirmUploadDto {
 
   @IsOptional()
   @IsString()
+  @IsIn(ALLOWED_IMAGE_MIME_TYPES)
   mimeType?: string;
 }

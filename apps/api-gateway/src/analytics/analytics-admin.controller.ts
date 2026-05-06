@@ -2,12 +2,12 @@ import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AnalyticsService } from './analytics.service';
-import { JwtAdminAuthGuard } from '../auth/guards';
+import { JwtAdminAuthGuard, SuperAdminGuard } from '../auth/guards';
 import { AnalyticsQueryDto, ExportQueryDto } from './dto';
 
 @ApiTags('Admin - Analytics')
 @Controller('admin/analytics')
-@UseGuards(JwtAdminAuthGuard)
+@UseGuards(JwtAdminAuthGuard, SuperAdminGuard)
 @ApiBearerAuth('JWT-auth')
 export class AnalyticsAdminController {
   constructor(private readonly analyticsService: AnalyticsService) {}

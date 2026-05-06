@@ -31,7 +31,7 @@ import {
 
 @ApiTags('Admin - Catalog')
 @Controller('admin/catalog')
-@UseGuards(JwtAdminAuthGuard)
+@UseGuards(JwtAdminAuthGuard, SuperAdminGuard)
 @ApiBearerAuth('JWT-auth')
 export class CatalogAdminController {
   constructor(private readonly catalogService: CatalogService) {}
@@ -58,7 +58,6 @@ export class CatalogAdminController {
 
   // IMPORTANT: Static routes must come before parameterized routes
   @Patch('categories/reorder')
-  @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Reorder categories' })
   @ApiResponse({ status: 200, description: 'Categories reordered' })
   @ApiResponse({ status: 400, description: 'Invalid category IDs' })
@@ -106,7 +105,6 @@ export class CatalogAdminController {
 
   // IMPORTANT: Static routes must come before parameterized routes
   @Post('products/bulk-delete')
-  @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Bulk delete products' })
   @ApiResponse({
     status: 200,

@@ -25,7 +25,7 @@ import {
 
 @ApiTags('Admin - Content')
 @Controller('admin/content')
-@UseGuards(JwtAdminAuthGuard)
+@UseGuards(JwtAdminAuthGuard, SuperAdminGuard)
 @ApiBearerAuth('JWT-auth')
 export class ContentAdminController {
   constructor(private readonly contentService: ContentService) {}

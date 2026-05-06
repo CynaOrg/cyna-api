@@ -28,6 +28,9 @@ export class Admin2FACode {
   @Column({ name: 'used_at', type: 'timestamptz', nullable: true })
   usedAt?: Date;
 
+  @Column({ type: 'int', default: 0 })
+  attempts: number;
+
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt: Date;
 

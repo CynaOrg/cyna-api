@@ -42,3 +42,9 @@ export * from './cache';
 
 // Shared types (cross-service DTO/view shapes)
 export * from './types';
+
+// Utilities
+export * from './utils';
+
+// Constants
+export * from './constants';

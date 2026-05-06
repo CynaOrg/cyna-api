@@ -8,6 +8,7 @@ import { LicenseKey } from '../entities/license-key.entity';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
 import { CancelSubscriptionDto } from '../dto/cancel-subscription.dto';
+import { SubscriptionStatus } from '@cyna-api/common';
 
 @Controller()
 export class PaymentController {
@@ -61,12 +62,23 @@ export class PaymentController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS)
-  async getSubscriptions(@Payload() data: { userId?: string; adminMode?: boolean }) {
+  async getSubscriptions(
+    @Payload()
+    data: {
+      userId?: string;
+      adminMode?: boolean;
+      status?: SubscriptionStatus;
+      page?: number;
+      limit?: number;
+    },
+  ) {
     try {
-      return await this.paymentService.getSubscriptionsForUser(
-        data.userId,
-        data.adminMode === true,
-      );
+      return await this.paymentService.getSubscriptionsForUser(data.userId, {
+        adminMode: data.adminMode === true,
+        status: data.status,
+        page: data.page,
+        limit: data.limit,
+      });
     } catch (error) {
       throw this.wrapError(error);
     }

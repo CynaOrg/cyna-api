@@ -161,12 +161,14 @@ export class SubscriptionAdminController {
   @Get()
   @ApiOperation({ summary: 'List all subscriptions (admin)' })
   @ApiResponse({ status: 200, description: 'Paginated list of subscriptions' })
-  async findAll(@Query() query: AdminSubscriptionQueryDto) {
+  async findAll(@Query() query: AdminSubscriptionQueryDto): Promise<unknown> {
     return firstValueFrom(
       this.paymentClient
         .send(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS, {
-          admin: true,
-          ...query,
+          adminMode: true,
+          status: query.status,
+          page: query.page,
+          limit: query.limit,
         })
         .pipe(timeout(5000), retry(2), catchError(rpcToHttpError)),
     );

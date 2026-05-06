@@ -39,6 +39,33 @@ export class SubscriptionService {
     });
   }
 
+  /**
+   * Admin-facing paginated listing with optional filters.
+   * SUB-2: filters/pagination must be honored end-to-end (cf. audit DTO-6).
+   */
+  async findAllAdmin(query: {
+    status?: SubscriptionStatus;
+    page?: number;
+    limit?: number;
+  }): Promise<{ items: Subscription[]; total: number; page: number; limit: number }> {
+    const page = Math.max(query.page ?? 1, 1);
+    const limit = Math.min(Math.max(query.limit ?? 20, 1), 100);
+    const offset = (page - 1) * limit;
+
+    // BaseEntity carries a @DeleteDateColumn — repository.findAndCount honors it
+    // automatically (soft-deleted rows are excluded). Switching from QueryBuilder
+    // to findAndCount avoids leaking soft-deleted subscriptions in the admin list.
+    const where = query.status !== undefined ? { status: query.status } : {};
+    const [items, total] = await this.subscriptionRepository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: offset,
+      take: limit,
+    });
+
+    return { items, total, page, limit };
+  }
+
   async findById(id: string): Promise<Subscription | null> {
     return this.subscriptionRepository.findOne({ where: { id } });
   }

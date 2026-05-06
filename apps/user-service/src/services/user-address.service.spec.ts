@@ -1,7 +1,7 @@
 // apps/user-service/src/services/user-address.service.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
 import { CynaLoggerService } from '@cyna-api/common';
 import { UserAddress } from '../entities/user-address.entity';
@@ -11,7 +11,6 @@ import { CreateUserAddressDto } from '../dto';
 describe('UserAddressService', () => {
   let service: UserAddressService;
   let repo: jest.Mocked<Repository<UserAddress>>;
-  let dataSource: jest.Mocked<DataSource>;
 
   const mockTxManager = {
     update: jest.fn(),
@@ -39,7 +38,9 @@ describe('UserAddressService', () => {
         {
           provide: DataSource,
           useValue: {
-            transaction: jest.fn((cb: any) => cb({ ...mockTxManager })),
+            transaction: jest.fn((cb: (em: EntityManager) => unknown) =>
+              cb({ ...mockTxManager } as unknown as EntityManager),
+            ),
           },
         },
         {
@@ -51,7 +52,6 @@ describe('UserAddressService', () => {
 
     service = module.get(UserAddressService);
     repo = module.get(getRepositoryToken(UserAddress));
-    dataSource = module.get(DataSource);
   });
 
   describe('list', () => {

@@ -6,7 +6,7 @@ import { StockService } from '../stock.service';
 import { Product, ProductType, StockReservation } from '../../entities';
 import { StockStatus } from '../../dto';
 import { CatalogEventsPublisher, StockReleaseReason } from '../../events';
-import { CynaLoggerService } from '@cyna-api/common';
+import { CynaCacheService, CynaLoggerService } from '@cyna-api/common';
 
 // Mock du logger
 const mockLogger = {
@@ -14,6 +14,17 @@ const mockLogger = {
   warn: jest.fn(),
   error: jest.fn(),
   debug: jest.fn(),
+};
+
+// Mock du cache (StockService dépend de CynaCacheService pour invalider/lire les compteurs)
+const mockCacheService = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
+  delByPattern: jest.fn(),
+  getOrSet: jest.fn(),
+  invalidateDomain: jest.fn(),
+  reset: jest.fn(),
 };
 
 // Mock de l'event publisher
@@ -129,6 +140,10 @@ describe('StockService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: CynaCacheService,
+          useValue: mockCacheService,
         },
       ],
     }).compile();

@@ -13,6 +13,15 @@ import { Transform } from 'class-transformer';
 import { Language } from '@cyna-api/common';
 import { ProductType } from '../../entities';
 
+// `enableImplicitConversion: true` coerces query strings to booleans BEFORE @Transform runs,
+// turning 'false' into truthy boolean true. Read the raw value from `obj` to bypass that.
+function coerceBooleanQuery(raw: unknown): unknown {
+  if (typeof raw === 'boolean') return raw;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return raw;
+}
+
 export enum ProductSortBy {
   DISPLAY_ORDER = 'displayOrder',
   PRICE_MONTHLY = 'priceMonthly',
@@ -50,21 +59,13 @@ export class ProductQueryDto {
   productType?: ProductType;
 
   @IsOptional()
+  @Transform(({ obj }) => coerceBooleanQuery(obj.isAvailable))
   @IsBoolean({ message: 'validation.isAvailable.invalid' })
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
   isAvailable?: boolean;
 
   @IsOptional()
+  @Transform(({ obj }) => coerceBooleanQuery(obj.isFeatured))
   @IsBoolean({ message: 'validation.isFeatured.invalid' })
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
   isFeatured?: boolean;
 
   @IsOptional()

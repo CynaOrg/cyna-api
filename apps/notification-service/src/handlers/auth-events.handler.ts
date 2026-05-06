@@ -34,7 +34,7 @@ export class AuthEventsHandler {
   @EventPattern(EVENT_PATTERNS.AUTH.USER_REGISTERED)
   async handleUserRegistered(@Payload() data: UserRegisteredEvent): Promise<void> {
     this.logger.log(
-      `Processing user_registered event for user: ${data.email}`,
+      `Processing user_registered event for user: ${data.userId}`,
       'AuthEventsHandler',
     );
 
@@ -60,7 +60,10 @@ export class AuthEventsHandler {
         html,
       });
 
-      this.logger.log(`Verification email sent successfully to ${data.email}`, 'AuthEventsHandler');
+      this.logger.log(
+        `Verification email sent successfully for user: ${data.userId}`,
+        'AuthEventsHandler',
+      );
     } catch (error) {
       this.logger.error(
         `Failed to process user_registered event: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -73,7 +76,7 @@ export class AuthEventsHandler {
   @EventPattern(EVENT_PATTERNS.AUTH.PASSWORD_RESET_REQUESTED)
   async handlePasswordResetRequested(@Payload() data: PasswordResetRequestedEvent): Promise<void> {
     this.logger.log(
-      `Processing password_reset_requested event for user: ${data.email}`,
+      `Processing password_reset_requested event for user: ${data.userId}`,
       'AuthEventsHandler',
     );
 
@@ -99,7 +102,7 @@ export class AuthEventsHandler {
       });
 
       this.logger.log(
-        `Password reset email sent successfully to ${data.email}`,
+        `Password reset email sent successfully for user: ${data.userId}`,
         'AuthEventsHandler',
       );
     } catch (error) {
@@ -114,7 +117,7 @@ export class AuthEventsHandler {
   @EventPattern(EVENT_PATTERNS.AUTH.ADMIN_2FA_CODE_REQUESTED)
   async handleAdmin2FACodeRequested(@Payload() data: Admin2FACodeRequestedEvent): Promise<void> {
     this.logger.log(
-      `Processing admin_2fa_code_requested event for admin: ${data.email}`,
+      `Processing admin_2fa_code_requested event for admin: ${data.adminId}`,
       'AuthEventsHandler',
     );
 
@@ -142,7 +145,10 @@ export class AuthEventsHandler {
         html,
       });
 
-      this.logger.log(`2FA code email sent successfully to ${data.email}`, 'AuthEventsHandler');
+      this.logger.log(
+        `2FA code email sent successfully for admin: ${data.adminId}`,
+        'AuthEventsHandler',
+      );
     } catch (error) {
       this.logger.error(
         `Failed to process admin_2fa_code_requested event: ${error instanceof Error ? error.message : 'Unknown error'}`,

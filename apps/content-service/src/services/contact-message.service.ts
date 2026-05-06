@@ -23,7 +23,7 @@ export class ContactMessageService {
     });
 
     await this.contactMessageRepository.save(message);
-    this.logger.log(`Contact message created: ${message.id} from ${message.email}`);
+    this.logger.log(`Contact message created: ${message.id}`);
 
     return message;
   }

@@ -154,7 +154,7 @@ describe('SubscriptionService', () => {
     it('should cancel at period end when cancelAtPeriodEnd is true', async () => {
       (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({ ...mockSubscription });
 
-      const result = await service.cancel('sub-123', 'user-123', true);
+      const result = await service.cancel('sub-123', 'user', 'user-123', true);
 
       expect(stripeService.cancelSubscription).toHaveBeenCalledWith('sub_stripe_123', true);
       expect(result.cancelAtPeriodEnd).toBe(true);
@@ -165,7 +165,7 @@ describe('SubscriptionService', () => {
     it('should cancel immediately when cancelAtPeriodEnd is false', async () => {
       (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({ ...mockSubscription });
 
-      const result = await service.cancel('sub-123', 'user-123', false);
+      const result = await service.cancel('sub-123', 'user', 'user-123', false);
 
       expect(stripeService.cancelSubscription).toHaveBeenCalledWith('sub_stripe_123', false);
       expect(result.status).toBe(SubscriptionStatus.CANCELLED);
@@ -176,7 +176,7 @@ describe('SubscriptionService', () => {
     it('should throw RpcException when subscription not found', async () => {
       (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
 
-      await expect(service.cancel('sub-nonexistent', 'user-123', true)).rejects.toThrow(
+      await expect(service.cancel('sub-nonexistent', 'user', 'user-123', true)).rejects.toThrow(
         RpcException,
       );
     });
@@ -184,20 +184,44 @@ describe('SubscriptionService', () => {
     it('should throw RpcException when userId does not match (forbidden)', async () => {
       (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({ ...mockSubscription });
 
-      await expect(service.cancel('sub-123', 'other-user', true)).rejects.toThrow(RpcException);
+      await expect(service.cancel('sub-123', 'user', 'other-user', true)).rejects.toThrow(
+        RpcException,
+      );
     });
 
     it('should verify the error code is SUBSCRIPTION_FORBIDDEN for wrong user', async () => {
       (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({ ...mockSubscription });
 
       try {
-        await service.cancel('sub-123', 'other-user', true);
+        await service.cancel('sub-123', 'user', 'other-user', true);
         fail('Should have thrown');
       } catch (error) {
         expect(error).toBeInstanceOf(RpcException);
         const rpcError = (error as RpcException).getError() as Record<string, unknown>;
         expect(rpcError.code).toBe('SUBSCRIPTION_FORBIDDEN');
         expect(rpcError.statusCode).toBe(403);
+      }
+    });
+
+    it('should bypass ownership check when actor is admin', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({ ...mockSubscription });
+
+      const result = await service.cancel('sub-123', 'admin', undefined, false);
+
+      expect(stripeService.cancelSubscription).toHaveBeenCalledWith('sub_stripe_123', false);
+      expect(result.status).toBe(SubscriptionStatus.CANCELLED);
+    });
+
+    it('should reject user-initiated cancel without userId', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({ ...mockSubscription });
+
+      try {
+        await service.cancel('sub-123', 'user', undefined, true);
+        fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(RpcException);
+        const rpcError = (error as RpcException).getError() as Record<string, unknown>;
+        expect(rpcError.code).toBe('SUBSCRIPTION_USER_ID_REQUIRED');
       }
     });
   });

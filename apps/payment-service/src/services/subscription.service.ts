@@ -67,7 +67,8 @@ export class SubscriptionService {
 
   async cancel(
     subscriptionId: string,
-    userId: string,
+    actor: 'user' | 'admin',
+    userId: string | undefined,
     cancelAtPeriodEnd: boolean,
   ): Promise<Subscription> {
     const subscription = await this.findById(subscriptionId);
@@ -79,13 +80,24 @@ export class SubscriptionService {
       });
     }
 
-    if (subscription.userId !== userId) {
-      throw new RpcException({
-        statusCode: 403,
-        message: 'Not authorized to cancel this subscription',
-        code: 'SUBSCRIPTION_FORBIDDEN',
-      });
+    if (actor === 'user') {
+      if (!userId) {
+        throw new RpcException({
+          statusCode: 400,
+          message: 'userId is required for user-initiated cancellations',
+          code: 'SUBSCRIPTION_USER_ID_REQUIRED',
+        });
+      }
+      if (subscription.userId !== userId) {
+        throw new RpcException({
+          statusCode: 403,
+          message: 'Not authorized to cancel this subscription',
+          code: 'SUBSCRIPTION_FORBIDDEN',
+        });
+      }
     }
+    // actor === 'admin': SuperAdminGuard already enforced at gateway boundary,
+    // ownership check is intentionally skipped here.
 
     // Cancel on Stripe
     await this.stripeService.cancelSubscription(

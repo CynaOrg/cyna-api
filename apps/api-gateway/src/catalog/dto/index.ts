@@ -11,3 +11,4 @@ export * from './bulk-delete-products.dto';
 export * from './update-stock.dto';
 export * from './request-upload-url.dto';
 export * from './confirm-upload.dto';
+export * from './admin-product-response.dto';

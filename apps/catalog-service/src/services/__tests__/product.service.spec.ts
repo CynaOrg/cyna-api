@@ -134,6 +134,7 @@ describe('ProductService', () => {
             create: jest.fn(),
             save: jest.fn(),
             remove: jest.fn(),
+            softDelete: jest.fn(),
             createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
           },
         },
@@ -574,19 +575,22 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de suppression
+    // Tests de suppression (soft delete - PROD-10)
     describe('delete()', () => {
-      // Verifie la suppression d'un produit
-      it('should delete a product', async () => {
+      // Verifie le soft delete d'un produit (deleted_at column)
+      it('should soft delete a product', async () => {
         const id = 'prod-uuid-001';
         const product = createMockProduct({ id });
 
         productRepository.findOne.mockResolvedValue(product);
-        productRepository.remove.mockResolvedValue(product);
+        (
+          productRepository.softDelete as jest.Mock
+        ).mockResolvedValue({ affected: 1 } as unknown as import('typeorm').UpdateResult);
 
         await service.delete(id);
 
-        expect(productRepository.remove).toHaveBeenCalledWith(product);
+        expect(productRepository.softDelete).toHaveBeenCalledWith(id);
+        expect(productRepository.remove).not.toHaveBeenCalled();
         expect(mockEventsPublisher.emitProductDeleted).toHaveBeenCalled();
       });
 
@@ -600,6 +604,28 @@ describe('ProductService', () => {
             code: 'PRODUCT_NOT_FOUND',
           }),
         });
+      });
+
+      // Verifie le bulk soft delete (deleted_at column)
+      it('should soft delete products in bulk', async () => {
+        const ids = ['prod-001', 'prod-002'];
+        const product1 = createMockProduct({ id: 'prod-001' });
+        const product2 = createMockProduct({ id: 'prod-002' });
+
+        productRepository.findOne
+          .mockResolvedValueOnce(product1)
+          .mockResolvedValueOnce(product2);
+        (
+          productRepository.softDelete as jest.Mock
+        ).mockResolvedValue({ affected: 1 } as unknown as import('typeorm').UpdateResult);
+
+        const result = await service.bulkDelete(ids);
+
+        expect(productRepository.softDelete).toHaveBeenCalledWith('prod-001');
+        expect(productRepository.softDelete).toHaveBeenCalledWith('prod-002');
+        expect(productRepository.remove).not.toHaveBeenCalled();
+        expect(result.deletedCount).toBe(2);
+        expect(result.failedIds).toEqual([]);
       });
     });
   });

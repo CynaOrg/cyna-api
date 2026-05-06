@@ -10,6 +10,8 @@ import {
   ProductQueryDto,
   RequestUploadUrlDto,
   ConfirmUploadDto,
+  AdminProductResponse,
+  PaginatedAdminProductResponse,
 } from './dto';
 
 @Injectable()
@@ -57,11 +59,18 @@ export class CatalogService {
 
   // ==================== Products ====================
 
-  async createProduct(dto: CreateProductDto) {
+  /**
+   * PROD-15: returns the admin DTO shape so the back-office state can
+   * be refreshed from the response without an extra GET.
+   */
+  async createProduct(dto: CreateProductDto): Promise<AdminProductResponse> {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_CREATE, dto);
   }
 
-  async updateProduct(id: string, dto: UpdateProductDto) {
+  /**
+   * PROD-15: returns the admin DTO shape (see createProduct above).
+   */
+  async updateProduct(id: string, dto: UpdateProductDto): Promise<AdminProductResponse> {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_UPDATE, { id, dto });
   }
 
@@ -79,12 +88,28 @@ export class CatalogService {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL, query);
   }
 
+  /**
+   * Admin variant of findAllProducts: returns the bilingual admin DTO
+   * (nameFr/nameEn + full images[]).
+   */
+  async findAllProductsAdmin(query: ProductQueryDto): Promise<PaginatedAdminProductResponse> {
+    return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_ALL_ADMIN, query);
+  }
+
   async findProductBySlug(slug: string, lang?: Language) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_SLUG, { slug, lang });
   }
 
   async findProductById(id: string) {
     return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID, { id });
+  }
+
+  /**
+   * Admin variant of findProductById: returns the bilingual admin DTO
+   * (nameFr/nameEn + full images[]).
+   */
+  async findProductByIdAdmin(id: string): Promise<AdminProductResponse> {
+    return this.sendMessage(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID_ADMIN, { id });
   }
 
   async searchProducts(searchTerm: string, query: ProductQueryDto) {

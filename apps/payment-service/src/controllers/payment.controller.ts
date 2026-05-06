@@ -77,6 +77,7 @@ export class PaymentController {
     try {
       return await this.subscriptionService.cancel(
         dto.subscriptionId,
+        dto.actor,
         dto.userId,
         dto.cancelAtPeriodEnd ?? true,
       );

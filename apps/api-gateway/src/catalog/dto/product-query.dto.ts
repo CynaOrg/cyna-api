@@ -13,6 +13,15 @@ import { Transform, Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Language } from '@cyna-api/common';
 
+// `enableImplicitConversion: true` coerces query strings to booleans BEFORE @Transform runs,
+// turning 'false' into truthy boolean true. Read the raw value from `obj` to bypass that.
+function coerceBooleanQuery(raw: unknown): unknown {
+  if (typeof raw === 'boolean') return raw;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return raw;
+}
+
 export enum ProductType {
   SAAS = 'saas',
   PHYSICAL = 'physical',
@@ -61,13 +70,13 @@ export class ProductQueryDto {
 
   @ApiPropertyOptional({ description: 'Filter by availability' })
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ obj }) => coerceBooleanQuery(obj.isAvailable))
   @IsBoolean()
   isAvailable?: boolean;
 
   @ApiPropertyOptional({ description: 'Filter by featured status' })
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ obj }) => coerceBooleanQuery(obj.isFeatured))
   @IsBoolean()
   isFeatured?: boolean;
 

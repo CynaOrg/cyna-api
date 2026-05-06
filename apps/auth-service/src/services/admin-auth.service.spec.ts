@@ -239,4 +239,72 @@ describe('AdminAuthService', () => {
       expect(refreshTokenRepository.update).toHaveBeenCalled();
     });
   });
+
+  describe('getMe', () => {
+    it('should return AdminResponseDto for an active admin (incl. isActive, createdAt, lastLoginAt)', async () => {
+      const lastLogin = new Date('2026-01-15T10:00:00Z');
+      const created = new Date('2025-09-01T08:30:00Z');
+      (adminRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        ...mockAdmin,
+        createdAt: created,
+        lastLoginAt: lastLogin,
+      });
+
+      const result = await service.getMe('admin-123');
+
+      expect(result).toEqual({
+        id: 'admin-123',
+        email: 'admin@example.com',
+        firstName: 'Admin',
+        lastName: 'User',
+        role: AdminRole.SUPER_ADMIN,
+        isActive: true,
+        createdAt: created,
+        lastLoginAt: lastLogin,
+      });
+    });
+
+    it('should normalize undefined lastLoginAt to null', async () => {
+      (adminRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        ...mockAdmin,
+        lastLoginAt: undefined,
+      });
+
+      const result = await service.getMe('admin-123');
+
+      expect(result.lastLoginAt).toBeNull();
+    });
+
+    it('should throw 404 ADMIN_NOT_FOUND when admin does not exist', async () => {
+      (adminRepository.findOne as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+
+      await expect(service.getMe('missing')).rejects.toThrow(RpcException);
+      try {
+        await service.getMe('missing');
+      } catch (err) {
+        expect((err as RpcException).getError()).toMatchObject({
+          statusCode: 404,
+          code: 'ADMIN_NOT_FOUND',
+        });
+      }
+    });
+
+    it('should throw 403 ACCOUNT_DISABLED when admin is inactive', async () => {
+      (adminRepository.findOne as jest.Mock)
+        .mockResolvedValueOnce({ ...mockAdmin, isActive: false })
+        .mockResolvedValueOnce({ ...mockAdmin, isActive: false });
+
+      await expect(service.getMe('admin-123')).rejects.toThrow(RpcException);
+      try {
+        await service.getMe('admin-123');
+      } catch (err) {
+        expect((err as RpcException).getError()).toMatchObject({
+          statusCode: 403,
+          code: 'ACCOUNT_DISABLED',
+        });
+      }
+    });
+  });
 });

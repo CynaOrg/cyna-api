@@ -36,6 +36,11 @@ export class AdminAuthController {
     return this.adminAuthService.logout(data.adminId, data.refreshToken);
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_GET_ME)
+  async getMe(@Payload() data: { adminId: string }) {
+    return this.adminAuthService.getMe(data.adminId);
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_GET_ADMINS)
   async getAdmins(@Payload() _data: Record<string, never>) {
     return this.adminAuthService.getAdmins();

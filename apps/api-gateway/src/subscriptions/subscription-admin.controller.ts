@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Param,
+  ParseUUIDPipe,
   Query,
   Body,
   Inject,
@@ -165,7 +166,7 @@ export class SubscriptionAdminController {
   @ApiParam({ name: 'id', description: 'Subscription ID' })
   @ApiResponse({ status: 200, description: 'Subscription details' })
   @ApiResponse({ status: 404, description: 'Subscription not found' })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return firstValueFrom(
       this.paymentClient
         .send(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTION, {
@@ -179,7 +180,10 @@ export class SubscriptionAdminController {
   @ApiOperation({ summary: 'Update subscription status (super_admin only)' })
   @ApiParam({ name: 'id', description: 'Subscription ID' })
   @ApiResponse({ status: 200, description: 'Subscription status updated' })
-  async updateStatus(@Param('id') id: string, @Body() dto: UpdateSubscriptionStatusDto) {
+  async updateStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateSubscriptionStatusDto,
+  ) {
     const pattern =
       dto.action === 'cancel'
         ? MESSAGE_PATTERNS.PAYMENT.CANCEL_SUBSCRIPTION
@@ -198,7 +202,7 @@ export class SubscriptionAdminController {
   @ApiResponse({ status: 200, description: 'Subscription terms updated' })
   @ApiResponse({ status: 400, description: 'Invalid payload' })
   async updateTerms(
-    @Param('subscriptionId') subscriptionId: string,
+    @Param('subscriptionId', ParseUUIDPipe) subscriptionId: string,
     @Body() dto: UpdateSubscriptionTermsDto,
   ) {
     if (dto.cancelAtPeriodEnd === undefined && dto.trialEnd === undefined) {

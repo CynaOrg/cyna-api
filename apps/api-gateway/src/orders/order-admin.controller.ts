@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Param,
+  ParseUUIDPipe,
   Query,
   Body,
   Inject,
@@ -67,7 +68,7 @@ export class OrderAdminController {
   @ApiParam({ name: 'orderId', description: 'Order ID' })
   @ApiResponse({ status: 200, description: 'Order details' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  async getOrder(@Param('orderId') orderId: string) {
+  async getOrder(@Param('orderId', ParseUUIDPipe) orderId: string) {
     return firstValueFrom(
       this.orderClient.send(MESSAGE_PATTERNS.ORDER.GET_ORDER, { orderId }).pipe(
         timeout(5000),
@@ -82,7 +83,10 @@ export class OrderAdminController {
   @ApiParam({ name: 'orderId', description: 'Order ID' })
   @ApiResponse({ status: 200, description: 'Order status updated' })
   @ApiResponse({ status: 404, description: 'Order not found' })
-  async updateOrderStatus(@Param('orderId') orderId: string, @Body() dto: UpdateOrderStatusDto) {
+  async updateOrderStatus(
+    @Param('orderId', ParseUUIDPipe) orderId: string,
+    @Body() dto: UpdateOrderStatusDto,
+  ) {
     return firstValueFrom(
       this.orderClient
         .send(MESSAGE_PATTERNS.ORDER.ADMIN_UPDATE_STATUS, {

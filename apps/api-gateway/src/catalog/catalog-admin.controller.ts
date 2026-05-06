@@ -71,7 +71,10 @@ export class CatalogAdminController {
   @ApiResponse({ status: 200, description: 'Category updated' })
   @ApiResponse({ status: 404, description: 'Category not found' })
   @ApiResponse({ status: 409, description: 'Category slug already exists' })
-  async updateCategory(@Param('categoryId') categoryId: string, @Body() dto: UpdateCategoryDto) {
+  async updateCategory(
+    @Param('categoryId', ParseUUIDPipe) categoryId: string,
+    @Body() dto: UpdateCategoryDto,
+  ) {
     return this.catalogService.updateCategory(categoryId, dto);
   }
 
@@ -81,7 +84,7 @@ export class CatalogAdminController {
   @ApiResponse({ status: 200, description: 'Category deleted' })
   @ApiResponse({ status: 404, description: 'Category not found' })
   @ApiResponse({ status: 409, description: 'Category has associated products' })
-  async deleteCategory(@Param('categoryId') categoryId: string) {
+  async deleteCategory(@Param('categoryId', ParseUUIDPipe) categoryId: string) {
     return this.catalogService.deleteCategory(categoryId);
   }
 
@@ -122,7 +125,7 @@ export class CatalogAdminController {
   @ApiParam({ name: 'productId', description: 'Product ID' })
   @ApiResponse({ status: 200, description: 'Product details' })
   @ApiResponse({ status: 404, description: 'Product not found' })
-  async findProductById(@Param('productId') productId: string) {
+  async findProductById(@Param('productId', ParseUUIDPipe) productId: string) {
     return this.catalogService.findProductById(productId);
   }
 
@@ -132,7 +135,10 @@ export class CatalogAdminController {
   @ApiResponse({ status: 200, description: 'Product updated' })
   @ApiResponse({ status: 404, description: 'Product not found' })
   @ApiResponse({ status: 409, description: 'Product slug or SKU already exists' })
-  async updateProduct(@Param('productId') productId: string, @Body() dto: UpdateProductDto) {
+  async updateProduct(
+    @Param('productId', ParseUUIDPipe) productId: string,
+    @Body() dto: UpdateProductDto,
+  ) {
     return this.catalogService.updateProduct(productId, dto);
   }
 
@@ -141,7 +147,7 @@ export class CatalogAdminController {
   @ApiParam({ name: 'productId', description: 'Product ID' })
   @ApiResponse({ status: 200, description: 'Product deleted' })
   @ApiResponse({ status: 404, description: 'Product not found' })
-  async deleteProduct(@Param('productId') productId: string) {
+  async deleteProduct(@Param('productId', ParseUUIDPipe) productId: string) {
     return this.catalogService.deleteProduct(productId);
   }
 
@@ -152,7 +158,10 @@ export class CatalogAdminController {
   @ApiParam({ name: 'productId', description: 'Product ID' })
   @ApiResponse({ status: 201, description: 'Image added' })
   @ApiResponse({ status: 404, description: 'Product not found' })
-  async addProductImage(@Param('productId') productId: string, @Body() dto: AddImageDto) {
+  async addProductImage(
+    @Param('productId', ParseUUIDPipe) productId: string,
+    @Body() dto: AddImageDto,
+  ) {
     return this.catalogService.addProductImage(
       productId,
       dto.imageUrl,
@@ -169,8 +178,8 @@ export class CatalogAdminController {
   @ApiResponse({ status: 200, description: 'Image deleted' })
   @ApiResponse({ status: 404, description: 'Image not found' })
   async deleteProductImage(
-    @Param('productId') productId: string,
-    @Param('imageId') imageId: string,
+    @Param('productId', ParseUUIDPipe) productId: string,
+    @Param('imageId', ParseUUIDPipe) imageId: string,
   ) {
     return this.catalogService.deleteProductImage(productId, imageId);
   }
@@ -180,7 +189,10 @@ export class CatalogAdminController {
   @ApiParam({ name: 'productId', description: 'Product ID' })
   @ApiResponse({ status: 200, description: 'Images reordered' })
   @ApiResponse({ status: 400, description: 'Invalid image IDs' })
-  async reorderProductImages(@Param('productId') productId: string, @Body() dto: ReorderImagesDto) {
+  async reorderProductImages(
+    @Param('productId', ParseUUIDPipe) productId: string,
+    @Body() dto: ReorderImagesDto,
+  ) {
     return this.catalogService.reorderProductImages(productId, dto.imageIds);
   }
 
@@ -220,7 +232,10 @@ export class CatalogAdminController {
   @ApiResponse({ status: 200, description: 'Stock updated' })
   @ApiResponse({ status: 400, description: 'Stock management not applicable' })
   @ApiResponse({ status: 404, description: 'Product not found' })
-  async updateProductStock(@Param('productId') productId: string, @Body() dto: UpdateStockDto) {
+  async updateProductStock(
+    @Param('productId', ParseUUIDPipe) productId: string,
+    @Body() dto: UpdateStockDto,
+  ) {
     return this.catalogService.updateStock(productId, dto);
   }
 

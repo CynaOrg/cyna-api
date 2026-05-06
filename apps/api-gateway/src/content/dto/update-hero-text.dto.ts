@@ -1,22 +1,32 @@
-import { IsString, IsOptional } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
+/**
+ * UpdateHeroTextDto - all fields optional so partial updates work.
+ * Mirror of `apps/content-service/src/dto/hero-text/update-hero-text.dto.ts`.
+ */
 export class UpdateHeroTextDto {
-  @ApiProperty({ description: 'Hero title in French' })
-  @IsString()
-  titleFr: string;
-
-  @ApiPropertyOptional({ description: 'Hero title in English' })
+  @ApiPropertyOptional({ description: 'Hero title in French', maxLength: 500 })
   @IsOptional()
   @IsString()
+  @MaxLength(500)
+  titleFr?: string;
+
+  @ApiPropertyOptional({ description: 'Hero title in English', maxLength: 500 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   titleEn?: string;
 
-  @ApiProperty({ description: 'Hero subtitle in French' })
-  @IsString()
-  subtitleFr: string;
-
-  @ApiPropertyOptional({ description: 'Hero subtitle in English' })
+  @ApiPropertyOptional({ description: 'Hero subtitle in French', maxLength: 500 })
   @IsOptional()
   @IsString()
+  @MaxLength(500)
+  subtitleFr?: string;
+
+  @ApiPropertyOptional({ description: 'Hero subtitle in English', maxLength: 500 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
   subtitleEn?: string;
 }

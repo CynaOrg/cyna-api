@@ -15,10 +15,11 @@ export interface AdminListQuery {
 }
 
 export interface AdminListResult {
-  items: Array<Omit<User, 'passwordHash'>>;
+  data: Array<Omit<User, 'passwordHash'>>;
   total: number;
   page: number;
   limit: number;
+  totalPages: number;
 }
 
 @Injectable()
@@ -56,7 +57,14 @@ export class UserAdminService {
     }
 
     const [items, total] = await qb.getManyAndCount();
-    return { items: items.map(this.stripPasswordHash), total, page, limit };
+    const totalPages = Math.max(Math.ceil(total / limit), 1);
+    return {
+      data: items.map((user) => this.stripPasswordHash(user)),
+      total,
+      page,
+      limit,
+      totalPages,
+    };
   }
 
   async adminGet(userId: string): Promise<Omit<User, 'passwordHash'>> {

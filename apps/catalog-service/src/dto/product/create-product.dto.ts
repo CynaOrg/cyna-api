@@ -44,7 +44,7 @@ export class CreateProductCharacteristicDto {
   @IsOptional()
   @IsInt({ message: 'validation.displayOrder.invalid' })
   @Min(0, { message: 'validation.displayOrder.min' })
-  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : 0))
+  @Transform(({ value }) => (value === undefined || value === null ? 0 : parseInt(value, 10)))
   displayOrder?: number = 0;
 }
 
@@ -107,31 +107,31 @@ export class CreateProductDto {
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'validation.priceMonthly.invalid' })
   @Min(0, { message: 'validation.priceMonthly.min' })
-  @Transform(({ value }) => (value !== undefined ? parseFloat(value) : undefined))
+  @Transform(({ value }) => (value === undefined || value === null ? value : parseFloat(value)))
   priceMonthly?: number;
 
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'validation.priceYearly.invalid' })
   @Min(0, { message: 'validation.priceYearly.min' })
-  @Transform(({ value }) => (value !== undefined ? parseFloat(value) : undefined))
+  @Transform(({ value }) => (value === undefined || value === null ? value : parseFloat(value)))
   priceYearly?: number;
 
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 }, { message: 'validation.priceUnit.invalid' })
   @Min(0, { message: 'validation.priceUnit.min' })
-  @Transform(({ value }) => (value !== undefined ? parseFloat(value) : undefined))
+  @Transform(({ value }) => (value === undefined || value === null ? value : parseFloat(value)))
   priceUnit?: number;
 
   @IsOptional()
   @IsInt({ message: 'validation.stockQuantity.invalid' })
   @Min(0, { message: 'validation.stockQuantity.min' })
-  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : undefined))
+  @Transform(({ value }) => (value === undefined || value === null ? value : parseInt(value, 10)))
   stockQuantity?: number;
 
   @IsOptional()
   @IsInt({ message: 'validation.stockAlertThreshold.invalid' })
   @Min(0, { message: 'validation.stockAlertThreshold.min' })
-  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : 10))
+  @Transform(({ value }) => (value === undefined || value === null ? 10 : parseInt(value, 10)))
   stockAlertThreshold?: number = 10;
 
   @IsOptional()
@@ -147,7 +147,7 @@ export class CreateProductDto {
   @IsOptional()
   @IsInt({ message: 'validation.displayOrder.invalid' })
   @Min(0, { message: 'validation.displayOrder.min' })
-  @Transform(({ value }) => (value !== undefined ? parseInt(value, 10) : 0))
+  @Transform(({ value }) => (value === undefined || value === null ? 0 : parseInt(value, 10)))
   displayOrder?: number = 0;
 
   @IsOptional()

@@ -23,7 +23,7 @@ export class StripeService {
     const params: Stripe.PaymentIntentCreateParams = {
       amount,
       currency,
-      payment_method_types: ['card'],
+      automatic_payment_methods: { enabled: true, allow_redirects: 'never' },
       metadata,
     };
     if (options.receiptEmail) params.receipt_email = options.receiptEmail;

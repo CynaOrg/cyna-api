@@ -90,19 +90,37 @@ describe('CynaCacheService', () => {
   });
 
   describe('delByPattern', () => {
-    it('uses scanStream when available on the underlying ioredis client', async () => {
+    it('scans with the namespace-prefixed pattern and deletes via the ioredis client', async () => {
       const stream = (async function* () {
-        yield ['product:1', 'product:2'];
-        yield ['product:3'];
+        yield ['keyv:product:1', 'keyv:product:2'];
+        yield ['keyv:product:3'];
       })();
-      const client = { scanStream: jest.fn(() => stream) };
-      // Mock the cache-manager v7 structure: stores[0].opts.store._cache.client
-      cacheManager.stores = [{ opts: { store: { _cache: { client } } } }];
+      const client = {
+        scanStream: jest.fn(() => stream),
+        del: jest.fn().mockResolvedValue(1),
+      };
+      // Mock the cache-manager v7 structure: stores[0] is a Keyv with namespace
+      // and stores[0].opts.store._cache.client holds the ioredis client.
+      cacheManager.stores = [
+        {
+          _namespace: 'keyv',
+          opts: { namespace: 'keyv', store: { _cache: { client } } },
+        },
+      ];
 
       await service.delByPattern('product:*');
 
-      expect(client.scanStream).toHaveBeenCalledWith({ match: 'product:*', count: 100 });
-      expect(cacheManager.del).toHaveBeenCalledTimes(3);
+      expect(client.scanStream).toHaveBeenCalledWith({
+        match: 'keyv:product:*',
+        count: 100,
+      });
+      // First batch: 2 keys → one del call with both
+      // Second batch: 1 key → one del call with one
+      expect(client.del).toHaveBeenCalledTimes(2);
+      expect(client.del).toHaveBeenNthCalledWith(1, 'keyv:product:1', 'keyv:product:2');
+      expect(client.del).toHaveBeenNthCalledWith(2, 'keyv:product:3');
+      // We do NOT route through cacheManager.del — that would re-prefix.
+      expect(cacheManager.del).not.toHaveBeenCalled();
     });
 
     it('logs a debug message when scan is unsupported', async () => {

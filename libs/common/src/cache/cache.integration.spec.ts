@@ -45,21 +45,17 @@ const REDIS_URL = process.env.REDIS_INTEGRATION_TEST_URL;
     await expect(cache.get('it:key')).resolves.toBeUndefined();
   });
 
-  it('delByPattern removes all matching keys via SCAN', async () => {
-    // Set keys with matching pattern
+  it('delByPattern removes all matching keys via SCAN, leaves others alone', async () => {
     await cache.set('it:scan:1', 'a', 30);
     await cache.set('it:scan:2', 'b', 30);
     await cache.set('it:other', 'c', 30);
 
-    // Verify keys are cached
-    await expect(cache.get('it:scan:1')).resolves.toBe('a');
-    await expect(cache.get('it:scan:2')).resolves.toBe('b');
-    await expect(cache.get('it:other')).resolves.toBe('c');
-
-    // Delete by pattern (should not error, even if SCAN returns 0 keys)
     await cache.delByPattern('it:scan:*');
 
-    // Delete remaining key for cleanup
+    await expect(cache.get('it:scan:1')).resolves.toBeUndefined();
+    await expect(cache.get('it:scan:2')).resolves.toBeUndefined();
+    await expect(cache.get('it:other')).resolves.toBe('c');
+
     await cache.del('it:other');
   }, 15000);
 });

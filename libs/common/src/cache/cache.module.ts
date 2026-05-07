@@ -3,6 +3,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { redisStore } from 'cache-manager-ioredis-yet';
 import { CynaCacheService } from './cache.service';
+import { RedisHealthService } from './cache.health';
 import { LoggerModule } from '../logger';
 
 export interface CynaCacheModuleOptions {
@@ -93,8 +94,8 @@ export class CynaCacheModule {
           inject: [ConfigService],
         }),
       ],
-      providers: [CynaCacheService],
-      exports: [CacheModule, CynaCacheService],
+      providers: [CynaCacheService, RedisHealthService],
+      exports: [CacheModule, CynaCacheService, RedisHealthService],
     };
   }
 }

@@ -46,7 +46,11 @@ export const envValidationSchema = Joi.object({
   DATABASE_LOGGING: Joi.boolean().default(true),
 
   // Redis
+  REDIS_URL: Joi.string()
+    .uri({ scheme: ['redis', 'rediss'] })
+    .optional(),
   REDIS_HOST: Joi.string().default('localhost'),
   REDIS_PORT: Joi.number().port().default(6379),
+  REDIS_PASSWORD: Joi.string().optional().allow(''),
   REDIS_TTL: Joi.number().integer().positive().default(3600),
 }).unknown(true); // Allow other environment variables

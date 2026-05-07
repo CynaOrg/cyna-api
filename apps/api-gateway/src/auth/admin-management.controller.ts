@@ -5,6 +5,7 @@ import {
   Patch,
   Delete,
   Param,
+  ParseUUIDPipe,
   Body,
   Inject,
   UseGuards,
@@ -86,7 +87,7 @@ export class AdminManagementController {
   @ApiResponse({ status: 200, description: 'Admin account details' })
   @ApiResponse({ status: 403, description: 'Super admin access required' })
   @ApiResponse({ status: 404, description: 'Admin not found' })
-  async getAdmin(@Param('adminId') adminId: string) {
+  async getAdmin(@Param('adminId', ParseUUIDPipe) adminId: string) {
     return firstValueFrom(
       this.authClient.send(MESSAGE_PATTERNS.AUTH.ADMIN_GET_ADMIN, { adminId }).pipe(
         timeout(5000),
@@ -102,7 +103,10 @@ export class AdminManagementController {
   @ApiResponse({ status: 200, description: 'Admin account updated' })
   @ApiResponse({ status: 403, description: 'Super admin access required' })
   @ApiResponse({ status: 404, description: 'Admin not found' })
-  async updateAdmin(@Param('adminId') adminId: string, @Body() dto: UpdateAdminDto) {
+  async updateAdmin(
+    @Param('adminId', ParseUUIDPipe) adminId: string,
+    @Body() dto: UpdateAdminDto,
+  ) {
     return firstValueFrom(
       this.authClient.send(MESSAGE_PATTERNS.AUTH.ADMIN_UPDATE_ADMIN, { adminId, ...dto }).pipe(
         timeout(5000),
@@ -119,7 +123,10 @@ export class AdminManagementController {
   @ApiResponse({ status: 400, description: 'Cannot delete yourself' })
   @ApiResponse({ status: 403, description: 'Super admin access required' })
   @ApiResponse({ status: 404, description: 'Admin not found' })
-  async deleteAdmin(@Param('adminId') adminId: string, @CurrentUser('id') requestAdminId: string) {
+  async deleteAdmin(
+    @Param('adminId', ParseUUIDPipe) adminId: string,
+    @CurrentUser('id') requestAdminId: string,
+  ) {
     return firstValueFrom(
       this.authClient
         .send(MESSAGE_PATTERNS.AUTH.ADMIN_DELETE_ADMIN, { adminId, requestAdminId })

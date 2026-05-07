@@ -20,6 +20,7 @@ import {
   RequestContentUploadUrlDto,
 } from '../dto';
 import { ContentEventsPublisher } from '../events';
+import { HeroText, TopProductConfig } from '../entities';
 
 @Controller()
 export class ContentController {
@@ -35,12 +36,13 @@ export class ContentController {
   // ==================== Homepage ====================
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.GET_HOMEPAGE)
-  async getHomepage() {
+  async getHomepage(@Payload() data?: { lang?: string }) {
+    const lang = data?.lang;
     const [carousel, heroText, topServicesData, topProductsData] = await Promise.all([
       this.carouselService.findAllPublic(),
       this.heroTextService.get(),
-      this.topProductsService.getTopServicesWithDetails(),
-      this.topProductsService.getTopProductsWithDetails(),
+      this.topProductsService.getTopServicesWithDetails(lang),
+      this.topProductsService.getTopProductsWithDetails(lang),
     ]);
 
     return {
@@ -61,13 +63,13 @@ export class ContentController {
   // ==================== Top Services/Products (Public) ====================
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.GET_TOP_SERVICES)
-  async getTopServices() {
-    return this.topProductsService.getTopServicesWithDetails();
+  async getTopServices(@Payload() data?: { lang?: string }) {
+    return this.topProductsService.getTopServicesWithDetails(data?.lang);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.GET_TOP_PRODUCTS)
-  async getTopProducts() {
-    return this.topProductsService.getTopProductsWithDetails();
+  async getTopProducts(@Payload() data?: { lang?: string }) {
+    return this.topProductsService.getTopProductsWithDetails(data?.lang);
   }
 
   // ==================== Contact Messages (Public) ====================
@@ -122,6 +124,11 @@ export class ContentController {
 
   // ==================== Admin - Hero Text ====================
 
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_HERO_TEXT)
+  async adminGetHeroText(): Promise<HeroText> {
+    return this.heroTextService.get();
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_HERO_TEXT)
   async adminUpdateHeroText(@Payload() data: UpdateHeroTextDto) {
     return this.heroTextService.update(data);
@@ -129,9 +136,19 @@ export class ContentController {
 
   // ==================== Admin - Top Services/Products ====================
 
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_SERVICES)
+  async adminGetTopServices(): Promise<TopProductConfig> {
+    return this.topProductsService.getTopServices();
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_SERVICES)
   async adminUpdateTopServices(@Payload() data: UpdateTopProductsDto) {
     return this.topProductsService.updateTopServices(data);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_PRODUCTS)
+  async adminGetTopProducts(): Promise<TopProductConfig> {
+    return this.topProductsService.getTopProducts();
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_PRODUCTS)

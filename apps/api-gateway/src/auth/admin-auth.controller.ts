@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   Body,
   HttpCode,
@@ -7,16 +8,50 @@ import {
   UseGuards,
   Res,
   Req,
+  Inject,
   UnauthorizedException,
+  HttpException,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
-import { Public } from '@cyna-api/common';
+import { ClientProxy } from '@nestjs/microservices';
+import {
+  Observable,
+  firstValueFrom,
+  timeout,
+  catchError,
+  throwError,
+  TimeoutError,
+} from 'rxjs';
+import { Public, SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import { AuthService } from './auth.service';
 import { AdminLoginDto, Verify2FADto, Resend2FADto, RefreshTokenDto, LogoutDto } from './dto';
 import { JwtAdminAuthGuard } from './guards';
 import { CurrentUser } from './decorators';
+import { RequestUser } from './interfaces';
+
+interface AuthenticatedRequest extends Request {
+  user: RequestUser;
+}
+
+/**
+ * Convert an RPC error to an HttpException so the
+ * GlobalExceptionFilter can return the proper status code and message.
+ */
+function rpcToHttpError(err: unknown): Observable<never> {
+  if (err instanceof TimeoutError) {
+    return throwError(() => new HttpException('Auth service timeout', 503));
+  }
+  const errObj = err as Record<string, unknown> | undefined;
+  const payload =
+    typeof errObj?.message === 'object' ? (errObj.message as Record<string, unknown>) : errObj;
+  const statusCode = typeof payload?.statusCode === 'number' ? payload.statusCode : 500;
+  const message =
+    (typeof payload?.message === 'string' ? payload.message : (errObj?.message as string)) ||
+    'Internal server error';
+  return throwError(() => new HttpException(message, statusCode));
+}
 
 const isProduction =
   process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT_NAME;
@@ -36,7 +71,31 @@ const ADMIN_REFRESH_TOKEN_COOKIE_OPTIONS = {
 @Controller('auth/admin')
 @UseGuards(JwtAdminAuthGuard)
 export class AdminAuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    @Inject(SERVICE_NAMES.AUTH) private readonly authClient: ClientProxy,
+  ) {}
+
+  @Get('me')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get the currently authenticated admin profile' })
+  @ApiResponse({ status: 200, description: 'Authenticated admin profile' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing token' })
+  @ApiResponse({ status: 403, description: 'Admin access required or account disabled' })
+  @ApiResponse({ status: 404, description: 'Admin not found' })
+  async me(@Req() req: AuthenticatedRequest): Promise<unknown> {
+    // No retry on this read: a 404 ADMIN_NOT_FOUND or 403 ACCOUNT_DISABLED is
+    // a business outcome, not a transient failure — retrying triples latency
+    // and the gateway's RPC client already handles transient connection drops.
+    return firstValueFrom(
+      this.authClient
+        .send(MESSAGE_PATTERNS.AUTH.ADMIN_GET_ME, { adminId: req.user.id })
+        .pipe(
+          timeout(5000),
+          catchError((err) => rpcToHttpError(err)),
+        ),
+    );
+  }
 
   @Public()
   @Throttle({ default: { limit: 5, ttl: 60000 } }) // 5 req/min

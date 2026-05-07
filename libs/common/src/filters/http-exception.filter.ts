@@ -71,6 +71,26 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         code = this.getErrorCodeFromStatus(status);
         message = String(exceptionResponse);
       }
+    } else if (
+      typeof exception === 'object' &&
+      exception !== null &&
+      'statusCode' in exception &&
+      typeof (exception as { statusCode: unknown }).statusCode === 'number' &&
+      'message' in exception
+    ) {
+      // RpcException-shaped error from a microservice (e.g. CART_EMPTY,
+      // CART_NOT_FOUND): preserve its statusCode + code so the client
+      // receives a meaningful 4xx instead of a generic 500.
+      const e = exception as {
+        statusCode: number;
+        message: string;
+        code?: string;
+      };
+      status = e.statusCode;
+      code = e.code || this.getErrorCodeFromStatus(status);
+      message = e.message?.includes('.')
+        ? await this.translateMessage(e.message, lang)
+        : e.message || this.getErrorCodeFromStatus(status);
     } else {
       // Unknown error
       status = HttpStatus.INTERNAL_SERVER_ERROR;

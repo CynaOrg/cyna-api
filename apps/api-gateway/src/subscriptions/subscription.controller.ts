@@ -113,6 +113,7 @@ export class SubscriptionController {
       this.paymentClient
         .send(MESSAGE_PATTERNS.PAYMENT.CANCEL_SUBSCRIPTION, {
           subscriptionId: id,
+          actor: 'user',
           userId: req.user.id,
           cancelAtPeriodEnd: body.cancelAtPeriodEnd ?? true,
         })

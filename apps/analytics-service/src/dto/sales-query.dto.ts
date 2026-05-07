@@ -1,6 +1,7 @@
 import { IsOptional, IsEnum } from 'class-validator';
 
 export enum SalesPeriod {
+  TODAY = 'today',
   WEEK = 'week',
   MONTH = 'month',
   QUARTER = 'quarter',
@@ -15,10 +16,14 @@ export enum SalesGroupBy {
 
 export class SalesQueryDto {
   @IsOptional()
-  @IsEnum(SalesPeriod)
+  @IsEnum(SalesPeriod, {
+    message: `period must be one of: ${Object.values(SalesPeriod).join(', ')}`,
+  })
   period?: SalesPeriod = SalesPeriod.MONTH;
 
   @IsOptional()
-  @IsEnum(SalesGroupBy)
+  @IsEnum(SalesGroupBy, {
+    message: `groupBy must be one of: ${Object.values(SalesGroupBy).join(', ')}`,
+  })
   groupBy?: SalesGroupBy = SalesGroupBy.DAY;
 }

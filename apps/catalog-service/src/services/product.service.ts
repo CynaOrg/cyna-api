@@ -190,6 +190,59 @@ export class ProductService {
     return result;
   }
 
+  /**
+   * Admin variant of findAll. Returns the full image array (not just the
+   * primary one) and bypasses the public cache to avoid leaking admin
+   * payloads through the read-through cache.
+   */
+  async findAllAdmin(query: ProductQueryDto): Promise<PaginatedResult<Product>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.productRepository
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.category', 'category')
+      .leftJoinAndSelect('product.images', 'images');
+    this.applyFilters(queryBuilder, query);
+    this.applySorting(queryBuilder, query.sortBy, query.sortOrder);
+
+    const [products, total] = await queryBuilder.skip(skip).take(limit).getManyAndCount();
+
+    return {
+      data: products,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Admin variant of findById. Bypasses the read-through cache so that
+   * the back-office always observes the latest state right after a
+   * mutation, and exposes the entity unfiltered for the admin DTO mapper.
+   */
+  async findByIdAdmin(id: string): Promise<Product> {
+    const product = await this.productRepository.findOne({
+      where: { id },
+      relations: ['category', 'images', 'characteristics'],
+    });
+
+    if (!product) {
+      this.logger.warn(`Product not found: ${id}`);
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Product not found',
+        code: 'PRODUCT_NOT_FOUND',
+      });
+    }
+
+    return product;
+  }
+
   async findBySlug(slug: string): Promise<Product> {
     const cacheKey = generateCacheKey.product(slug);
 
@@ -357,8 +410,14 @@ export class ProductService {
     };
 
     const slug = product.slug;
-    await this.productRepository.remove(product);
-    this.logger.log(`Product deleted: ${id}`);
+    // Soft delete: TypeORM sets deleted_at via the @DeleteDateColumn on
+    // BaseEntity. Subsequent find()/findOne()/QueryBuilder calls exclude
+    // soft-deleted rows by default, so the product disappears from the
+    // catalog while order history and license keys keep their FK target.
+    // TODO(PROD-10): expose an admin "trash" endpoint with `withDeleted: true`
+    // and a restore action when product recovery is needed.
+    await this.productRepository.softDelete(id);
+    this.logger.log(`Product soft-deleted: ${id}`);
 
     // Invalidate caches
     await this.invalidateProductCache(id, slug);
@@ -387,7 +446,8 @@ export class ProductService {
           productName: product.nameEn || product.nameFr,
         };
 
-        await this.productRepository.remove(product);
+        // Soft delete (see delete() for rationale).
+        await this.productRepository.softDelete(id);
         deletedCount += 1;
 
         await this.eventsPublisher.emitProductDeleted({
@@ -407,7 +467,9 @@ export class ProductService {
       await this.invalidateProductCache();
     }
 
-    this.logger.log(`Bulk delete completed: ${deletedCount} deleted, ${failedIds.length} failed`);
+    this.logger.log(
+      `Bulk soft-delete completed: ${deletedCount} deleted, ${failedIds.length} failed`,
+    );
 
     return { deletedCount, failedIds };
   }

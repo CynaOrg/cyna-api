@@ -29,6 +29,39 @@ interface CatalogProduct {
   images?: Array<{ imageUrl?: string }>;
 }
 
+/**
+ * Stable shape returned by `adminGetOrders`. Explicitly exposes
+ * `customerEmail` (populated for both guest and authenticated orders since the
+ * `RenameGuestEmailToCustomerEmail` migration) so the back-office can render
+ * a human-readable identifier instead of the raw user UUID — see audit ORD-1.
+ */
+export interface AdminOrderListItem {
+  id: string;
+  orderNumber: string;
+  userId: string | null;
+  customerEmail: string;
+  notificationEmail: string | null;
+  status: OrderStatus;
+  orderType: OrderType;
+  subtotal: number;
+  taxAmount: number;
+  shippingAmount: number;
+  discountAmount: number;
+  total: number;
+  currency: string;
+  stripePaymentIntentId: string | null;
+  stripeInvoiceUrl: string | null;
+  paidAt: Date | null;
+  shippedAt: Date | null;
+  deliveredAt: Date | null;
+  trackingNumber: string | null;
+  trackingUrl: string | null;
+  notes: string | null;
+  items: OrderItem[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 @Injectable()
 export class OrderService {
   private readonly logger = new Logger(OrderService.name);
@@ -71,6 +104,37 @@ export class OrderService {
     preferredLanguage?: Language;
     stripePaymentIntentId: string;
   }): Promise<Order> {
+    // Idempotence: if a pending order already exists for this cart, reuse it
+    // so the gateway can fetch the existing Stripe PaymentIntent's client
+    // secret instead of creating a fresh one. The address snapshots are
+    // refreshed in case the customer changed them between attempts.
+    const existing = await this.orderRepository.findOne({
+      where: { cartId: data.cartId, status: OrderStatus.PENDING },
+    });
+    if (existing) {
+      let mutated = false;
+      if (data.billingAddress) {
+        existing.billingAddressSnapshot = data.billingAddress;
+        mutated = true;
+      }
+      if (data.shippingAddress !== undefined) {
+        existing.shippingAddressSnapshot = data.shippingAddress ?? null;
+        mutated = true;
+      }
+      if (data.email && data.email !== existing.customerEmail) {
+        existing.customerEmail = data.email;
+        existing.notificationEmail = data.email;
+        mutated = true;
+      }
+      if (mutated) await this.orderRepository.save(existing);
+      this.logger.log(`Reusing pending order ${existing.orderNumber} for cart ${data.cartId}`);
+      const reloaded = await this.orderRepository.findOne({
+        where: { id: existing.id },
+        relations: ['items'],
+      });
+      return reloaded ?? existing;
+    }
+
     // 1. Get the cart by its database ID
     const cartEntity = await this.cartService.findCartById(data.cartId);
     if (!cartEntity) {
@@ -201,6 +265,7 @@ export class OrderService {
       const order = this.orderRepository.create({
         orderNumber,
         userId: data.userId || null,
+        cartId: data.cartId,
         customerEmail: data.email,
         notificationEmail: data.email,
         notificationLanguage: data.preferredLanguage ?? Language.FR,
@@ -244,11 +309,10 @@ export class OrderService {
       await this.orderItemRepository.save(orderItem);
     }
 
-    // 8. Clear the cart
-    await this.cartService.clearCart({
-      userId: cartEntity.userId ?? undefined,
-      sessionId: cartEntity.sessionId ?? undefined,
-    });
+    // The cart is intentionally NOT cleared here. We keep it alive until the
+    // Stripe webhook flips the order to PAID (see `handlePaymentConfirmed`)
+    // so a customer abandoning checkout — or returning to it later — still
+    // sees their basket and can pay without recreating it.
 
     this.logger.log(`Order created: ${savedOrder.orderNumber} (${savedOrder.id})`);
 
@@ -282,6 +346,25 @@ export class OrderService {
     this.logger.log(
       `Order ${order.orderNumber} marked as PAID${invoice.stripeInvoiceUrl ? ' (invoice attached)' : ''}`,
     );
+
+    // Now that payment is confirmed, the cart this order was created from
+    // can finally be cleared. Best-effort: a missing cart row (e.g. expired
+    // guest session) must not roll back the PAID state.
+    if (order.cartId) {
+      try {
+        const cartEntity = await this.cartService.findCartById(order.cartId);
+        if (cartEntity) {
+          await this.cartService.clearCart({
+            userId: cartEntity.userId ?? undefined,
+            sessionId: cartEntity.sessionId ?? undefined,
+          });
+        }
+      } catch (err) {
+        this.logger.warn(
+          `clearCart on PAID order ${order.orderNumber} failed: ${(err as Error).message}`,
+        );
+      }
+    }
 
     // Confirm stock
     for (const item of order.items) {
@@ -372,7 +455,13 @@ export class OrderService {
     userId?: string;
     page?: number;
     limit?: number;
-  }) {
+  }): Promise<{
+    data: AdminOrderListItem[];
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  }> {
     const { search, status, dateFrom, dateTo, orderType, userId, page = 1, limit = 20 } = params;
 
     const qb = this.orderRepository
@@ -416,12 +505,46 @@ export class OrderService {
       .take(limit)
       .getMany();
 
+    // ORD-1: explicitly surface `customerEmail` (populated for both guest and
+    // logged-in orders since the RenameGuestEmailToCustomerEmail migration) so
+    // the admin UI can show a meaningful identifier instead of the raw user
+    // UUID. We map to a stable, typed shape rather than leaking the entity
+    // directly so future column additions stay opt-in.
     return {
-      data: orders,
+      data: orders.map((o) => this.toAdminListItem(o)),
       total,
       page,
       limit,
       totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  private toAdminListItem(order: Order): AdminOrderListItem {
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      userId: order.userId,
+      customerEmail: order.customerEmail,
+      notificationEmail: order.notificationEmail,
+      status: order.status,
+      orderType: order.orderType,
+      subtotal: order.subtotal,
+      taxAmount: order.taxAmount,
+      shippingAmount: order.shippingAmount,
+      discountAmount: order.discountAmount,
+      total: order.total,
+      currency: order.currency,
+      stripePaymentIntentId: order.stripePaymentIntentId,
+      stripeInvoiceUrl: order.stripeInvoiceUrl,
+      paidAt: order.paidAt,
+      shippedAt: order.shippedAt,
+      deliveredAt: order.deliveredAt,
+      trackingNumber: order.trackingNumber,
+      trackingUrl: order.trackingUrl,
+      notes: order.notes,
+      items: order.items,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
     };
   }
 

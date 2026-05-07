@@ -39,6 +39,33 @@ export class SubscriptionService {
     });
   }
 
+  /**
+   * Admin-facing paginated listing with optional filters.
+   * SUB-2: filters/pagination must be honored end-to-end (cf. audit DTO-6).
+   */
+  async findAllAdmin(query: {
+    status?: SubscriptionStatus;
+    page?: number;
+    limit?: number;
+  }): Promise<{ items: Subscription[]; total: number; page: number; limit: number }> {
+    const page = Math.max(query.page ?? 1, 1);
+    const limit = Math.min(Math.max(query.limit ?? 20, 1), 100);
+    const offset = (page - 1) * limit;
+
+    // BaseEntity carries a @DeleteDateColumn — repository.findAndCount honors it
+    // automatically (soft-deleted rows are excluded). Switching from QueryBuilder
+    // to findAndCount avoids leaking soft-deleted subscriptions in the admin list.
+    const where = query.status !== undefined ? { status: query.status } : {};
+    const [items, total] = await this.subscriptionRepository.findAndCount({
+      where,
+      order: { createdAt: 'DESC' },
+      skip: offset,
+      take: limit,
+    });
+
+    return { items, total, page, limit };
+  }
+
   async findById(id: string): Promise<Subscription | null> {
     return this.subscriptionRepository.findOne({ where: { id } });
   }
@@ -67,7 +94,8 @@ export class SubscriptionService {
 
   async cancel(
     subscriptionId: string,
-    userId: string,
+    actor: 'user' | 'admin',
+    userId: string | undefined,
     cancelAtPeriodEnd: boolean,
   ): Promise<Subscription> {
     const subscription = await this.findById(subscriptionId);
@@ -79,13 +107,24 @@ export class SubscriptionService {
       });
     }
 
-    if (subscription.userId !== userId) {
-      throw new RpcException({
-        statusCode: 403,
-        message: 'Not authorized to cancel this subscription',
-        code: 'SUBSCRIPTION_FORBIDDEN',
-      });
+    if (actor === 'user') {
+      if (!userId) {
+        throw new RpcException({
+          statusCode: 400,
+          message: 'userId is required for user-initiated cancellations',
+          code: 'SUBSCRIPTION_USER_ID_REQUIRED',
+        });
+      }
+      if (subscription.userId !== userId) {
+        throw new RpcException({
+          statusCode: 403,
+          message: 'Not authorized to cancel this subscription',
+          code: 'SUBSCRIPTION_FORBIDDEN',
+        });
+      }
     }
+    // actor === 'admin': SuperAdminGuard already enforced at gateway boundary,
+    // ownership check is intentionally skipped here.
 
     // Cancel on Stripe
     await this.stripeService.cancelSubscription(

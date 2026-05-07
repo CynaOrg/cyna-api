@@ -765,6 +765,13 @@ export class SalesService {
     const now = new Date();
 
     switch (period) {
+      case SalesPeriod.TODAY: {
+        // Start of today UTC (00:00:00) → now. Mirrors DashboardService.TODAY.
+        const start = new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+        );
+        return { start, end: now };
+      }
       case SalesPeriod.WEEK: {
         const dayOfWeek = now.getUTCDay();
         const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;

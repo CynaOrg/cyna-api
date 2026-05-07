@@ -9,6 +9,7 @@ import {
 } from '@cyna-api/common';
 import { StripeService } from './stripe.service';
 import { SubscriptionService } from './subscription.service';
+import { Subscription } from '../entities/subscription.entity';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreateSubscriptionDto } from '../dto/create-subscription.dto';
 
@@ -75,6 +76,36 @@ export class PaymentService {
     };
   }
 
+  /**
+   * Fetch a Stripe PaymentIntent by id and return its client_secret along
+   * with the basic shape used by `createPaymentIntent`. Used by the gateway
+   * to keep checkout idempotent: when an order already has a PaymentIntent
+   * we re-emit the existing client_secret instead of minting a new intent.
+   *
+   * If the intent is in a terminal/non-payable state (succeeded, canceled,
+   * etc.) the caller falls back to creating a fresh one.
+   */
+  async retrievePaymentIntent(paymentIntentId: string): Promise<{
+    clientSecret: string;
+    paymentIntentId: string;
+    amount: number;
+    currency: string;
+    reusable: boolean;
+  }> {
+    const intent = await this.stripeService.getPaymentIntent(paymentIntentId);
+    const reusable =
+      intent.status === 'requires_payment_method' ||
+      intent.status === 'requires_confirmation' ||
+      intent.status === 'requires_action';
+    return {
+      clientSecret: intent.client_secret ?? '',
+      paymentIntentId: intent.id,
+      amount: intent.amount,
+      currency: intent.currency,
+      reusable,
+    };
+  }
+
   private async resolveOrCreateCustomer(dto: CreatePaymentIntentDto): Promise<string | undefined> {
     try {
       if (dto.userId) {
@@ -117,12 +148,54 @@ export class PaymentService {
 
   async getSubscriptionsForUser(
     userId: string | undefined,
-    adminMode = false,
-  ): Promise<Record<string, unknown>[]> {
-    const subscriptions = adminMode
-      ? await this.subscriptionService.findAll()
-      : await this.subscriptionService.findByUserId(userId as string);
+    options:
+      | boolean
+      | {
+          adminMode?: boolean;
+          status?: SubscriptionStatus;
+          page?: number;
+          limit?: number;
+        } = false,
+  ): Promise<
+    | Record<string, unknown>[]
+    | {
+        data: Record<string, unknown>[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }
+  > {
+    const opts = typeof options === 'boolean' ? { adminMode: options } : options;
+    const adminMode = opts.adminMode === true;
 
+    if (adminMode) {
+      const page = Math.max(opts.page ?? 1, 1);
+      const limit = Math.min(Math.max(opts.limit ?? 20, 1), 100);
+      const { items, total } = await this.subscriptionService.findAllAdmin({
+        status: opts.status,
+        page,
+        limit,
+      });
+      // `enrichSubscriptions` populates `productName` from the catalog (and
+      // persists it on the entity) so the admin UI can render a human-readable
+      // product name instead of the raw productId UUID — see audit SUB-3.
+      // TODO(SUB-3): also denormalize `customerEmail` here. Subscriptions only
+      // hold `userId` + `stripeCustomerId`; the customer's email lives in
+      // user-service. The current scope keeps the cross-service lookup out
+      // (would require a batched USER.GET_BY_IDS or a snapshot column).
+      const enriched = await this.enrichSubscriptions(items);
+      const totalPages = Math.max(Math.ceil(total / limit), 1);
+      return { data: enriched, total, page, limit, totalPages };
+    }
+
+    const subscriptions = await this.subscriptionService.findByUserId(userId as string);
+    return this.enrichSubscriptions(subscriptions);
+  }
+
+  private async enrichSubscriptions(
+    subscriptions: Subscription[],
+  ): Promise<Record<string, unknown>[]> {
     // Sync status with Stripe and enrich with product data
     const productIds = [...new Set(subscriptions.map((s) => s.productId))];
     const products = new Map<string, Record<string, unknown>>();

@@ -55,6 +55,7 @@ async function bootstrap() {
       'x-correlation-id',
       'X-Session-Id',
       'x-lang',
+      'X-Client-Type',
     ],
   });
 

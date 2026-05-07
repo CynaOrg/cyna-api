@@ -60,10 +60,24 @@ export class CynaCacheModule {
               ttl: defaultTtlMs,
             };
 
+            // cache-manager-ioredis-yet's redisStore() does `new IORedis(options)`,
+            // which does NOT recognize a `url` field on the options object. To use
+            // a connection URL we parse it and pass the components explicitly.
+            const connectionOptions = url
+              ? (() => {
+                  const u = new URL(url);
+                  return {
+                    host: u.hostname,
+                    port: u.port ? parseInt(u.port, 10) : 6379,
+                    username: u.username ? decodeURIComponent(u.username) : undefined,
+                    password: u.password ? decodeURIComponent(u.password) : undefined,
+                    ...ioredisOptions,
+                  };
+                })()
+              : { host, port, password, ...ioredisOptions };
+
             try {
-              const store = url
-                ? await redisStore({ url, ...ioredisOptions })
-                : await redisStore({ host, port, password, ...ioredisOptions });
+              const store = await redisStore(connectionOptions);
 
               // Probe the connection so failures throw synchronously rather than
               // being silently swallowed by ioredis' background reconnect loop.

@@ -38,6 +38,29 @@ describe('CynaCacheModule', () => {
     await moduleRef.close();
   });
 
+  it('parses REDIS_URL and connects to its host (not localhost default)', async () => {
+    // This test would have caught the regression where redisStore({ url, ... })
+    // ignored the `url` field and silently fell back to localhost:6379. Using
+    // a non-localhost hostname guarantees an ECONNREFUSED + fallback if the URL
+    // is not parsed.
+    process.env.REDIS_URL = 'redis://default:somepass@unreachable.invalid:65000';
+    process.env.NODE_ENV = 'development'; // allow fallback so boot doesn't throw
+    delete process.env.REDIS_HOST;
+    delete process.env.REDIS_PORT;
+    delete process.env.REDIS_PASSWORD;
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        ConfigModule.forRoot({ load: [configuration], isGlobal: true }),
+        LoggerModule,
+        CynaCacheModule.forRoot(),
+      ],
+    }).compile();
+
+    expect(moduleRef.get(CynaCacheService)).toBeDefined();
+    await moduleRef.close();
+  });
+
   it('boots with HOST and PORT only (no password)', async () => {
     delete process.env.REDIS_URL;
     delete process.env.REDIS_PASSWORD;

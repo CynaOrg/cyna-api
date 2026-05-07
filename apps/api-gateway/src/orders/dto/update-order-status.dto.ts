@@ -26,6 +26,6 @@ export class UpdateOrderStatusDto {
     example: 'https://www.ups.com/track?tracknum=1Z999AA10123456784',
   })
   @IsOptional()
-  @IsUrl({ protocols: ['http', 'https'], require_protocol: true, require_tld: true })
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true, require_tld: false })
   trackingUrl?: string;
 }

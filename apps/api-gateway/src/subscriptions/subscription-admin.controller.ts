@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Param,
+  ParseUUIDPipe,
   Query,
   Body,
   Inject,
@@ -35,7 +36,6 @@ import {
   IsEnum,
   IsInt,
   Min,
-  IsString,
   IsBoolean,
   Validate,
   ValidatorConstraint,
@@ -86,10 +86,22 @@ class AdminSubscriptionQueryDto {
   limit?: number = 20;
 }
 
+/**
+ * Admin actions on a subscription. Centralised enum so validation,
+ * Swagger docs and dispatcher all use the same source of truth.
+ */
+export enum SubscriptionActionEnum {
+  CANCEL = 'cancel',
+  REACTIVATE = 'reactivate',
+  PAUSE = 'pause',
+}
+
 class UpdateSubscriptionStatusDto {
-  @ApiProperty({ enum: ['cancel', 'reactivate', 'pause'] })
-  @IsString()
-  action: 'cancel' | 'reactivate' | 'pause';
+  @ApiProperty({ enum: SubscriptionActionEnum })
+  @IsEnum(SubscriptionActionEnum, {
+    message: 'action must be one of: cancel, reactivate, pause',
+  })
+  action: SubscriptionActionEnum;
 }
 
 export class UpdateSubscriptionTermsDto {
@@ -138,7 +150,7 @@ function rpcToHttpError(err: unknown): Observable<never> {
 
 @ApiTags('Admin - Subscriptions')
 @Controller('admin/payments/subscriptions')
-@UseGuards(JwtAdminAuthGuard)
+@UseGuards(JwtAdminAuthGuard, SuperAdminGuard)
 @ApiBearerAuth('JWT-auth')
 export class SubscriptionAdminController {
   constructor(
@@ -149,12 +161,14 @@ export class SubscriptionAdminController {
   @Get()
   @ApiOperation({ summary: 'List all subscriptions (admin)' })
   @ApiResponse({ status: 200, description: 'Paginated list of subscriptions' })
-  async findAll(@Query() query: AdminSubscriptionQueryDto) {
+  async findAll(@Query() query: AdminSubscriptionQueryDto): Promise<unknown> {
     return firstValueFrom(
       this.paymentClient
         .send(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS, {
-          admin: true,
-          ...query,
+          adminMode: true,
+          status: query.status,
+          page: query.page,
+          limit: query.limit,
         })
         .pipe(timeout(5000), retry(2), catchError(rpcToHttpError)),
     );
@@ -165,7 +179,7 @@ export class SubscriptionAdminController {
   @ApiParam({ name: 'id', description: 'Subscription ID' })
   @ApiResponse({ status: 200, description: 'Subscription details' })
   @ApiResponse({ status: 404, description: 'Subscription not found' })
-  async findOne(@Param('id') id: string) {
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
     return firstValueFrom(
       this.paymentClient
         .send(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTION, {
@@ -176,31 +190,48 @@ export class SubscriptionAdminController {
   }
 
   @Patch(':id/status')
-  @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Update subscription status (super_admin only)' })
   @ApiParam({ name: 'id', description: 'Subscription ID' })
   @ApiResponse({ status: 200, description: 'Subscription status updated' })
-  async updateStatus(@Param('id') id: string, @Body() dto: UpdateSubscriptionStatusDto) {
-    const pattern =
-      dto.action === 'cancel'
-        ? MESSAGE_PATTERNS.PAYMENT.CANCEL_SUBSCRIPTION
-        : MESSAGE_PATTERNS.PAYMENT.REACTIVATE_SUBSCRIPTION;
+  @ApiResponse({ status: 400, description: 'Invalid action value' })
+  @ApiResponse({ status: 404, description: 'Subscription not found' })
+  @ApiResponse({ status: 501, description: 'Action not implemented yet (reactivate/pause)' })
+  async updateStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateSubscriptionStatusDto,
+  ) {
+    // SUB-1: only `cancel` is wired end-to-end today. Reactivate and pause
+    // are accepted by validation (so the front knows the contract) but
+    // explicitly rejected with 501 until the payment-service handlers are
+    // implemented. Previously, anything ≠ 'cancel' fell through to
+    // REACTIVATE_SUBSCRIPTION which has no handler and silently timed out.
+    // TODO(SUB-1): implement payment.reactivate_subscription and
+    // payment.pause_subscription in payment-service, then route here.
+    if (dto.action !== SubscriptionActionEnum.CANCEL) {
+      throw new HttpException(
+        `Subscription action '${dto.action}' is not implemented yet`,
+        501,
+      );
+    }
 
     return firstValueFrom(
       this.paymentClient
-        .send(pattern, { subscriptionId: id, cancelAtPeriodEnd: false })
+        .send(MESSAGE_PATTERNS.PAYMENT.CANCEL_SUBSCRIPTION, {
+          subscriptionId: id,
+          actor: 'admin',
+          cancelAtPeriodEnd: false,
+        })
         .pipe(timeout(10000), retry(1), catchError(rpcToHttpError)),
     );
   }
 
   @Patch(':subscriptionId/terms')
-  @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Update subscription terms (super_admin only)' })
   @ApiParam({ name: 'subscriptionId', description: 'Subscription ID' })
   @ApiResponse({ status: 200, description: 'Subscription terms updated' })
   @ApiResponse({ status: 400, description: 'Invalid payload' })
   async updateTerms(
-    @Param('subscriptionId') subscriptionId: string,
+    @Param('subscriptionId', ParseUUIDPipe) subscriptionId: string,
     @Body() dto: UpdateSubscriptionTermsDto,
   ) {
     if (dto.cancelAtPeriodEnd === undefined && dto.trialEnd === undefined) {

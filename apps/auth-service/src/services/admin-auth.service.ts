@@ -74,7 +74,7 @@ export class AdminAuthService {
       purpose: '2fa',
     });
 
-    this.logger.log(`2FA code sent to admin: ${admin.email}`, 'AdminAuthService');
+    this.logger.log(`2FA code sent to admin: ${admin.id}`, 'AdminAuthService');
 
     return {
       requires2FA: true,
@@ -147,7 +147,7 @@ export class AdminAuthService {
 
     await this.authEventsPublisher.emitAdminLogin(admin.id);
 
-    this.logger.log(`Admin logged in: ${admin.email}`, 'AdminAuthService');
+    this.logger.log(`Admin logged in: ${admin.id}`, 'AdminAuthService');
 
     return {
       accessToken,
@@ -215,7 +215,7 @@ export class AdminAuthService {
       purpose: '2fa',
     });
 
-    this.logger.log(`2FA code resent to admin: ${admin.email}`, 'AdminAuthService');
+    this.logger.log(`2FA code resent to admin: ${admin.id}`, 'AdminAuthService');
 
     return {
       requires2FA: true,
@@ -273,7 +273,7 @@ export class AdminAuthService {
 
     const newRefreshToken = await this.createRefreshToken(admin.id);
 
-    this.logger.log(`Token refreshed for admin: ${admin.email}`, 'AdminAuthService');
+    this.logger.log(`Token refreshed for admin: ${admin.id}`, 'AdminAuthService');
 
     return {
       accessToken,
@@ -300,6 +300,30 @@ export class AdminAuthService {
     this.logger.log(`Admin logged out: ${adminId}`, 'AdminAuthService');
 
     return { success: true };
+  }
+
+  async getMe(adminId: string): Promise<AdminResponseDto> {
+    const admin = await this.adminRepository.findOne({
+      where: { id: adminId },
+    });
+
+    if (!admin) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'Admin not found',
+        code: 'ADMIN_NOT_FOUND',
+      });
+    }
+
+    if (!admin.isActive) {
+      throw new RpcException({
+        statusCode: 403,
+        message: 'Admin account is disabled',
+        code: 'ACCOUNT_DISABLED',
+      });
+    }
+
+    return AdminResponseDto.fromEntity(admin);
   }
 
   async getAdmins() {
@@ -379,7 +403,10 @@ export class AdminAuthService {
 
     const savedAdmin = await this.adminRepository.save(admin);
 
-    this.logger.log(`Admin created: ${savedAdmin.email} (${savedAdmin.role})`, 'AdminAuthService');
+    this.logger.log(
+      `Admin created: ${savedAdmin.id} (${savedAdmin.role})`,
+      'AdminAuthService',
+    );
 
     return {
       id: savedAdmin.id,
@@ -420,7 +447,7 @@ export class AdminAuthService {
 
     const updatedAdmin = await this.adminRepository.save(admin);
 
-    this.logger.log(`Admin updated: ${updatedAdmin.email}`, 'AdminAuthService');
+    this.logger.log(`Admin updated: ${updatedAdmin.id}`, 'AdminAuthService');
 
     return {
       id: updatedAdmin.id,
@@ -458,7 +485,7 @@ export class AdminAuthService {
     await this.adminRepository.softRemove(admin);
 
     this.logger.log(
-      `Admin deleted (soft): ${admin.email} by admin ${requestAdminId}`,
+      `Admin deleted (soft): ${admin.id} by admin ${requestAdminId}`,
       'AdminAuthService',
     );
 

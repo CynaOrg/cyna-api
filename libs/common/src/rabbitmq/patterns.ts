@@ -37,6 +37,7 @@ export const MESSAGE_PATTERNS = {
     ADMIN_RESEND_2FA: { cmd: 'auth.admin_resend_2fa' },
     ADMIN_REFRESH_TOKEN: { cmd: 'auth.admin_refresh_token' },
     ADMIN_LOGOUT: { cmd: 'auth.admin_logout' },
+    ADMIN_GET_ME: { cmd: 'auth.admin_get_me' },
     ADMIN_GET_ADMINS: { cmd: 'auth.admin_get_admins' },
     ADMIN_GET_ADMIN: { cmd: 'auth.admin_get_admin' },
     ADMIN_CREATE_ADMIN: { cmd: 'auth.admin_create_admin' },
@@ -87,8 +88,10 @@ export const MESSAGE_PATTERNS = {
     PRODUCT_DELETE: { cmd: 'catalog.product.delete' },
     PRODUCT_BULK_DELETE: { cmd: 'catalog.product.bulk_delete' },
     PRODUCT_FIND_ALL: { cmd: 'catalog.product.findAll' },
+    PRODUCT_FIND_ALL_ADMIN: { cmd: 'catalog.product.findAllAdmin' },
     PRODUCT_FIND_BY_SLUG: { cmd: 'catalog.product.findBySlug' },
     PRODUCT_FIND_BY_ID: { cmd: 'catalog.product.findById' },
+    PRODUCT_FIND_BY_ID_ADMIN: { cmd: 'catalog.product.findByIdAdmin' },
     PRODUCT_SEARCH: { cmd: 'catalog.product.search' },
     PRODUCT_FIND_FEATURED: { cmd: 'catalog.product.findFeatured' },
     PRODUCT_FIND_BY_CATEGORY: { cmd: 'catalog.product.findByCategory' },
@@ -158,6 +161,7 @@ export const MESSAGE_PATTERNS = {
     ADMIN_UPDATE_SUBSCRIPTION_TERMS: { cmd: 'payment.admin_update_subscription_terms' },
     CREATE_CHECKOUT_SESSION: { cmd: 'payment.create_checkout_session' },
     CREATE_PAYMENT_INTENT: { cmd: 'payment.create_payment_intent' },
+    RETRIEVE_PAYMENT_INTENT: { cmd: 'payment.retrieve_payment_intent' },
     CREATE_SUBSCRIPTION: { cmd: 'payment.create_subscription' },
     GET_USER_LICENSES: { cmd: 'payment.get_user_licenses' },
     GET_LICENSE_BY_ID: { cmd: 'payment.get_license_by_id' },
@@ -181,8 +185,11 @@ export const MESSAGE_PATTERNS = {
     // Admin - Carousel Image Upload
     CAROUSEL_REQUEST_UPLOAD_URL: { cmd: 'content.admin_carousel_request_upload_url' },
     // Admin - Hero & Top Products
+    ADMIN_GET_HERO_TEXT: { cmd: 'content.admin_get_hero_text' },
     ADMIN_UPDATE_HERO_TEXT: { cmd: 'content.admin_update_hero_text' },
+    ADMIN_GET_TOP_SERVICES: { cmd: 'content.admin_get_top_services' },
     ADMIN_UPDATE_TOP_SERVICES: { cmd: 'content.admin_update_top_services' },
+    ADMIN_GET_TOP_PRODUCTS: { cmd: 'content.admin_get_top_products' },
     ADMIN_UPDATE_TOP_PRODUCTS: { cmd: 'content.admin_update_top_products' },
     // Admin - Contact Messages
     ADMIN_GET_CONTACT_MESSAGES: { cmd: 'content.admin_get_contact_messages' },

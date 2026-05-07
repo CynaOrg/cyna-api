@@ -66,14 +66,24 @@ export class AuthController {
   @ApiResponse({ status: 401, description: 'Invalid credentials' })
   @ApiResponse({ status: 403, description: 'Email not verified' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
-  async login(@Body() dto: LoginDto, @Res({ passthrough: true }) res: Response) {
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
     const result = await this.authService.login(dto);
 
-    // Set refresh token as HTTP-only cookie
+    // Web: refresh token is set as HTTP-only cookie and stripped from the body.
+    // Mobile (Capacitor): WKWebView does not reliably persist cross-origin
+    // cookies across app launches, so when `X-Client-Type: mobile` is set we
+    // also keep the refreshToken in the body. The app stores it in the
+    // Keychain and re-sends it on /refresh-token in the body.
     if (result.refreshToken) {
       res.cookie('refresh_token', result.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
-      // Return response without refreshToken in body
-      delete result.refreshToken;
+      const isMobileClient = req.headers['x-client-type'] === 'mobile';
+      if (!isMobileClient) {
+        delete result.refreshToken;
+      }
     }
 
     return result;
@@ -146,11 +156,14 @@ export class AuthController {
 
     const result = await this.authService.refreshToken({ refreshToken });
 
-    // Set new refresh token cookie
+    // Same pattern as login: web gets the refresh token in cookie only, mobile
+    // also gets it in the body for Keychain persistence.
     if (result.refreshToken) {
       res.cookie('refresh_token', result.refreshToken, REFRESH_TOKEN_COOKIE_OPTIONS);
-      // Return response without refreshToken in body
-      delete result.refreshToken;
+      const isMobileClient = req.headers['x-client-type'] === 'mobile';
+      if (!isMobileClient) {
+        delete result.refreshToken;
+      }
     }
 
     return result;

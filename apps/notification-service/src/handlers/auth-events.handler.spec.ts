@@ -96,7 +96,7 @@ describe('AuthEventsHandler', () => {
       });
 
       expect(mockLogger.log).toHaveBeenCalledWith(
-        'Verification email sent successfully to test@example.com',
+        'Verification email sent successfully for user: user-123',
         'AuthEventsHandler',
       );
     });

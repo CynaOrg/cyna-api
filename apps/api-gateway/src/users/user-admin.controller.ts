@@ -3,6 +3,7 @@ import {
   Get,
   Patch,
   Param,
+  ParseUUIDPipe,
   Query,
   Body,
   Inject,
@@ -24,8 +25,10 @@ import {
 } from '@nestjs/swagger';
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import { SuperAdminGuard } from '../auth/guards';
-import { IsOptional, IsBoolean, IsString, IsInt, Min } from 'class-validator';
+import { IsOptional, IsBoolean, IsString, IsInt, IsEnum, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+
+type AdminUserStatusFilter = 'active' | 'inactive';
 
 class AdminUserQueryDto {
   @ApiPropertyOptional()
@@ -46,6 +49,11 @@ class AdminUserQueryDto {
   @Min(1)
   @Type(() => Number)
   limit?: number = 20;
+
+  @ApiPropertyOptional({ enum: ['active', 'inactive'] })
+  @IsOptional()
+  @IsEnum(['active', 'inactive'])
+  status?: AdminUserStatusFilter;
 }
 
 class UpdateUserStatusDto {
@@ -92,8 +100,13 @@ export class UserAdminController {
   @Get()
   @ApiOperation({ summary: 'List all users (super_admin only)' })
   @ApiResponse({ status: 200, description: 'Paginated list of users' })
-  async findAll(@Query() query: AdminUserQueryDto) {
-    return this.sendMessage(MESSAGE_PATTERNS.USER.ADMIN_LIST, query);
+  async findAll(@Query() query: AdminUserQueryDto): Promise<unknown> {
+    const { status, ...rest } = query;
+    const forwarded: Record<string, unknown> = { ...rest };
+    if (status !== undefined) {
+      forwarded.isActive = status === 'active';
+    }
+    return this.sendMessage(MESSAGE_PATTERNS.USER.ADMIN_LIST, forwarded);
   }
 
   @Get(':userId')
@@ -101,7 +114,7 @@ export class UserAdminController {
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User details' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async findOne(@Param('userId') userId: string) {
+  async findOne(@Param('userId', ParseUUIDPipe) userId: string) {
     return this.sendMessage(MESSAGE_PATTERNS.USER.ADMIN_GET, { userId });
   }
 
@@ -110,7 +123,10 @@ export class UserAdminController {
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User status updated' })
   @ApiResponse({ status: 404, description: 'User not found' })
-  async updateStatus(@Param('userId') userId: string, @Body() dto: UpdateUserStatusDto) {
+  async updateStatus(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Body() dto: UpdateUserStatusDto,
+  ) {
     return this.sendMessage(MESSAGE_PATTERNS.USER.ADMIN_UPDATE_STATUS, {
       userId,
       isActive: dto.isActive,
@@ -122,7 +138,7 @@ export class UserAdminController {
   @ApiParam({ name: 'userId', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'Paginated list of orders' })
   async getUserOrders(
-    @Param('userId') userId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @Query() query: AdminUserQueryDto,
   ): Promise<unknown> {
     return firstValueFrom(

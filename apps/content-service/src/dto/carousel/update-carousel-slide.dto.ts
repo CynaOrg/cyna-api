@@ -1,5 +1,20 @@
-import { IsOptional, IsString, IsBoolean, IsInt, IsUrl, MaxLength, Min } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsBoolean,
+  IsInt,
+  IsUrl,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Transform } from 'class-transformer';
+
+/**
+ * Allow either an absolute http(s) URL or a root-relative path (e.g. "/products/123").
+ * Explicitly rejects unsafe schemes (javascript:, data:, vbscript:, file:, etc.).
+ */
+const LINK_URL_PATTERN = /^(?:https?:\/\/[^\s]+|\/(?![/\\])[^\s]*)$/;
 
 export class UpdateCarouselSlideDto {
   @IsOptional()
@@ -31,7 +46,8 @@ export class UpdateCarouselSlideDto {
   imageUrl?: string;
 
   @IsOptional()
-  @IsUrl({}, { message: 'validation.linkUrl.invalid' })
+  @IsString()
+  @Matches(LINK_URL_PATTERN, { message: 'validation.linkUrl.invalid' })
   linkUrl?: string;
 
   @IsOptional()

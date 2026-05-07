@@ -49,7 +49,25 @@ describe('UserAdminService', () => {
     qb.getManyAndCount.mockResolvedValue([[{ id: 'u1' } as User], 1]);
     const res = await service.adminList({ page: 1, limit: 10 });
     expect(res.total).toBe(1);
-    expect(res.items).toHaveLength(1);
+    expect(res.data).toHaveLength(1);
+    expect(res.page).toBe(1);
+    expect(res.limit).toBe(10);
+    expect(res.totalPages).toBe(1);
+  });
+
+  it('adminList computes totalPages correctly when total is zero', async () => {
+    qb.getManyAndCount.mockResolvedValue([[], 0]);
+    const res = await service.adminList({ page: 1, limit: 10 });
+    expect(res.total).toBe(0);
+    expect(res.data).toHaveLength(0);
+    expect(res.totalPages).toBe(1);
+  });
+
+  it('adminList computes totalPages with multiple pages', async () => {
+    qb.getManyAndCount.mockResolvedValue([[{ id: 'u1' } as User], 25]);
+    const res = await service.adminList({ page: 2, limit: 10 });
+    expect(res.total).toBe(25);
+    expect(res.totalPages).toBe(3);
   });
 
   it('adminGet throws 404 when not found', async () => {

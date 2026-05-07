@@ -25,7 +25,13 @@ describe('UserAdminController', () => {
   });
 
   it('adminList delegates to service', async () => {
-    service.adminList.mockResolvedValue({ items: [], total: 0, page: 1, limit: 10 });
+    service.adminList.mockResolvedValue({
+      data: [],
+      total: 0,
+      page: 1,
+      limit: 10,
+      totalPages: 1,
+    });
     await controller.adminList({ page: 1, limit: 10 });
     expect(service.adminList).toHaveBeenCalledWith({ page: 1, limit: 10 });
   });

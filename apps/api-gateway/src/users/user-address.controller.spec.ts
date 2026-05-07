@@ -27,7 +27,9 @@ describe('Gateway UserAddressController', () => {
 
   it('POST create sends user.create_address with merged payload', async () => {
     client.send.mockReturnValue(of({ id: 'a1' }));
-    await controller.create('u1', { label: 'L' } as any);
+    await controller.create('u1', { label: 'L' } as unknown as Parameters<
+      typeof controller.create
+    >[1]);
     expect(client.send).toHaveBeenCalledWith(
       MESSAGE_PATTERNS.USER.CREATE_ADDRESS,
       expect.objectContaining({ userId: 'u1', label: 'L' }),
@@ -36,7 +38,9 @@ describe('Gateway UserAddressController', () => {
 
   it('PATCH update merges userId, id, and body', async () => {
     client.send.mockReturnValue(of({ id: 'a1' }));
-    await controller.update('u1', 'a1', { label: 'X' } as any);
+    await controller.update('u1', 'a1', { label: 'X' } as unknown as Parameters<
+      typeof controller.update
+    >[2]);
     expect(client.send).toHaveBeenCalledWith(
       MESSAGE_PATTERNS.USER.UPDATE_ADDRESS,
       expect.objectContaining({ userId: 'u1', id: 'a1', label: 'X' }),

@@ -1,5 +1,5 @@
 import { Test } from '@nestjs/testing';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule } from '@nestjs/config';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { CynaCacheModule } from './cache.module';
 import { CynaCacheService } from './cache.service';

@@ -5,7 +5,7 @@ import { CynaLoggerService } from '../logger';
 
 describe('RedisHealthService', () => {
   let service: RedisHealthService;
-  let cacheManager: { get: jest.Mock; set: jest.Mock; del: jest.Mock; stores?: any };
+  let cacheManager: { get: jest.Mock; set: jest.Mock; del: jest.Mock; stores?: unknown[] };
 
   // Helper: build the cache-manager v7 nested structure exposing an ioredis-like client
   const withClient = (client: unknown) => [{ opts: { store: { _cache: { client } } } }];

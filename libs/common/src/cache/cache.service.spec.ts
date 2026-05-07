@@ -9,7 +9,7 @@ describe('CynaCacheService', () => {
     get: jest.Mock;
     set: jest.Mock;
     del: jest.Mock;
-    stores?: any;
+    stores?: unknown[];
     clear?: jest.Mock;
   };
   let logger: { debug: jest.Mock; warn: jest.Mock; log: jest.Mock };

@@ -52,6 +52,15 @@ export class PaymentController {
     }
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.PAYMENT.RETRIEVE_PAYMENT_INTENT)
+  async retrievePaymentIntent(@Payload() dto: { paymentIntentId: string }) {
+    try {
+      return await this.paymentService.retrievePaymentIntent(dto.paymentIntentId);
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.PAYMENT.CREATE_SUBSCRIPTION)
   async createSubscription(@Payload() dto: CreateSubscriptionDto) {
     try {

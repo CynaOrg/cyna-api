@@ -161,6 +161,7 @@ export const MESSAGE_PATTERNS = {
     ADMIN_UPDATE_SUBSCRIPTION_TERMS: { cmd: 'payment.admin_update_subscription_terms' },
     CREATE_CHECKOUT_SESSION: { cmd: 'payment.create_checkout_session' },
     CREATE_PAYMENT_INTENT: { cmd: 'payment.create_payment_intent' },
+    RETRIEVE_PAYMENT_INTENT: { cmd: 'payment.retrieve_payment_intent' },
     CREATE_SUBSCRIPTION: { cmd: 'payment.create_subscription' },
     GET_USER_LICENSES: { cmd: 'payment.get_user_licenses' },
     GET_LICENSE_BY_ID: { cmd: 'payment.get_license_by_id' },

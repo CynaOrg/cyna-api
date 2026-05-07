@@ -76,6 +76,36 @@ export class PaymentService {
     };
   }
 
+  /**
+   * Fetch a Stripe PaymentIntent by id and return its client_secret along
+   * with the basic shape used by `createPaymentIntent`. Used by the gateway
+   * to keep checkout idempotent: when an order already has a PaymentIntent
+   * we re-emit the existing client_secret instead of minting a new intent.
+   *
+   * If the intent is in a terminal/non-payable state (succeeded, canceled,
+   * etc.) the caller falls back to creating a fresh one.
+   */
+  async retrievePaymentIntent(paymentIntentId: string): Promise<{
+    clientSecret: string;
+    paymentIntentId: string;
+    amount: number;
+    currency: string;
+    reusable: boolean;
+  }> {
+    const intent = await this.stripeService.getPaymentIntent(paymentIntentId);
+    const reusable =
+      intent.status === 'requires_payment_method' ||
+      intent.status === 'requires_confirmation' ||
+      intent.status === 'requires_action';
+    return {
+      clientSecret: intent.client_secret ?? '',
+      paymentIntentId: intent.id,
+      amount: intent.amount,
+      currency: intent.currency,
+      reusable,
+    };
+  }
+
   private async resolveOrCreateCustomer(dto: CreatePaymentIntentDto): Promise<string | undefined> {
     try {
       if (dto.userId) {
@@ -128,7 +158,13 @@ export class PaymentService {
         } = false,
   ): Promise<
     | Record<string, unknown>[]
-    | { data: Record<string, unknown>[]; total: number; page: number; limit: number; totalPages: number }
+    | {
+        data: Record<string, unknown>[];
+        total: number;
+        page: number;
+        limit: number;
+        totalPages: number;
+      }
   > {
     const opts = typeof options === 'boolean' ? { adminMode: options } : options;
     const adminMode = opts.adminMode === true;

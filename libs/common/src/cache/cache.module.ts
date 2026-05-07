@@ -1,89 +1,34 @@
-import { DynamicModule, Global, Module } from '@nestjs/common';
+import { DynamicModule, Global, Logger, Module } from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { redisStore } from 'cache-manager-redis-store';
+import { redisStore } from 'cache-manager-ioredis-yet';
 import { CynaCacheService } from './cache.service';
 import { LoggerModule } from '../logger';
 
-/**
- * Cache Module Options
- */
 export interface CynaCacheModuleOptions {
-  /**
-   * Custom TTL in seconds (overrides config)
-   */
+  /** Custom TTL in seconds (overrides config). */
   ttl?: number;
   /**
-   * Whether to use local memory cache as fallback
+   * Whether to fall back to in-memory cache if Redis is unreachable.
+   * Default: true outside production, false in production.
    */
   useMemoryFallback?: boolean;
 }
 
-/**
- * CYNA Cache Module
- * Provides Redis-based caching with NestJS Cache Manager
- * Supports both root configuration and feature-specific setup
- */
 @Global()
 @Module({})
 export class CynaCacheModule {
-  /**
-   * Configure the root cache module with Redis
-   * Should be imported once in the root application module
-   */
   static forRoot(options?: CynaCacheModuleOptions): DynamicModule {
-    return {
-      module: CynaCacheModule,
-      imports: [
-        LoggerModule,
-        CacheModule.registerAsync({
-          imports: [ConfigModule],
-          useFactory: async (configService: ConfigService) => {
-            const redisHost = configService.get<string>('redis.host') || 'localhost';
-            const redisPort = configService.get<number>('redis.port') || 6379;
-            const defaultTtl = options?.ttl || configService.get<number>('redis.ttl') || 3600;
-
-            try {
-              const store = await redisStore({
-                socket: {
-                  host: redisHost,
-                  port: redisPort,
-                },
-                ttl: defaultTtl,
-              });
-
-              console.log(`[CynaCacheModule] Connected to Redis at ${redisHost}:${redisPort}`);
-
-              return {
-                store: store as unknown as string,
-                ttl: defaultTtl,
-              };
-            } catch (error) {
-              // Fallback to in-memory cache if Redis connection fails
-              if (options?.useMemoryFallback) {
-                console.warn(
-                  `[CynaCacheModule] Redis connection failed, using in-memory cache: ${error}`,
-                );
-                return {
-                  ttl: defaultTtl,
-                };
-              }
-              throw error;
-            }
-          },
-          inject: [ConfigService],
-        }),
-      ],
-      providers: [CynaCacheService],
-      exports: [CacheModule, CynaCacheService],
-    };
+    return CynaCacheModule.build(options);
   }
 
-  /**
-   * Register cache module for a specific feature
-   * Useful when you need different TTL configurations per module
-   */
   static forFeature(options?: CynaCacheModuleOptions): DynamicModule {
+    return CynaCacheModule.build(options);
+  }
+
+  private static build(options?: CynaCacheModuleOptions): DynamicModule {
+    const logger = new Logger('CynaCacheModule');
+
     return {
       module: CynaCacheModule,
       imports: [
@@ -91,29 +36,57 @@ export class CynaCacheModule {
         CacheModule.registerAsync({
           imports: [ConfigModule],
           useFactory: async (configService: ConfigService) => {
-            const redisHost = configService.get<string>('redis.host') || 'localhost';
-            const redisPort = configService.get<number>('redis.port') || 6379;
-            const defaultTtl = options?.ttl || configService.get<number>('redis.ttl') || 3600;
+            const env =
+              configService.get<string>('app.env') || process.env.NODE_ENV || 'development';
+            const allowFallback = options?.useMemoryFallback ?? env !== 'production';
+            const defaultTtlSeconds =
+              options?.ttl ?? configService.get<number>('redis.ttl') ?? 3600;
+            const defaultTtlMs = defaultTtlSeconds * 1000;
+
+            const url = configService.get<string>('redis.url');
+            const host = configService.get<string>('redis.host') || 'localhost';
+            const port = configService.get<number>('redis.port') || 6379;
+            const password = configService.get<string>('redis.password') || undefined;
+
+            // ioredis is lazy by default and surfaces connection errors via async events.
+            // These options force fail-fast behavior so unreachable Redis throws here.
+            const ioredisOptions = {
+              maxRetriesPerRequest: 1,
+              enableOfflineQueue: false,
+              connectTimeout: 5000,
+              ttl: defaultTtlMs,
+            };
 
             try {
-              const store = await redisStore({
-                socket: {
-                  host: redisHost,
-                  port: redisPort,
-                },
-                ttl: defaultTtl,
-              });
+              const store = url
+                ? await redisStore({ url, ...ioredisOptions })
+                : await redisStore({ host, port, password, ...ioredisOptions });
+
+              // Probe the connection so failures throw synchronously rather than
+              // being silently swallowed by ioredis' background reconnect loop.
+              const client = (store as unknown as { client?: { ping?: () => Promise<string> } })
+                .client;
+              if (client?.ping) {
+                await client.ping();
+              }
+
+              const target = url ? new URL(url).host : `${host}:${port}`;
+              logger.log(`Connected to Redis at ${target}`);
 
               return {
                 store: store as unknown as string,
-                ttl: defaultTtl,
+                ttl: defaultTtlMs,
               };
             } catch (error) {
-              if (options?.useMemoryFallback) {
-                return {
-                  ttl: defaultTtl,
-                };
+              if (allowFallback) {
+                logger.warn(
+                  `Redis connection failed, using in-memory cache: ${(error as Error).message}`,
+                );
+                return { ttl: defaultTtlMs };
               }
+              logger.error(
+                `Redis connection failed in production (no fallback): ${(error as Error).message}`,
+              );
               throw error;
             }
           },

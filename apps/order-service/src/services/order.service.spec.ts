@@ -180,7 +180,9 @@ describe('OrderService', () => {
       catalogClient.send
         .mockReturnValueOnce(of(mockProducts[0]))
         .mockReturnValueOnce(of(mockProducts[1]));
-      (orderRepository.findOne as jest.Mock).mockResolvedValue({
+      // First findOne call is the idempotency check (no existing pending
+      // order for this cart); subsequent calls return the reloaded order.
+      (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
         id: 'order-new',
         items: [],
         orderNumber: 'CYN-2026-00001',
@@ -265,7 +267,9 @@ describe('OrderService', () => {
       (cartService.getCart as jest.Mock).mockResolvedValueOnce(singleTypeCart);
       catalogClient.send.mockReset();
       catalogClient.send.mockReturnValueOnce(of(mockProducts[0]));
-      (orderRepository.findOne as jest.Mock).mockResolvedValue({
+      // First findOne call is the idempotency check (no existing pending
+      // order for this cart); subsequent calls return the reloaded order.
+      (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
         id: 'order-new',
         items: [],
         orderNumber: 'CYN-2026-00001',
@@ -286,7 +290,7 @@ describe('OrderService', () => {
       );
     });
 
-    it('should clear cart after order creation', async () => {
+    it('should NOT clear cart at order creation (cart is preserved until payment is confirmed)', async () => {
       await service.createOrderFromCart({
         userId: 'user-1',
         cartId: 'cart-1',
@@ -295,10 +299,7 @@ describe('OrderService', () => {
         stripePaymentIntentId: 'pi_123',
       });
 
-      expect(cartService.clearCart).toHaveBeenCalledWith({
-        userId: 'user-1',
-        sessionId: undefined,
-      });
+      expect(cartService.clearCart).not.toHaveBeenCalled();
     });
 
     it('should throw when cart is empty', async () => {
@@ -334,7 +335,9 @@ describe('OrderService', () => {
       catalogClient.send
         .mockReturnValueOnce(of(mockProducts[0]))
         .mockReturnValueOnce(of(mockProducts[1]));
-      (orderRepository.findOne as jest.Mock).mockResolvedValue({
+      // First findOne call is the idempotency check (no existing pending
+      // order for this cart); subsequent calls return the reloaded order.
+      (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
         id: 'order-new',
         items: [],
         orderNumber: 'CYN-2026-00001',
@@ -360,7 +363,9 @@ describe('OrderService', () => {
       catalogClient.send
         .mockReturnValueOnce(of(mockProducts[0]))
         .mockReturnValueOnce(of(mockProducts[1]));
-      (orderRepository.findOne as jest.Mock).mockResolvedValue({
+      // First findOne call is the idempotency check (no existing pending
+      // order for this cart); subsequent calls return the reloaded order.
+      (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
         id: 'order-new',
         items: [],
         orderNumber: 'CYN-2026-00001',
@@ -575,7 +580,9 @@ describe('OrderService', () => {
       catalogClient.send
         .mockReturnValueOnce(of(mockProducts[0]))
         .mockReturnValueOnce(of(mockProducts[1]));
-      (orderRepository.findOne as jest.Mock).mockResolvedValue({
+      // First findOne call is the idempotency check (no existing pending
+      // order for this cart); subsequent calls return the reloaded order.
+      (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
         id: 'order-new',
         items: [],
         orderNumber: 'CYN-2026-00001',

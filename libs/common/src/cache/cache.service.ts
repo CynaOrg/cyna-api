@@ -79,18 +79,30 @@ export class CynaCacheService {
    */
   async delByPattern(pattern: string): Promise<void> {
     try {
-      // Access the underlying store for pattern-based operations
-      const store = (this.cacheManager as unknown as CacheManagerExtended).store;
-      if (store && typeof store.keys === 'function') {
-        const keys = await store.keys(pattern);
-        if (keys && keys.length > 0) {
-          await Promise.all(keys.map((key: string) => this.cacheManager.del(key)));
-          this.logger.debug(`Cache DEL by pattern: ${pattern} (${keys.length} keys)`);
+      const store = (
+        this.cacheManager as unknown as {
+          store?: {
+            client?: {
+              scanStream?: (opts: { match: string; count: number }) => AsyncIterable<string[]>;
+            };
+          };
         }
-      } else {
-        // Fallback: log warning if pattern deletion is not supported
+      ).store;
+      const client = store?.client;
+
+      if (!client || typeof client.scanStream !== 'function') {
         this.logger.debug(`Cache DEL by pattern not supported for current store: ${pattern}`);
+        return;
       }
+
+      const stream = client.scanStream({ match: pattern, count: 100 });
+      let total = 0;
+      for await (const keys of stream) {
+        if (keys.length === 0) continue;
+        await Promise.all(keys.map((key) => this.cacheManager.del(key)));
+        total += keys.length;
+      }
+      this.logger.debug(`Cache DEL by pattern: ${pattern} (${total} keys)`);
     } catch (error) {
       this.logger.warn(`Cache DEL by pattern error for ${pattern}: ${error}`);
     }

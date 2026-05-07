@@ -12,9 +12,59 @@ import {
   CACHE_PREFIXES,
   SERVICE_NAMES,
   MESSAGE_PATTERNS,
+  Language,
+  coerceLanguage,
 } from '@cyna-api/common';
 import { TopProductConfig } from '../entities';
 import { UpdateTopProductsDto } from '../dto';
+
+interface RawProductImage {
+  imageUrl: string;
+  isPrimary: boolean;
+  displayOrder: number;
+}
+
+interface RawProductCategory {
+  id: string;
+  slug: string;
+  nameFr: string;
+  nameEn: string;
+}
+
+interface RawProductEntity {
+  id: string;
+  slug: string;
+  sku?: string;
+  nameFr: string;
+  nameEn: string;
+  shortDescriptionFr?: string;
+  shortDescriptionEn?: string;
+  productType: string;
+  priceMonthly?: string | number;
+  priceYearly?: string | number;
+  priceUnit?: string | number;
+  isAvailable: boolean;
+  isFeatured: boolean;
+  images?: RawProductImage[];
+  categoryId?: string;
+  category?: RawProductCategory;
+}
+
+export interface LocalizedTopProduct {
+  id: string;
+  slug: string;
+  name: string;
+  shortDescription?: string;
+  productType: string;
+  priceMonthly?: number;
+  priceYearly?: number;
+  priceUnit?: number;
+  isAvailable: boolean;
+  isFeatured: boolean;
+  primaryImageUrl?: string;
+  categoryId?: string;
+  categoryName?: string;
+}
 
 const CONFIG_TYPE_SERVICES = 'top_services';
 const CONFIG_TYPE_PRODUCTS = 'top_products';
@@ -72,21 +122,21 @@ export class TopProductsService {
     );
   }
 
-  async getTopServicesWithDetails(): Promise<{
+  async getTopServicesWithDetails(lang?: string): Promise<{
     config: TopProductConfig;
-    products: Record<string, unknown>[];
+    products: LocalizedTopProduct[];
   }> {
     const config = await this.getTopServices();
-    const products = await this.resolveProductDetails(config.productIds);
+    const products = await this.resolveProductDetails(config.productIds, coerceLanguage(lang));
     return { config, products };
   }
 
-  async getTopProductsWithDetails(): Promise<{
+  async getTopProductsWithDetails(lang?: string): Promise<{
     config: TopProductConfig;
-    products: Record<string, unknown>[];
+    products: LocalizedTopProduct[];
   }> {
     const config = await this.getTopProducts();
-    const products = await this.resolveProductDetails(config.productIds);
+    const products = await this.resolveProductDetails(config.productIds, coerceLanguage(lang));
     return { config, products };
   }
 
@@ -134,18 +184,21 @@ export class TopProductsService {
     return config;
   }
 
-  private async resolveProductDetails(productIds: string[]): Promise<Record<string, unknown>[]> {
+  private async resolveProductDetails(
+    productIds: string[],
+    lang: Language = Language.FR,
+  ): Promise<LocalizedTopProduct[]> {
     if (!productIds || productIds.length === 0) {
       return [];
     }
 
-    const products: Record<string, unknown>[] = [];
+    const products: LocalizedTopProduct[] = [];
 
     for (const productId of productIds) {
       try {
         const product = await firstValueFrom(
           this.catalogClient
-            .send(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID, { id: productId })
+            .send<RawProductEntity>(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID, { id: productId })
             .pipe(
               timeout(5000),
               retry({ count: 1, delay: 1000 }),
@@ -157,7 +210,7 @@ export class TopProductsService {
               }),
             ),
         );
-        products.push(product);
+        products.push(this.toLocalizedProduct(product, lang));
       } catch (error) {
         this.logger.warn(
           `Failed to resolve product details for: ${productId} - ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -166,6 +219,31 @@ export class TopProductsService {
     }
 
     return products;
+  }
+
+  private toLocalizedProduct(product: RawProductEntity, lang: Language): LocalizedTopProduct {
+    const isEn = lang === Language.EN;
+    const primaryImage = product.images?.find((img) => img.isPrimary) ?? product.images?.[0];
+
+    return {
+      id: product.id,
+      slug: product.slug,
+      name: isEn ? product.nameEn : product.nameFr,
+      shortDescription: isEn ? product.shortDescriptionEn : product.shortDescriptionFr,
+      productType: product.productType,
+      priceMonthly: product.priceMonthly != null ? Number(product.priceMonthly) : undefined,
+      priceYearly: product.priceYearly != null ? Number(product.priceYearly) : undefined,
+      priceUnit: product.priceUnit != null ? Number(product.priceUnit) : undefined,
+      isAvailable: product.isAvailable,
+      isFeatured: product.isFeatured,
+      primaryImageUrl: primaryImage?.imageUrl,
+      categoryId: product.categoryId,
+      categoryName: product.category
+        ? isEn
+          ? product.category.nameEn
+          : product.category.nameFr
+        : undefined,
+    };
   }
 
   private async invalidateTopProductsCache(): Promise<void> {

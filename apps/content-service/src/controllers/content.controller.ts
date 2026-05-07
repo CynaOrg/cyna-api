@@ -36,12 +36,13 @@ export class ContentController {
   // ==================== Homepage ====================
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.GET_HOMEPAGE)
-  async getHomepage() {
+  async getHomepage(@Payload() data?: { lang?: string }) {
+    const lang = data?.lang;
     const [carousel, heroText, topServicesData, topProductsData] = await Promise.all([
       this.carouselService.findAllPublic(),
       this.heroTextService.get(),
-      this.topProductsService.getTopServicesWithDetails(),
-      this.topProductsService.getTopProductsWithDetails(),
+      this.topProductsService.getTopServicesWithDetails(lang),
+      this.topProductsService.getTopProductsWithDetails(lang),
     ]);
 
     return {
@@ -62,13 +63,13 @@ export class ContentController {
   // ==================== Top Services/Products (Public) ====================
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.GET_TOP_SERVICES)
-  async getTopServices() {
-    return this.topProductsService.getTopServicesWithDetails();
+  async getTopServices(@Payload() data?: { lang?: string }) {
+    return this.topProductsService.getTopServicesWithDetails(data?.lang);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.GET_TOP_PRODUCTS)
-  async getTopProducts() {
-    return this.topProductsService.getTopProductsWithDetails();
+  async getTopProducts(@Payload() data?: { lang?: string }) {
+    return this.topProductsService.getTopProductsWithDetails(data?.lang);
   }
 
   // ==================== Contact Messages (Public) ====================

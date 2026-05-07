@@ -39,8 +39,10 @@ export interface AppConfiguration {
     logging: boolean;
   };
   redis: {
+    url?: string;
     host: string;
     port: number;
+    password?: string;
     ttl: number;
   };
 }
@@ -81,8 +83,10 @@ export default (): AppConfiguration => ({
     logging: process.env.DATABASE_LOGGING === 'true',
   },
   redis: {
+    url: process.env.REDIS_URL || undefined,
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379', 10),
+    password: process.env.REDIS_PASSWORD || undefined,
     ttl: parseInt(process.env.REDIS_TTL || '3600', 10),
   },
 });

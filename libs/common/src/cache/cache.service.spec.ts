@@ -9,7 +9,7 @@ describe('CynaCacheService', () => {
     get: jest.Mock;
     set: jest.Mock;
     del: jest.Mock;
-    store?: any;
+    stores?: any;
     clear?: jest.Mock;
   };
   let logger: { debug: jest.Mock; warn: jest.Mock; log: jest.Mock };
@@ -96,7 +96,8 @@ describe('CynaCacheService', () => {
         yield ['product:3'];
       })();
       const client = { scanStream: jest.fn(() => stream) };
-      cacheManager.store = { client };
+      // Mock the cache-manager v7 structure: stores[0].opts.store._cache.client
+      cacheManager.stores = [{ opts: { store: { _cache: { client } } } }];
 
       await service.delByPattern('product:*');
 
@@ -105,7 +106,8 @@ describe('CynaCacheService', () => {
     });
 
     it('logs a debug message when scan is unsupported', async () => {
-      cacheManager.store = {};
+      // No stores → memory mode → no client
+      cacheManager.stores = [];
       await service.delByPattern('product:*');
       expect(logger.debug).toHaveBeenCalledWith(
         expect.stringContaining('Cache DEL by pattern not supported'),

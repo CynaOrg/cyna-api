@@ -1,6 +1,8 @@
 import { DynamicModule, Global, Logger, Module } from '@nestjs/common';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { KeyvAdapter } from 'cache-manager';
+import Keyv from 'keyv';
 import { redisStore } from 'cache-manager-ioredis-yet';
 import { CynaCacheService } from './cache.service';
 import { RedisHealthService } from './cache.health';
@@ -65,17 +67,61 @@ export class CynaCacheModule {
 
               // Probe the connection so failures throw synchronously rather than
               // being silently swallowed by ioredis' background reconnect loop.
-              const client = (store as unknown as { client?: { ping?: () => Promise<string> } })
-                .client;
+              // We wait for the 'ready' event because ioredis connects asynchronously;
+              // pinging before ready while enableOfflineQueue=false races against the socket.
+              const client = (
+                store as unknown as {
+                  client?: {
+                    status?: string;
+                    ping?: () => Promise<string>;
+                    once?: (event: string, listener: (...args: unknown[]) => void) => void;
+                    off?: (event: string, listener: (...args: unknown[]) => void) => void;
+                  };
+                }
+              ).client;
+
               if (client?.ping) {
+                if (client.status !== 'ready' && client.once && client.off) {
+                  await new Promise<void>((resolve, reject) => {
+                    const onReady = () => {
+                      cleanup();
+                      resolve();
+                    };
+                    const onError = (err: unknown) => {
+                      cleanup();
+                      reject(err instanceof Error ? err : new Error(String(err)));
+                    };
+                    const cleanup = () => {
+                      client.off?.('ready', onReady);
+                      client.off?.('error', onError);
+                    };
+                    client.once?.('ready', onReady);
+                    client.once?.('error', onError);
+                  });
+                }
                 await client.ping();
               }
 
               const target = url ? new URL(url).host : `${host}:${port}`;
               logger.log(`Connected to Redis at ${target}`);
 
+              // Wrap the cache-manager-ioredis-yet store in a KeyvAdapter,
+              // then in a Keyv. @nestjs/cache-manager v3 passes the raw store
+              // to `new Keyv({ store })`, but Keyv expects a KeyvStoreAdapter
+              // (delete/clear methods), not the legacy Store interface (del).
+              // Without this wrapping, Keyv silently falls back to an in-memory Map.
+              // The cast bridges cache-manager-ioredis-yet's RedisStore (legacy
+              // Store interface) and cache-manager v7's CacheManagerStore — runtime
+              // methods (get/set/del/mget/mdel) line up; only the static types differ.
+              const keyv = new Keyv({
+                store: new KeyvAdapter(
+                  store as unknown as ConstructorParameters<typeof KeyvAdapter>[0],
+                ),
+                ttl: defaultTtlMs,
+              });
+
               return {
-                store: store as unknown as string,
+                stores: [keyv],
                 ttl: defaultTtlMs,
               };
             } catch (error) {

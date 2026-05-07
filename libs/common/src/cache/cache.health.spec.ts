@@ -5,7 +5,10 @@ import { CynaLoggerService } from '../logger';
 
 describe('RedisHealthService', () => {
   let service: RedisHealthService;
-  let cacheManager: { get: jest.Mock; set: jest.Mock; del: jest.Mock; store?: any };
+  let cacheManager: { get: jest.Mock; set: jest.Mock; del: jest.Mock; stores?: any };
+
+  // Helper: build the cache-manager v7 nested structure exposing an ioredis-like client
+  const withClient = (client: unknown) => [{ opts: { store: { _cache: { client } } } }];
 
   beforeEach(async () => {
     cacheManager = { get: jest.fn(), set: jest.fn(), del: jest.fn() };
@@ -30,7 +33,7 @@ describe('RedisHealthService', () => {
       return setCall ? setCall[1] : 'ok';
     });
     cacheManager.del.mockResolvedValue(undefined);
-    cacheManager.store = { client: {} }; // ioredis client present → store is "redis"
+    cacheManager.stores = withClient({}); // ioredis client present → store is "redis"
 
     const result = await service.probe();
 
@@ -42,7 +45,7 @@ describe('RedisHealthService', () => {
 
   it('returns down when set throws', async () => {
     cacheManager.set.mockRejectedValue(new Error('NOAUTH'));
-    cacheManager.store = { client: {} };
+    cacheManager.stores = withClient({});
 
     const result = await service.probe();
 
@@ -57,7 +60,7 @@ describe('RedisHealthService', () => {
       return setCall ? setCall[1] : 'ok';
     });
     cacheManager.del.mockResolvedValue(undefined);
-    cacheManager.store = undefined;
+    cacheManager.stores = []; // no underlying redis store → memory mode
 
     const result = await service.probe();
 
@@ -69,7 +72,7 @@ describe('RedisHealthService', () => {
     cacheManager.set.mockResolvedValue(undefined);
     cacheManager.get.mockResolvedValue('wrong');
     cacheManager.del.mockResolvedValue(undefined);
-    cacheManager.store = { client: {} };
+    cacheManager.stores = withClient({});
 
     const result = await service.probe();
     expect(result.status).toBe('down');

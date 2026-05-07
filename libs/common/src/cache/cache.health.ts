@@ -3,6 +3,7 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { CynaLoggerService } from '../logger';
 import { randomUUID } from 'crypto';
+import { getRedisClient } from './cache.utils';
 
 export interface RedisHealthResult {
   status: 'up' | 'down';
@@ -61,7 +62,6 @@ export class RedisHealthService {
   }
 
   private detectStore(): 'redis' | 'memory' {
-    const store = (this.cacheManager as unknown as { store?: { client?: unknown } }).store;
-    return store && store.client ? 'redis' : 'memory';
+    return getRedisClient(this.cacheManager) ? 'redis' : 'memory';
   }
 }

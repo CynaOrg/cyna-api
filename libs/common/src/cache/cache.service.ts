@@ -2,16 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { CynaLoggerService } from '../logger';
-
-interface CacheStore {
-  keys?: (pattern: string) => Promise<string[]>;
-  reset?: () => Promise<void>;
-}
-
-interface CacheManagerExtended {
-  store?: CacheStore;
-  clear?: () => Promise<void>;
-}
+import { getRedisClient } from './cache.utils';
 
 /**
  * CYNA Cache Service
@@ -79,16 +70,7 @@ export class CynaCacheService {
    */
   async delByPattern(pattern: string): Promise<void> {
     try {
-      const store = (
-        this.cacheManager as unknown as {
-          store?: {
-            client?: {
-              scanStream?: (opts: { match: string; count: number }) => AsyncIterable<string[]>;
-            };
-          };
-        }
-      ).store;
-      const client = store?.client;
+      const client = getRedisClient(this.cacheManager);
 
       if (!client || typeof client.scanStream !== 'function') {
         this.logger.debug(`Cache DEL by pattern not supported for current store: ${pattern}`);
@@ -141,15 +123,10 @@ export class CynaCacheService {
    */
   async reset(): Promise<void> {
     try {
-      // Try to access clear method or underlying store reset
-      const extended = this.cacheManager as unknown as CacheManagerExtended;
-      const store = extended.store;
-      if (store && typeof store.reset === 'function') {
-        await store.reset();
-        this.logger.log('Cache reset completed');
-      } else if (typeof extended.clear === 'function') {
+      const extended = this.cacheManager as unknown as { clear?: () => Promise<void> };
+      if (typeof extended.clear === 'function') {
         await extended.clear();
-        this.logger.log('Cache cleared completed');
+        this.logger.log('Cache cleared');
       } else {
         this.logger.debug('Cache reset not supported for current store');
       }

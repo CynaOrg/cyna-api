@@ -7,7 +7,14 @@ import { OrderItem } from './order-item.entity';
 @Index('idx_orders_order_number', ['orderNumber'], { unique: true })
 @Index('idx_orders_stripe_payment_intent_id', ['stripePaymentIntentId'])
 @Index('idx_orders_status', ['status'])
+@Index('idx_orders_cart_id_status', ['cartId', 'status'])
 export class Order extends BaseEntity {
+  /** Cart this order was created from. Used for idempotent re-creation:
+      a fresh checkout for the same cart returns the existing pending order
+      instead of creating a new one (and a new Stripe PaymentIntent). */
+  @Column({ name: 'cart_id', type: 'uuid', nullable: true })
+  cartId: string | null;
+
   @Column({ name: 'order_number', type: 'varchar', length: 20, unique: true })
   orderNumber: string;
 

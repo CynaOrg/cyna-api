@@ -104,6 +104,37 @@ export class OrderService {
     preferredLanguage?: Language;
     stripePaymentIntentId: string;
   }): Promise<Order> {
+    // Idempotence: if a pending order already exists for this cart, reuse it
+    // so the gateway can fetch the existing Stripe PaymentIntent's client
+    // secret instead of creating a fresh one. The address snapshots are
+    // refreshed in case the customer changed them between attempts.
+    const existing = await this.orderRepository.findOne({
+      where: { cartId: data.cartId, status: OrderStatus.PENDING },
+    });
+    if (existing) {
+      let mutated = false;
+      if (data.billingAddress) {
+        existing.billingAddressSnapshot = data.billingAddress;
+        mutated = true;
+      }
+      if (data.shippingAddress !== undefined) {
+        existing.shippingAddressSnapshot = data.shippingAddress ?? null;
+        mutated = true;
+      }
+      if (data.email && data.email !== existing.customerEmail) {
+        existing.customerEmail = data.email;
+        existing.notificationEmail = data.email;
+        mutated = true;
+      }
+      if (mutated) await this.orderRepository.save(existing);
+      this.logger.log(`Reusing pending order ${existing.orderNumber} for cart ${data.cartId}`);
+      const reloaded = await this.orderRepository.findOne({
+        where: { id: existing.id },
+        relations: ['items'],
+      });
+      return reloaded ?? existing;
+    }
+
     // 1. Get the cart by its database ID
     const cartEntity = await this.cartService.findCartById(data.cartId);
     if (!cartEntity) {
@@ -234,6 +265,7 @@ export class OrderService {
       const order = this.orderRepository.create({
         orderNumber,
         userId: data.userId || null,
+        cartId: data.cartId,
         customerEmail: data.email,
         notificationEmail: data.email,
         notificationLanguage: data.preferredLanguage ?? Language.FR,
@@ -277,11 +309,10 @@ export class OrderService {
       await this.orderItemRepository.save(orderItem);
     }
 
-    // 8. Clear the cart
-    await this.cartService.clearCart({
-      userId: cartEntity.userId ?? undefined,
-      sessionId: cartEntity.sessionId ?? undefined,
-    });
+    // The cart is intentionally NOT cleared here. We keep it alive until the
+    // Stripe webhook flips the order to PAID (see `handlePaymentConfirmed`)
+    // so a customer abandoning checkout — or returning to it later — still
+    // sees their basket and can pay without recreating it.
 
     this.logger.log(`Order created: ${savedOrder.orderNumber} (${savedOrder.id})`);
 
@@ -315,6 +346,25 @@ export class OrderService {
     this.logger.log(
       `Order ${order.orderNumber} marked as PAID${invoice.stripeInvoiceUrl ? ' (invoice attached)' : ''}`,
     );
+
+    // Now that payment is confirmed, the cart this order was created from
+    // can finally be cleared. Best-effort: a missing cart row (e.g. expired
+    // guest session) must not roll back the PAID state.
+    if (order.cartId) {
+      try {
+        const cartEntity = await this.cartService.findCartById(order.cartId);
+        if (cartEntity) {
+          await this.cartService.clearCart({
+            userId: cartEntity.userId ?? undefined,
+            sessionId: cartEntity.sessionId ?? undefined,
+          });
+        }
+      } catch (err) {
+        this.logger.warn(
+          `clearCart on PAID order ${order.orderNumber} failed: ${(err as Error).message}`,
+        );
+      }
+    }
 
     // Confirm stock
     for (const item of order.items) {

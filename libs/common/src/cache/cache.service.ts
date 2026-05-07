@@ -2,16 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { CynaLoggerService } from '../logger';
-
-interface CacheStore {
-  keys?: (pattern: string) => Promise<string[]>;
-  reset?: () => Promise<void>;
-}
-
-interface CacheManagerExtended {
-  store?: CacheStore;
-  clear?: () => Promise<void>;
-}
+import { getRedisClient, getKeyvNamespace } from './cache.utils';
 
 /**
  * CYNA Cache Service
@@ -79,18 +70,28 @@ export class CynaCacheService {
    */
   async delByPattern(pattern: string): Promise<void> {
     try {
-      // Access the underlying store for pattern-based operations
-      const store = (this.cacheManager as unknown as CacheManagerExtended).store;
-      if (store && typeof store.keys === 'function') {
-        const keys = await store.keys(pattern);
-        if (keys && keys.length > 0) {
-          await Promise.all(keys.map((key: string) => this.cacheManager.del(key)));
-          this.logger.debug(`Cache DEL by pattern: ${pattern} (${keys.length} keys)`);
-        }
-      } else {
-        // Fallback: log warning if pattern deletion is not supported
+      const client = getRedisClient(this.cacheManager);
+
+      if (!client || typeof client.scanStream !== 'function' || typeof client.del !== 'function') {
         this.logger.debug(`Cache DEL by pattern not supported for current store: ${pattern}`);
+        return;
       }
+
+      // Keyv prefixes every cached key with `${namespace}:` (default "keyv:") in
+      // the underlying Redis. Both the SCAN match pattern and DEL targets must
+      // use the prefixed form, otherwise nothing is matched/removed.
+      const namespace = getKeyvNamespace(this.cacheManager);
+      const prefixedPattern = `${namespace}:${pattern}`;
+
+      const stream = client.scanStream({ match: prefixedPattern, count: 100 });
+      let total = 0;
+      for await (const keys of stream) {
+        if (keys.length === 0) continue;
+        // Delete via the raw ioredis client to bypass Keyv's re-prefixing.
+        await client.del(...keys);
+        total += keys.length;
+      }
+      this.logger.debug(`Cache DEL by pattern: ${pattern} (${total} keys)`);
     } catch (error) {
       this.logger.warn(`Cache DEL by pattern error for ${pattern}: ${error}`);
     }
@@ -129,15 +130,10 @@ export class CynaCacheService {
    */
   async reset(): Promise<void> {
     try {
-      // Try to access clear method or underlying store reset
-      const extended = this.cacheManager as unknown as CacheManagerExtended;
-      const store = extended.store;
-      if (store && typeof store.reset === 'function') {
-        await store.reset();
-        this.logger.log('Cache reset completed');
-      } else if (typeof extended.clear === 'function') {
+      const extended = this.cacheManager as unknown as { clear?: () => Promise<void> };
+      if (typeof extended.clear === 'function') {
         await extended.clear();
-        this.logger.log('Cache cleared completed');
+        this.logger.log('Cache cleared');
       } else {
         this.logger.debug('Cache reset not supported for current store');
       }

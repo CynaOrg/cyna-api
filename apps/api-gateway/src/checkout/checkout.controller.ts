@@ -75,31 +75,80 @@ export class CheckoutController {
           ),
       );
 
-      const paymentIntent = await firstValueFrom(
-        this.paymentClient
-          .send(MESSAGE_PATTERNS.PAYMENT.CREATE_PAYMENT_INTENT, {
-            orderId: order.id,
-            amount: order.total,
-            currency: order.currency || 'EUR',
-            userId,
-            guestEmail: email,
-          })
-          .pipe(
-            timeout(10000),
-            retry(1),
-            catchError((err) => {
-              if (err instanceof TimeoutError) {
-                return throwError(() => ({ statusCode: 503, message: 'Payment service timeout' }));
-              }
-              return throwError(() => err);
-            }),
-          ),
-      );
+      // If the order already has a PaymentIntent (either because we just
+      // returned an idempotent pending order, or because a previous attempt
+      // already created one), try to reuse it. Only create a fresh intent
+      // when none exists or the existing one is no longer payable.
+      let paymentIntent: {
+        clientSecret: string;
+        paymentIntentId: string;
+        amount: number;
+        currency: string;
+      } | null = null;
 
-      this.orderClient.emit(MESSAGE_PATTERNS.ORDER.UPDATE_ORDER_STATUS.cmd, {
-        orderId: order.id,
-        stripePaymentIntentId: paymentIntent.paymentIntentId,
-      });
+      if (order.stripePaymentIntentId) {
+        try {
+          const retrieved = await firstValueFrom(
+            this.paymentClient
+              .send(MESSAGE_PATTERNS.PAYMENT.RETRIEVE_PAYMENT_INTENT, {
+                paymentIntentId: order.stripePaymentIntentId,
+              })
+              .pipe(
+                timeout(5000),
+                catchError(() => throwError(() => null)),
+              ),
+          );
+          if (retrieved?.reusable && retrieved.clientSecret) {
+            paymentIntent = {
+              clientSecret: retrieved.clientSecret,
+              paymentIntentId: retrieved.paymentIntentId,
+              amount: retrieved.amount,
+              currency: retrieved.currency,
+            };
+            this.logger.debug(
+              `Reusing PaymentIntent ${retrieved.paymentIntentId} for order ${order.id}`,
+            );
+          }
+        } catch {
+          // Fall through to create a new one.
+        }
+      }
+
+      if (!paymentIntent) {
+        const created = await firstValueFrom(
+          this.paymentClient
+            .send(MESSAGE_PATTERNS.PAYMENT.CREATE_PAYMENT_INTENT, {
+              orderId: order.id,
+              amount: order.total,
+              currency: order.currency || 'EUR',
+              userId,
+              guestEmail: email,
+            })
+            .pipe(
+              timeout(10000),
+              retry(1),
+              catchError((err) => {
+                if (err instanceof TimeoutError) {
+                  return throwError(() => ({
+                    statusCode: 503,
+                    message: 'Payment service timeout',
+                  }));
+                }
+                return throwError(() => err);
+              }),
+            ),
+        );
+        paymentIntent = created;
+
+        this.orderClient.emit(MESSAGE_PATTERNS.ORDER.UPDATE_ORDER_STATUS.cmd, {
+          orderId: order.id,
+          stripePaymentIntentId: created.paymentIntentId,
+        });
+      }
+
+      if (!paymentIntent) {
+        throw new BadRequestException('Failed to obtain payment intent');
+      }
 
       return {
         clientSecret: paymentIntent.clientSecret,

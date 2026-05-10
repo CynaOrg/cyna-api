@@ -180,11 +180,10 @@ export class PaymentService {
       // `enrichSubscriptions` populates `productName` from the catalog (and
       // persists it on the entity) so the admin UI can render a human-readable
       // product name instead of the raw productId UUID — see audit SUB-3.
-      // TODO(SUB-3): also denormalize `customerEmail` here. Subscriptions only
-      // hold `userId` + `stripeCustomerId`; the customer's email lives in
-      // user-service. The current scope keeps the cross-service lookup out
-      // (would require a batched USER.GET_BY_IDS or a snapshot column).
-      const enriched = await this.enrichSubscriptions(items);
+      // SUB-3: customer email is now denormalized for adminMode only via a
+      // per-userId USER.GET_BY_ID lookup; mirrors the order DTO's
+      // `customerEmail` so the backoffice list can show the same column shape.
+      const enriched = await this.enrichSubscriptions(items, { withCustomerEmail: true });
       const totalPages = Math.max(Math.ceil(total / limit), 1);
       return { data: enriched, total, page, limit, totalPages };
     }
@@ -195,6 +194,7 @@ export class PaymentService {
 
   private async enrichSubscriptions(
     subscriptions: Subscription[],
+    options: { withCustomerEmail?: boolean } = {},
   ): Promise<Record<string, unknown>[]> {
     // Sync status with Stripe and enrich with product data
     const productIds = [...new Set(subscriptions.map((s) => s.productId))];
@@ -213,6 +213,31 @@ export class PaymentService {
         if (product) products.set(productId, product);
       } catch {
         // Skip if catalog is unavailable
+      }
+    }
+
+    // Customer email lookup is gated behind a flag because:
+    // - non-admin callers already know who they are (no need to expose other
+    //   users' emails in their own subscription list).
+    // - it adds N extra USER.GET_BY_ID round-trips. Acceptable for the admin
+    //   page (≤20 items, mostly few unique users); a batched
+    //   USER.GET_BY_IDS would be the next step if this grows.
+    const customerEmails = new Map<string, string>();
+    if (options.withCustomerEmail) {
+      const userIds = [...new Set(subscriptions.map((s) => s.userId))];
+      for (const userId of userIds) {
+        try {
+          const user = await firstValueFrom(
+            this.userClient.send(MESSAGE_PATTERNS.USER.GET_BY_ID, { userId }).pipe(
+              timeout(3000),
+              catchError(() => throwError(() => null)),
+            ),
+          );
+          const email = (user as { email?: string } | null | undefined)?.email;
+          if (email) customerEmails.set(userId, email);
+        } catch {
+          // Skip if user-service is unavailable; row will fall back to userId.
+        }
       }
     }
 
@@ -284,6 +309,9 @@ export class PaymentService {
       enriched.push({
         ...sub,
         productImageUrl: primaryImage,
+        ...(options.withCustomerEmail
+          ? { customerEmail: customerEmails.get(sub.userId) ?? null }
+          : {}),
       });
     }
 

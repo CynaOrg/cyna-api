@@ -70,14 +70,15 @@ export class AdminAuthController {
     @Payload()
     data: {
       adminId: string;
+      requestAdminId?: string;
       firstName?: string;
       lastName?: string;
       role?: AdminRole;
       isActive?: boolean;
     },
   ) {
-    const { adminId, ...updateData } = data;
-    return this.adminAuthService.updateAdmin(adminId, updateData);
+    const { adminId, requestAdminId, ...updateData } = data;
+    return this.adminAuthService.updateAdmin(adminId, updateData, requestAdminId);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.AUTH.ADMIN_DELETE_ADMIN)

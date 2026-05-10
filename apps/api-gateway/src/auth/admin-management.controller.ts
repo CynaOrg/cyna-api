@@ -101,18 +101,22 @@ export class AdminManagementController {
   @ApiOperation({ summary: 'Update admin account (super admin only)' })
   @ApiParam({ name: 'adminId', description: 'Admin ID' })
   @ApiResponse({ status: 200, description: 'Admin account updated' })
+  @ApiResponse({ status: 400, description: 'Cannot deactivate yourself' })
   @ApiResponse({ status: 403, description: 'Super admin access required' })
   @ApiResponse({ status: 404, description: 'Admin not found' })
   async updateAdmin(
     @Param('adminId', ParseUUIDPipe) adminId: string,
     @Body() dto: UpdateAdminDto,
+    @CurrentUser('id') requestAdminId: string,
   ) {
     return firstValueFrom(
-      this.authClient.send(MESSAGE_PATTERNS.AUTH.ADMIN_UPDATE_ADMIN, { adminId, ...dto }).pipe(
-        timeout(5000),
-        retry(1),
-        catchError((err) => rpcToHttpError(err)),
-      ),
+      this.authClient
+        .send(MESSAGE_PATTERNS.AUTH.ADMIN_UPDATE_ADMIN, { adminId, requestAdminId, ...dto })
+        .pipe(
+          timeout(5000),
+          retry(1),
+          catchError((err) => rpcToHttpError(err)),
+        ),
     );
   }
 

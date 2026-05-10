@@ -307,4 +307,83 @@ describe('AdminAuthService', () => {
       }
     });
   });
+
+  describe('updateAdmin', () => {
+    it('should reject self-deactivation with CANNOT_DEACTIVATE_SELF', async () => {
+      // Guard runs before any repository lookup; findOne must not be called.
+      await expect(
+        service.updateAdmin('admin-123', { isActive: false }, 'admin-123'),
+      ).rejects.toThrow(RpcException);
+
+      try {
+        await service.updateAdmin('admin-123', { isActive: false }, 'admin-123');
+      } catch (err) {
+        expect((err as RpcException).getError()).toMatchObject({
+          statusCode: 400,
+          code: 'CANNOT_DEACTIVATE_SELF',
+        });
+      }
+
+      expect(adminRepository.findOne).not.toHaveBeenCalled();
+      expect(adminRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should allow self-update when isActive is not being toggled to false', async () => {
+      (adminRepository.findOne as jest.Mock).mockResolvedValueOnce(mockAdmin);
+
+      await service.updateAdmin('admin-123', { firstName: 'Renamed' }, 'admin-123');
+
+      expect(adminRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ firstName: 'Renamed' }),
+      );
+    });
+
+    it('should allow self-update with isActive: true (idempotent reactivation)', async () => {
+      (adminRepository.findOne as jest.Mock).mockResolvedValueOnce(mockAdmin);
+
+      await service.updateAdmin('admin-123', { isActive: true }, 'admin-123');
+
+      expect(adminRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ isActive: true }),
+      );
+    });
+
+    it('should allow deactivating another admin', async () => {
+      const otherAdmin = { ...mockAdmin, id: 'admin-456' };
+      (adminRepository.findOne as jest.Mock).mockResolvedValueOnce(otherAdmin);
+
+      await service.updateAdmin('admin-456', { isActive: false }, 'admin-123');
+
+      expect(adminRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'admin-456', isActive: false }),
+      );
+    });
+
+    it('should still work when requestAdminId is undefined (legacy callers)', async () => {
+      (adminRepository.findOne as jest.Mock).mockResolvedValueOnce(mockAdmin);
+
+      await service.updateAdmin('admin-123', { firstName: 'NoCaller' });
+
+      expect(adminRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ firstName: 'NoCaller' }),
+      );
+    });
+
+    it('should throw 404 ADMIN_NOT_FOUND when target admin does not exist', async () => {
+      (adminRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+
+      await expect(service.updateAdmin('missing', { firstName: 'X' }, 'admin-123')).rejects.toThrow(
+        RpcException,
+      );
+
+      try {
+        await service.updateAdmin('missing', { firstName: 'X' }, 'admin-123');
+      } catch (err) {
+        expect((err as RpcException).getError()).toMatchObject({
+          statusCode: 404,
+          code: 'ADMIN_NOT_FOUND',
+        });
+      }
+    });
+  });
 });

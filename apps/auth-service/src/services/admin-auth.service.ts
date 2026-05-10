@@ -403,10 +403,7 @@ export class AdminAuthService {
 
     const savedAdmin = await this.adminRepository.save(admin);
 
-    this.logger.log(
-      `Admin created: ${savedAdmin.id} (${savedAdmin.role})`,
-      'AdminAuthService',
-    );
+    this.logger.log(`Admin created: ${savedAdmin.id} (${savedAdmin.role})`, 'AdminAuthService');
 
     return {
       id: savedAdmin.id,
@@ -427,7 +424,19 @@ export class AdminAuthService {
       role?: AdminRole;
       isActive?: boolean;
     },
+    requestAdminId?: string,
   ) {
+    // Mirror CANNOT_DELETE_SELF: deactivating yourself locks you out, which is
+    // functionally equivalent to deleting your own account. Block it server-side
+    // so a direct API call can't bypass the UI guards.
+    if (requestAdminId !== undefined && requestAdminId === adminId && dto.isActive === false) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'Cannot deactivate your own account',
+        code: 'CANNOT_DEACTIVATE_SELF',
+      });
+    }
+
     const admin = await this.adminRepository.findOne({
       where: { id: adminId },
     });

@@ -358,4 +358,73 @@ describe('PaymentService', () => {
       );
     });
   });
+
+  describe('getSubscriptionsForUser (admin mode)', () => {
+    const baseSub = {
+      id: 'sub-1',
+      userId: 'user-1',
+      productId: 'prod-1',
+      productName: 'Existing Name',
+      stripeSubscriptionId: 'sub_stripe_1',
+      status: SubscriptionStatus.ACTIVE,
+      billingPeriod: 'monthly' as const,
+      cancelAtPeriodEnd: false,
+      currentPeriodStart: new Date(),
+      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+    };
+
+    beforeEach(() => {
+      subscriptionService.findAllAdmin = jest
+        .fn()
+        .mockResolvedValue({ items: [baseSub], total: 1, page: 1, limit: 20 });
+      // Stripe sync is best-effort; throwing is fine, the service catches.
+      stripeService.getSubscription = jest.fn().mockRejectedValue(new Error('skip'));
+      catalogClient.send.mockReturnValue(of(mockProduct));
+    });
+
+    it('enriches each row with customerEmail from USER.GET_BY_ID', async () => {
+      userClient.send.mockImplementation((pattern: { cmd: string }) => {
+        if (pattern.cmd === MESSAGE_PATTERNS.USER.GET_BY_ID.cmd) {
+          return of({ id: 'user-1', email: 'admin-customer@example.com' });
+        }
+        return of(null);
+      });
+
+      const result = (await service.getSubscriptionsForUser(undefined, {
+        adminMode: true,
+        page: 1,
+        limit: 20,
+      })) as { data: Record<string, unknown>[] };
+
+      expect(userClient.send).toHaveBeenCalledWith(MESSAGE_PATTERNS.USER.GET_BY_ID, {
+        userId: 'user-1',
+      });
+      expect(result.data[0]).toEqual(
+        expect.objectContaining({ customerEmail: 'admin-customer@example.com' }),
+      );
+    });
+
+    it('falls back to customerEmail: null when user-service returns null', async () => {
+      userClient.send.mockReturnValue(of(null));
+
+      const result = (await service.getSubscriptionsForUser(undefined, {
+        adminMode: true,
+      })) as { data: Record<string, unknown>[] };
+
+      expect(result.data[0]).toEqual(expect.objectContaining({ customerEmail: null }));
+    });
+
+    it('does not call USER.GET_BY_ID in non-admin mode', async () => {
+      (subscriptionService as Partial<SubscriptionService>).findByUserId = jest
+        .fn()
+        .mockResolvedValue([baseSub]);
+
+      const result = (await service.getSubscriptionsForUser('user-1', {
+        adminMode: false,
+      })) as Record<string, unknown>[];
+
+      expect(userClient.send).not.toHaveBeenCalled();
+      expect(result[0]).not.toHaveProperty('customerEmail');
+    });
+  });
 });

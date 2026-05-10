@@ -161,12 +161,17 @@ describe('AuthEventsHandler', () => {
     it('should send 2FA code email', async () => {
       await handler.handleAdmin2FACodeRequested(admin2FAEvent);
 
-      expect(mockEmailTemplateService.render).toHaveBeenCalledWith('admin-2fa-code', 'fr', {
-        firstName: 'Admin',
-        code: '123456',
-        expiresInMinutes: 5,
-        backofficeUrl: 'http://localhost:4201',
-      });
+      expect(mockEmailTemplateService.render).toHaveBeenCalledWith(
+        'admin-2fa-code',
+        'fr',
+        expect.objectContaining({
+          firstName: 'Admin',
+          code: '123456',
+          expiresInMinutes: 5,
+          backofficeUrl: 'http://localhost:4201',
+          frontendUrl: 'http://localhost:4200',
+        }),
+      );
 
       expect(mockEmailService.sendEmail).toHaveBeenCalledWith({
         to: 'admin@example.com',

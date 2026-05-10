@@ -133,6 +133,7 @@ export class AuthEventsHandler {
       };
 
       const html = this.emailTemplateService.render('admin-2fa-code', data.language, {
+        ...this.baseVars(),
         firstName: data.firstName,
         code: data.code,
         expiresInMinutes: data.expiresInMinutes,

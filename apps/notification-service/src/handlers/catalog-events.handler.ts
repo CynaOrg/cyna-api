@@ -44,6 +44,7 @@ export class CatalogEventsHandler {
         'BACKOFFICE_URL',
         'http://localhost:4200',
       );
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:4200');
 
       const detectedAtDate =
         data.detectedAt instanceof Date ? data.detectedAt : new Date(data.detectedAt);
@@ -52,6 +53,8 @@ export class CatalogEventsHandler {
       const subject = `⚠ Stock bas — ${data.productName} (${data.sku})`;
 
       const html = this.emailTemplateService.render('stock-low-alert', Language.FR, {
+        frontendUrl,
+        year: new Date().getFullYear(),
         productName: data.productName,
         sku: data.sku,
         currentStock: data.currentStock,

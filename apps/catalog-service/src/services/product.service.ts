@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
-import { RpcException } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { firstValueFrom, timeout, catchError } from 'rxjs';
+import { TimeoutError } from 'rxjs';
 import {
   CynaLoggerService,
   CynaCacheService,
@@ -9,6 +11,9 @@ import {
   CACHE_KEYS,
   generateCacheKey,
   CACHE_PREFIXES,
+  SERVICE_NAMES,
+  MESSAGE_PATTERNS,
+  FeaturedProductType,
 } from '@cyna-api/common';
 import { Product, Category, ProductCharacteristic, ProductImage, ProductType } from '../entities';
 import {
@@ -34,7 +39,7 @@ export interface PaginatedResult<T> {
 }
 
 @Injectable()
-export class ProductService {
+export class ProductService implements OnApplicationBootstrap {
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
@@ -47,7 +52,45 @@ export class ProductService {
     private readonly logger: CynaLoggerService,
     private readonly eventsPublisher: CatalogEventsPublisher,
     private readonly cacheService: CynaCacheService,
+    @Inject(SERVICE_NAMES.CONTENT)
+    private readonly contentClient: ClientProxy,
   ) {}
+
+  async onApplicationBootstrap(): Promise<void> {
+    void this.reconcileFeaturedFromContent();
+  }
+
+  private async reconcileFeaturedFromContent(): Promise<void> {
+    const maxAttempts = 10;
+    const baseDelayMs = 1500;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const snapshot = await firstValueFrom(
+          this.contentClient
+            .send<{
+              saasIds: string[];
+              physicalIds: string[];
+            }>(MESSAGE_PATTERNS.CONTENT.GET_TOP_PRODUCTS_FULL_SYNC, {})
+            .pipe(timeout(5000)),
+        );
+        await this.reconcileFeaturedFromFullSync(
+          snapshot.saasIds ?? [],
+          snapshot.physicalIds ?? [],
+        );
+        return;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        this.logger.warn(`Featured reconcile attempt ${attempt}/${maxAttempts} failed: ${message}`);
+        if (attempt === maxAttempts) {
+          this.logger.error(
+            'Featured reconcile gave up after max attempts; isFeatured may be out of sync until next admin action',
+          );
+          return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, baseDelayMs * attempt));
+      }
+    }
+  }
 
   async create(dto: CreateProductDto): Promise<Product> {
     const category = await this.categoryRepository.findOne({
@@ -106,7 +149,7 @@ export class ProductService {
       stockQuantity: dto.stockQuantity,
       stockAlertThreshold: dto.stockAlertThreshold ?? 10,
       isAvailable: dto.isAvailable ?? true,
-      isFeatured: dto.isFeatured ?? false,
+      isFeatured: false,
       displayOrder: dto.displayOrder ?? 0,
       stripeProductId: dto.stripeProductId,
       stripePriceIdMonthly: dto.stripePriceIdMonthly,
@@ -115,6 +158,21 @@ export class ProductService {
     });
 
     await this.productRepository.save(product);
+
+    if (dto.isFeatured) {
+      const featuredType = this.toFeaturedProductType(product.productType);
+      if (featuredType) {
+        try {
+          await this.requestFeaturedToggle(product.id, featuredType, true);
+          product.isFeatured = true;
+          await this.productRepository.save(product);
+        } catch (error) {
+          this.logger.warn(
+            `Could not feature new product ${product.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          );
+        }
+      }
+    }
 
     if (dto.characteristics && dto.characteristics.length > 0) {
       const characteristics = dto.characteristics.map((char) =>
@@ -347,8 +405,19 @@ export class ProductService {
       }
     }
 
-    const { characteristics, ...productData } = dto;
+    const { characteristics, isFeatured: nextFeatured, ...productData } = dto;
     Object.assign(product, productData);
+
+    if (nextFeatured !== undefined) {
+      const featuredType = this.toFeaturedProductType(product.productType);
+      if (featuredType) {
+        await this.requestFeaturedToggle(product.id, featuredType, nextFeatured);
+        product.isFeatured = nextFeatured;
+      } else {
+        product.isFeatured = false;
+      }
+    }
+
     await this.productRepository.save(product);
 
     if (characteristics !== undefined) {
@@ -982,6 +1051,116 @@ export class ProductService {
     }
     if (slug) {
       await this.cacheService.del(generateCacheKey.product(slug));
+    }
+  }
+
+  async syncFeaturedFromTopProducts(
+    productType: FeaturedProductType,
+    added: string[],
+    removed: string[],
+  ): Promise<void> {
+    if (added.length > 0) {
+      await this.productRepository
+        .createQueryBuilder()
+        .update(Product)
+        .set({ isFeatured: true })
+        .where('id IN (:...ids)', { ids: added })
+        .andWhere('isFeatured = :current', { current: false })
+        .execute();
+    }
+    if (removed.length > 0) {
+      await this.productRepository
+        .createQueryBuilder()
+        .update(Product)
+        .set({ isFeatured: false })
+        .where('id IN (:...ids)', { ids: removed })
+        .andWhere('isFeatured = :current', { current: true })
+        .execute();
+    }
+    if (added.length > 0 || removed.length > 0) {
+      await this.invalidateProductCache();
+      this.logger.log(
+        `Synced isFeatured from top_products (${productType}): +${added.length} -${removed.length}`,
+      );
+    }
+  }
+
+  async reconcileFeaturedFromFullSync(saasIds: string[], physicalIds: string[]): Promise<void> {
+    const featuredIds = [...saasIds, ...physicalIds];
+
+    if (featuredIds.length > 0) {
+      await this.productRepository
+        .createQueryBuilder()
+        .update(Product)
+        .set({ isFeatured: true })
+        .where('id IN (:...ids)', { ids: featuredIds })
+        .andWhere('isFeatured = :current', { current: false })
+        .execute();
+    }
+
+    const offTypes: ProductType[] = [ProductType.SAAS, ProductType.PHYSICAL];
+
+    const offQb = this.productRepository
+      .createQueryBuilder()
+      .update(Product)
+      .set({ isFeatured: false })
+      .where('productType IN (:...types)', { types: offTypes })
+      .andWhere('isFeatured = :current', { current: true });
+
+    if (featuredIds.length > 0) {
+      offQb.andWhere('id NOT IN (:...keep)', { keep: featuredIds });
+    }
+    await offQb.execute();
+
+    await this.invalidateProductCache();
+    this.logger.log(
+      `Reconciled isFeatured from full_sync (saas=${saasIds.length}, physical=${physicalIds.length})`,
+    );
+  }
+
+  private toFeaturedProductType(productType: ProductType): FeaturedProductType | null {
+    if (productType === ProductType.SAAS) return 'saas';
+    if (productType === ProductType.PHYSICAL) return 'physical';
+    return null;
+  }
+
+  private async requestFeaturedToggle(
+    productId: string,
+    productType: FeaturedProductType,
+    featured: boolean,
+  ): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.contentClient
+          .send(MESSAGE_PATTERNS.CONTENT.ADMIN_TOGGLE_FEATURED, {
+            productId,
+            productType,
+            featured,
+          })
+          .pipe(
+            timeout(5000),
+            catchError((err) => {
+              if (err instanceof TimeoutError) {
+                throw new RpcException({
+                  statusCode: 503,
+                  message: 'Content service unavailable',
+                  code: 'CONTENT_SERVICE_TIMEOUT',
+                });
+              }
+              throw err;
+            }),
+          ),
+      );
+    } catch (err) {
+      if (err instanceof RpcException) throw err;
+      if (err && typeof err === 'object' && 'statusCode' in err) {
+        throw new RpcException(err as Record<string, unknown>);
+      }
+      throw new RpcException({
+        statusCode: 500,
+        message: err instanceof Error ? err.message : 'Failed to toggle featured product',
+        code: 'CONTENT_SYNC_FAILED',
+      });
     }
   }
 }

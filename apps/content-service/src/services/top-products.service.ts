@@ -1,7 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError } from 'rxjs';
 import { TimeoutError } from 'rxjs';
 import {
@@ -14,9 +14,11 @@ import {
   MESSAGE_PATTERNS,
   Language,
   coerceLanguage,
+  FeaturedProductType,
 } from '@cyna-api/common';
 import { TopProductConfig } from '../entities';
-import { UpdateTopProductsDto } from '../dto';
+import { UpdateTopProductsDto, ToggleFeaturedDto } from '../dto';
+import { ContentEventsPublisher } from '../events';
 
 interface RawProductImage {
   imageUrl: string;
@@ -68,6 +70,7 @@ export interface LocalizedTopProduct {
 
 const CONFIG_TYPE_SERVICES = 'top_services';
 const CONFIG_TYPE_PRODUCTS = 'top_products';
+const FEATURED_LIMIT = 8;
 
 @Injectable()
 export class TopProductsService {
@@ -78,7 +81,19 @@ export class TopProductsService {
     private readonly catalogClient: ClientProxy,
     private readonly logger: CynaLoggerService,
     private readonly cacheService: CynaCacheService,
+    private readonly eventsPublisher: ContentEventsPublisher,
   ) {}
+
+  async getFullSyncSnapshot(): Promise<{ saasIds: string[]; physicalIds: string[] }> {
+    const [services, products] = await Promise.all([
+      this.topProductConfigRepository.findOne({ where: { configType: CONFIG_TYPE_SERVICES } }),
+      this.topProductConfigRepository.findOne({ where: { configType: CONFIG_TYPE_PRODUCTS } }),
+    ]);
+    return {
+      saasIds: services?.productIds ?? [],
+      physicalIds: products?.productIds ?? [],
+    };
+  }
 
   async getTopServices(): Promise<TopProductConfig> {
     return this.cacheService.getOrSet(
@@ -141,45 +156,89 @@ export class TopProductsService {
   }
 
   async updateTopServices(dto: UpdateTopProductsDto): Promise<TopProductConfig> {
+    return this.persistConfig(CONFIG_TYPE_SERVICES, 'saas', dto.productIds);
+  }
+
+  async updateTopProducts(dto: UpdateTopProductsDto): Promise<TopProductConfig> {
+    return this.persistConfig(CONFIG_TYPE_PRODUCTS, 'physical', dto.productIds);
+  }
+
+  async toggleFeatured(dto: ToggleFeaturedDto): Promise<TopProductConfig> {
+    const configType = dto.productType === 'saas' ? CONFIG_TYPE_SERVICES : CONFIG_TYPE_PRODUCTS;
+
     let config = await this.topProductConfigRepository.findOne({
-      where: { configType: CONFIG_TYPE_SERVICES },
+      where: { configType },
     });
 
-    if (!config) {
-      config = this.topProductConfigRepository.create({
-        configType: CONFIG_TYPE_SERVICES,
-        productIds: dto.productIds,
-      });
-    } else {
-      config.productIds = dto.productIds;
+    const previousIds = config?.productIds ?? [];
+    const exists = previousIds.includes(dto.productId);
+
+    if (dto.featured && exists) {
+      return config!;
+    }
+    if (!dto.featured && !exists) {
+      return config ?? this.topProductConfigRepository.create({ configType, productIds: [] });
     }
 
+    let nextIds: string[];
+    if (dto.featured) {
+      if (previousIds.length >= FEATURED_LIMIT) {
+        throw new RpcException({
+          statusCode: 400,
+          message: `Featured products limit reached (${FEATURED_LIMIT})`,
+          code: 'FEATURED_LIMIT_REACHED',
+        });
+      }
+      nextIds = [...previousIds, dto.productId];
+    } else {
+      nextIds = previousIds.filter((id) => id !== dto.productId);
+    }
+
+    if (!config) {
+      config = this.topProductConfigRepository.create({ configType, productIds: nextIds });
+    } else {
+      config.productIds = nextIds;
+    }
     await this.topProductConfigRepository.save(config);
-    this.logger.log(`Top services updated: ${dto.productIds.length} products`);
+    this.logger.log(
+      `Featured toggle (${dto.productType}) ${dto.featured ? 'add' : 'remove'} ${dto.productId} (now ${nextIds.length})`,
+    );
 
     await this.invalidateTopProductsCache();
+
+    this.eventsPublisher.emitTopProductsUpdated({
+      productType: dto.productType,
+      added: dto.featured ? [dto.productId] : [],
+      removed: dto.featured ? [] : [dto.productId],
+    });
 
     return config;
   }
 
-  async updateTopProducts(dto: UpdateTopProductsDto): Promise<TopProductConfig> {
+  private async persistConfig(
+    configType: typeof CONFIG_TYPE_SERVICES | typeof CONFIG_TYPE_PRODUCTS,
+    productType: FeaturedProductType,
+    nextIds: string[],
+  ): Promise<TopProductConfig> {
     let config = await this.topProductConfigRepository.findOne({
-      where: { configType: CONFIG_TYPE_PRODUCTS },
+      where: { configType },
     });
 
-    if (!config) {
-      config = this.topProductConfigRepository.create({
-        configType: CONFIG_TYPE_PRODUCTS,
-        productIds: dto.productIds,
-      });
-    } else {
-      config.productIds = dto.productIds;
-    }
+    const previousIds = config?.productIds ?? [];
 
+    if (!config) {
+      config = this.topProductConfigRepository.create({ configType, productIds: nextIds });
+    } else {
+      config.productIds = nextIds;
+    }
     await this.topProductConfigRepository.save(config);
-    this.logger.log(`Top products updated: ${dto.productIds.length} products`);
+    this.logger.log(`${configType} updated: ${nextIds.length} products`);
 
     await this.invalidateTopProductsCache();
+
+    const added = nextIds.filter((id) => !previousIds.includes(id));
+    const removed = previousIds.filter((id) => !nextIds.includes(id));
+    this.eventsPublisher.emitTopProductsUpdated({ productType, added, removed });
 
     return config;
   }

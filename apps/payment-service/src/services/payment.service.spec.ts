@@ -426,5 +426,46 @@ describe('PaymentService', () => {
       expect(userClient.send).not.toHaveBeenCalled();
       expect(result[0]).not.toHaveProperty('customerEmail');
     });
+
+    // fix/backoffice-mrr: analytics callers need every subscription (not
+    // paginated) and a plain array (not the {data,...} envelope) so MRR can
+    // sum across all active subs. Regression test for the silent MRR=0 bug.
+    describe('with fetchAll', () => {
+      const otherSub = {
+        ...baseSub,
+        id: 'sub-2',
+        userId: 'user-2',
+        stripeSubscriptionId: 'sub_stripe_2',
+        status: SubscriptionStatus.CANCELLED,
+      };
+
+      beforeEach(() => {
+        subscriptionService.findAll = jest.fn().mockResolvedValue([baseSub, otherSub]);
+        userClient.send.mockReturnValue(of(null));
+      });
+
+      it('returns a plain array (not the paginated envelope) when fetchAll is true', async () => {
+        const result = await service.getSubscriptionsForUser(undefined, {
+          adminMode: true,
+          fetchAll: true,
+        });
+
+        expect(Array.isArray(result)).toBe(true);
+        expect(result).toHaveLength(2);
+        expect(subscriptionService.findAll).toHaveBeenCalledTimes(1);
+        expect(subscriptionService.findAllAdmin).not.toHaveBeenCalled();
+      });
+
+      it('honors the optional status filter when fetchAll is true', async () => {
+        const result = (await service.getSubscriptionsForUser(undefined, {
+          adminMode: true,
+          fetchAll: true,
+          status: SubscriptionStatus.ACTIVE,
+        })) as Record<string, unknown>[];
+
+        expect(result).toHaveLength(1);
+        expect(result[0]).toEqual(expect.objectContaining({ id: 'sub-1' }));
+      });
+    });
   });
 });

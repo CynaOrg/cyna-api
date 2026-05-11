@@ -82,7 +82,10 @@ export class DashboardService {
 
     const dateRange = this.getDateRange(period);
 
-    // Fetch data from other services in parallel with graceful degradation
+    // Fetch data from other services in parallel with graceful degradation.
+    // `fetchAll: true` on GET_SUBSCRIPTIONS returns the full set as a plain
+    // array (bypassing the admin pagination envelope) so MRR is computed over
+    // every active subscription, not just the first 20.
     const [ordersResult, subscriptionsResult] = await Promise.allSettled([
       this.sendMessage(this.orderClient, MESSAGE_PATTERNS.ORDER.ADMIN_GET_ORDERS, {
         page: 1,
@@ -90,6 +93,7 @@ export class DashboardService {
       }),
       this.sendMessage(this.paymentClient, MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS, {
         adminMode: true,
+        fetchAll: true,
       }),
     ]);
 
@@ -97,7 +101,7 @@ export class DashboardService {
     const allOrders: OrderRecord[] = Array.isArray(ordersValue)
       ? (ordersValue as OrderRecord[])
       : ((ordersValue as { data?: OrderRecord[] })?.data ?? []);
-    const allSubscriptions =
+    const subscriptionsValue =
       subscriptionsResult.status === 'fulfilled' ? subscriptionsResult.value : [];
 
     if (ordersResult.status === 'rejected') {
@@ -109,10 +113,13 @@ export class DashboardService {
       );
     }
 
-    // Ensure arrays (the order endpoint now returns paginated payload by default,
-    // already unwrapped above)
+    // Orders/subscriptions are already unwrapped above. Subscriptions also
+    // tolerate the legacy paginated envelope `{data, total, ...}` defensively —
+    // historically that shape silently zeroed MRR (cf. fix/backoffice-mrr).
     const orders: OrderRecord[] = allOrders;
-    const subscriptions = Array.isArray(allSubscriptions) ? allSubscriptions : [];
+    const subscriptions: SubscriptionRecord[] = Array.isArray(subscriptionsValue)
+      ? (subscriptionsValue as SubscriptionRecord[])
+      : ((subscriptionsValue as { data?: SubscriptionRecord[] })?.data ?? []);
 
     // Filter orders by current period
     const currentOrders = orders.filter((o: OrderRecord) => {

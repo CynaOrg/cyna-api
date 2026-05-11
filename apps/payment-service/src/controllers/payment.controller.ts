@@ -79,6 +79,7 @@ export class PaymentController {
       status?: SubscriptionStatus;
       page?: number;
       limit?: number;
+      fetchAll?: boolean;
     },
   ) {
     try {
@@ -87,6 +88,7 @@ export class PaymentController {
         status: data.status,
         page: data.page,
         limit: data.limit,
+        fetchAll: data.fetchAll === true,
       });
     } catch (error) {
       throw this.wrapError(error);

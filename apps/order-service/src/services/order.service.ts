@@ -1,6 +1,6 @@
 import { Injectable, Inject, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, Not, Repository } from 'typeorm';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } from 'rxjs';
 import {
@@ -410,17 +410,29 @@ export class OrderService {
   }
 
   async getOrdersByUserId(userId: string): Promise<Order[]> {
+    // PENDING is a server-side staging state created the moment the customer
+    // clicks "continue to payment" — before any card is submitted to Stripe.
+    // If they bail out without paying, Stripe never fires a webhook and the
+    // row stays PENDING forever, but it does not represent an order the user
+    // owes money on. Surfacing it here misled customers into thinking they
+    // had an unpayable order (no "retry payment" UI exists in the dashboard).
+    // The cart is kept alive precisely so they can resume checkout from /cart.
+    // Admin reads go through `adminGetOrders`, which still shows everything.
     return this.orderRepository.find({
-      where: { userId },
+      where: { userId, status: Not(OrderStatus.PENDING) },
       relations: ['items'],
       order: { createdAt: 'DESC' },
     });
   }
 
   async getOrderById(orderId: string, userId?: string): Promise<Order> {
-    const where: { id: string; userId?: string } = { id: orderId };
+    const where: FindOptionsWhere<Order> = { id: orderId };
     if (userId) {
       where.userId = userId;
+      // Same rationale as `getOrdersByUserId` — PENDING orders are not
+      // user-facing until the Stripe webhook flips them past it. Admin
+      // lookups (no userId) keep full visibility.
+      where.status = Not(OrderStatus.PENDING);
     }
 
     const order = await this.orderRepository.findOne({

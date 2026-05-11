@@ -211,13 +211,19 @@ export class ExportService {
     dateTo: string,
   ): Promise<SubscriptionRecord[]> {
     try {
-      const result = await this.sendMessage<SubscriptionRecord[]>(
+      // `fetchAll: true` returns the full set as a plain array. Without it,
+      // adminMode returns a paginated envelope and the previous
+      // `Array.isArray` check silently fell back to [] (cf. fix/backoffice-mrr).
+      const result = await this.sendMessage<SubscriptionRecord[] | { data?: SubscriptionRecord[] }>(
         this.paymentClient,
         MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS,
-        { adminMode: true },
+        {
+          adminMode: true,
+          fetchAll: true,
+        },
       );
 
-      const subscriptions = Array.isArray(result) ? result : [];
+      const subscriptions = Array.isArray(result) ? result : (result?.data ?? []);
       const from = new Date(dateFrom);
       const to = new Date(dateTo);
       to.setUTCHours(23, 59, 59, 999);

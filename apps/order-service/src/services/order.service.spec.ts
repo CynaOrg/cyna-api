@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { RpcException } from '@nestjs/microservices';
-import { Repository } from 'typeorm';
+import { FindOperator, Repository } from 'typeorm';
 import { of } from 'rxjs';
 import { OrderService } from './order.service';
 import { CartService } from './cart.service';
@@ -514,44 +514,67 @@ describe('OrderService', () => {
   });
 
   describe('getOrdersByUserId', () => {
-    it('should return orders for user with items relation', async () => {
+    it('should return non-pending orders for user with items relation', async () => {
       (orderRepository.find as jest.Mock).mockResolvedValueOnce([mockOrder]);
 
       const result = await service.getOrdersByUserId('user-123');
 
       expect(result).toEqual([mockOrder]);
-      expect(orderRepository.find).toHaveBeenCalledWith({
-        where: { userId: 'user-123' },
-        relations: ['items'],
-        order: { createdAt: 'DESC' },
-      });
+      const findArgs = (orderRepository.find as jest.Mock).mock.calls[0][0];
+      expect(findArgs.where.userId).toBe('user-123');
+      // Status filter must be a `Not(PENDING)` operator so abandoned
+      // checkouts don't leak into the user's order list.
+      expect(findArgs.where.status).toBeInstanceOf(FindOperator);
+      expect((findArgs.where.status as FindOperator<unknown>).type).toBe('not');
+      expect((findArgs.where.status as FindOperator<unknown>).value).toBe(OrderStatus.PENDING);
+      expect(findArgs.relations).toEqual(['items']);
+      expect(findArgs.order).toEqual({ createdAt: 'DESC' });
     });
   });
 
   describe('getOrderById', () => {
-    it('should return order when found', async () => {
+    it('should return order when found (admin path: no userId)', async () => {
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(mockOrder);
 
       const result = await service.getOrderById('order-123');
 
       expect(result).toEqual(mockOrder);
+      // Admin path doesn't constrain by status — admins still see PENDING.
+      const findArgs = (orderRepository.findOne as jest.Mock).mock.calls[0][0];
+      expect(findArgs.where).toEqual({ id: 'order-123' });
     });
 
-    it('should filter by userId when provided', async () => {
-      (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(mockOrder);
+    it('should filter by userId and exclude PENDING when userId provided', async () => {
+      (orderRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        ...mockOrder,
+        status: OrderStatus.PAID,
+      });
 
       await service.getOrderById('order-123', 'user-123');
 
-      expect(orderRepository.findOne).toHaveBeenCalledWith({
-        where: { id: 'order-123', userId: 'user-123' },
-        relations: ['items'],
-      });
+      const findArgs = (orderRepository.findOne as jest.Mock).mock.calls[0][0];
+      expect(findArgs.where.id).toBe('order-123');
+      expect(findArgs.where.userId).toBe('user-123');
+      expect(findArgs.where.status).toBeInstanceOf(FindOperator);
+      expect((findArgs.where.status as FindOperator<unknown>).type).toBe('not');
+      expect((findArgs.where.status as FindOperator<unknown>).value).toBe(OrderStatus.PENDING);
+      expect(findArgs.relations).toEqual(['items']);
     });
 
     it('should throw RpcException when order not found', async () => {
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
 
       await expect(service.getOrderById('order-nonexistent')).rejects.toThrow(RpcException);
+    });
+
+    it('should throw RpcException when the only matching order is PENDING (filtered out)', async () => {
+      // Simulates a user trying to access their abandoned checkout's order
+      // detail page: the row exists but the user-facing query filters it out.
+      (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+
+      await expect(service.getOrderById('pending-order-id', 'user-123')).rejects.toThrow(
+        RpcException,
+      );
     });
   });
 

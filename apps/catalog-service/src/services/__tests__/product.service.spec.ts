@@ -175,6 +175,10 @@ describe('ProductService', () => {
           provide: CynaCacheService,
           useValue: mockCacheService,
         },
+        {
+          provide: 'CONTENT_SERVICE',
+          useValue: { send: jest.fn(), emit: jest.fn() },
+        },
       ],
     }).compile();
 
@@ -583,9 +587,9 @@ describe('ProductService', () => {
         const product = createMockProduct({ id });
 
         productRepository.findOne.mockResolvedValue(product);
-        (
-          productRepository.softDelete as jest.Mock
-        ).mockResolvedValue({ affected: 1 } as unknown as import('typeorm').UpdateResult);
+        (productRepository.softDelete as jest.Mock).mockResolvedValue({
+          affected: 1,
+        } as unknown as import('typeorm').UpdateResult);
 
         await service.delete(id);
 
@@ -612,12 +616,10 @@ describe('ProductService', () => {
         const product1 = createMockProduct({ id: 'prod-001' });
         const product2 = createMockProduct({ id: 'prod-002' });
 
-        productRepository.findOne
-          .mockResolvedValueOnce(product1)
-          .mockResolvedValueOnce(product2);
-        (
-          productRepository.softDelete as jest.Mock
-        ).mockResolvedValue({ affected: 1 } as unknown as import('typeorm').UpdateResult);
+        productRepository.findOne.mockResolvedValueOnce(product1).mockResolvedValueOnce(product2);
+        (productRepository.softDelete as jest.Mock).mockResolvedValue({
+          affected: 1,
+        } as unknown as import('typeorm').UpdateResult);
 
         const result = await service.bulkDelete(ids);
 

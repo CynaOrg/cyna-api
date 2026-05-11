@@ -1,6 +1,11 @@
 import { Controller } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
-import { MESSAGE_PATTERNS, Language } from '@cyna-api/common';
+import { EventPattern, MessagePattern, Payload } from '@nestjs/microservices';
+import {
+  MESSAGE_PATTERNS,
+  EVENT_PATTERNS,
+  Language,
+  TopProductsUpdatedEvent,
+} from '@cyna-api/common';
 import { CategoryService, ProductService, StockService, ImageService } from '../services';
 import {
   CreateCategoryDto,
@@ -139,9 +144,7 @@ export class CatalogController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID_ADMIN)
-  async findProductByIdAdmin(
-    @Payload() data: { id: string },
-  ): Promise<AdminProductResponseDto> {
+  async findProductByIdAdmin(@Payload() data: { id: string }): Promise<AdminProductResponseDto> {
     const product = await this.productService.findByIdAdmin(data.id);
     return AdminProductResponseDto.fromEntity(product);
   }
@@ -258,5 +261,16 @@ export class CatalogController {
   async confirmStock(@Payload() data: { cartId: string }) {
     await this.stockService.confirmReservation(data.cartId);
     return { success: true };
+  }
+
+  // ==================== Content Sync Events ====================
+
+  @EventPattern(EVENT_PATTERNS.CONTENT.TOP_PRODUCTS_UPDATED)
+  async handleTopProductsUpdated(@Payload() data: TopProductsUpdatedEvent): Promise<void> {
+    await this.productService.syncFeaturedFromTopProducts(
+      data.productType,
+      data.added ?? [],
+      data.removed ?? [],
+    );
   }
 }

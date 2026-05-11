@@ -7,6 +7,7 @@ import { Cart, CartItem, Order, OrderItem } from './entities';
 import { CartService, OrderService } from './services';
 import { OrderController } from './controllers';
 import { CartAbandonedCron } from './cron/cart-abandoned.cron';
+import { PendingOrdersCleanupCron } from './cron/pending-orders-cleanup.cron';
 import { RenameGuestEmailToCustomerEmail1776900000000 } from './migrations/1776900000000-RenameGuestEmailToCustomerEmail';
 import { AddStripeInvoiceToOrders1777300000000 } from './migrations/1777300000000-AddStripeInvoiceToOrders';
 import { AddAbandonedNotifiedAtToCarts1777400000000 } from './migrations/1777400000000-AddAbandonedNotifiedAtToCarts';
@@ -72,6 +73,6 @@ import { AddAbandonedNotifiedAtToCarts1777400000000 } from './migrations/1777400
     ]),
   ],
   controllers: [OrderController],
-  providers: [CartService, OrderService, CartAbandonedCron],
+  providers: [CartService, OrderService, CartAbandonedCron, PendingOrdersCleanupCron],
 })
 export class OrderModule {}

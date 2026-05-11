@@ -83,8 +83,17 @@ describe('Order Management (e2e)', () => {
   /**
    * Helper to create an order for a user.
    * Returns the order info + access credentials.
+   *
+   * By default the order is created in PENDING state (as it would be the
+   * moment the customer clicks "continue to payment"). Pass
+   * `markPaid: true` to flip it to PAID — needed when the test reads back
+   * through the user-facing /orders endpoints, which hide PENDING orders
+   * to avoid surfacing abandoned checkouts.
    */
-  async function createOrderForUser(email: string): Promise<{
+  async function createOrderForUser(
+    email: string,
+    options: { markPaid?: boolean } = {},
+  ): Promise<{
     orderId: string;
     orderNumber: string;
     accessToken: string;
@@ -104,6 +113,13 @@ describe('Order Management (e2e)', () => {
 
     const checkout = checkoutRes.body as CheckoutResponse;
 
+    if (options.markPaid) {
+      await orderDataSource.query(
+        `UPDATE orders SET status = 'paid', paid_at = NOW() WHERE id = $1`,
+        [checkout.data.orderId],
+      );
+    }
+
     return {
       orderId: checkout.data.orderId,
       orderNumber: checkout.data.orderNumber,
@@ -112,8 +128,10 @@ describe('Order Management (e2e)', () => {
     };
   }
 
-  it('should list orders for authenticated user with 200', async () => {
-    const { accessToken } = await createOrderForUser('order-list@example.com');
+  it('should list paid orders for authenticated user with 200', async () => {
+    const { accessToken } = await createOrderForUser('order-list@example.com', {
+      markPaid: true,
+    });
 
     const res = await request(app.getHttpServer())
       .get('/api/v1/orders')
@@ -125,11 +143,31 @@ describe('Order Management (e2e)', () => {
     expect(Array.isArray(body.data)).toBe(true);
     expect(body.data.length).toBe(1);
     expect(body.data[0].orderNumber).toBeDefined();
-    expect(body.data[0].status).toBe('pending');
+    expect(body.data[0].status).toBe('paid');
+  });
+
+  it('should hide abandoned PENDING orders from the user order list', async () => {
+    // User clicks "continue to payment", which creates the order, but never
+    // submits a card. Stripe never fires a webhook → the row stays PENDING.
+    // From the customer's perspective the order does not exist: they did not
+    // pay, so it must not appear in their dashboard.
+    const { accessToken } = await createOrderForUser('order-abandoned@example.com');
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/orders')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(res.status).toBe(200);
+    const body = res.body as OrdersListResponse;
+    expect(body.data).toBeDefined();
+    expect(Array.isArray(body.data)).toBe(true);
+    expect(body.data.length).toBe(0);
   });
 
   it('should get order by ID with order details and items', async () => {
-    const { orderId, accessToken } = await createOrderForUser('order-detail@example.com');
+    const { orderId, accessToken } = await createOrderForUser('order-detail@example.com', {
+      markPaid: true,
+    });
 
     const res = await request(app.getHttpServer())
       .get(`/api/v1/orders/${orderId}`)
@@ -143,6 +181,16 @@ describe('Order Management (e2e)', () => {
     expect(Array.isArray(body.data.items)).toBe(true);
     expect(body.data.items.length).toBeGreaterThan(0);
     expect(body.data.items[0].productId).toBe(product.id);
+  });
+
+  it('should 404 on order detail for an abandoned PENDING order owned by the user', async () => {
+    const { orderId, accessToken } = await createOrderForUser('order-pending-detail@example.com');
+
+    const res = await request(app.getHttpServer())
+      .get(`/api/v1/orders/${orderId}`)
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(res.status).toBe(404);
   });
 
   it('should return 404 when trying to access another user order', async () => {

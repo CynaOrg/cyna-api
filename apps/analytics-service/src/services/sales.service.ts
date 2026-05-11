@@ -749,12 +749,19 @@ export class SalesService {
 
   private async fetchSubscriptions(): Promise<SubscriptionRecord[]> {
     try {
-      const result = await this.sendMessage<SubscriptionRecord[]>(
+      // `fetchAll: true` returns the full set as a plain array. Without it,
+      // adminMode returns a paginated envelope and the previous
+      // `Array.isArray` check silently fell back to [] (cf. fix/backoffice-mrr).
+      const result = await this.sendMessage<SubscriptionRecord[] | { data?: SubscriptionRecord[] }>(
         this.paymentClient,
         MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS,
-        { adminMode: true },
+        {
+          adminMode: true,
+          fetchAll: true,
+        },
       );
-      return Array.isArray(result) ? result : [];
+      if (Array.isArray(result)) return result;
+      return result?.data ?? [];
     } catch {
       this.logger.warn('Failed to fetch subscriptions for sales analytics');
       return [];
@@ -767,9 +774,7 @@ export class SalesService {
     switch (period) {
       case SalesPeriod.TODAY: {
         // Start of today UTC (00:00:00) → now. Mirrors DashboardService.TODAY.
-        const start = new Date(
-          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
-        );
+        const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
         return { start, end: now };
       }
       case SalesPeriod.WEEK: {

@@ -155,6 +155,7 @@ export class PaymentService {
           status?: SubscriptionStatus;
           page?: number;
           limit?: number;
+          fetchAll?: boolean;
         } = false,
   ): Promise<
     | Record<string, unknown>[]
@@ -168,6 +169,17 @@ export class PaymentService {
   > {
     const opts = typeof options === 'boolean' ? { adminMode: options } : options;
     const adminMode = opts.adminMode === true;
+
+    // Analytics callers (dashboard/sales/export) need the full subscription set,
+    // not a paginated slice, to compute MRR and totals across all customers.
+    // Returns a plain array — mirrors the non-admin shape so callers don't have
+    // to special-case the paginated envelope.
+    if (adminMode && opts.fetchAll === true) {
+      const all = await this.subscriptionService.findAll();
+      const filtered =
+        opts.status !== undefined ? all.filter((s) => s.status === opts.status) : all;
+      return this.enrichSubscriptions(filtered, { withCustomerEmail: true });
+    }
 
     if (adminMode) {
       const page = Math.max(opts.page ?? 1, 1);

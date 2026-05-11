@@ -14,6 +14,7 @@ import {
   ReorderCarouselDto,
   UpdateHeroTextDto,
   UpdateTopProductsDto,
+  ToggleFeaturedDto,
   CreateContactMessageDto,
   ContactMessageQueryDto,
   UpdateContactMessageDto,
@@ -154,6 +155,16 @@ export class ContentController {
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_PRODUCTS)
   async adminUpdateTopProducts(@Payload() data: UpdateTopProductsDto) {
     return this.topProductsService.updateTopProducts(data);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_TOGGLE_FEATURED)
+  async adminToggleFeatured(@Payload() data: ToggleFeaturedDto) {
+    return this.topProductsService.toggleFeatured(data);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.GET_TOP_PRODUCTS_FULL_SYNC)
+  async getTopProductsFullSync(): Promise<{ saasIds: string[]; physicalIds: string[] }> {
+    return this.topProductsService.getFullSyncSnapshot();
   }
 
   // ==================== Admin - Contact Messages ====================

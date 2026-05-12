@@ -3,9 +3,9 @@
 <p>Merci pour votre commande <strong>{{orderNumber}}</strong>.</p>
 
 <p>Vous trouverez ci-dessous
-  {{#if hasSingleLicense}}votre licence{{else}}vos {{licenseCount}} licences{{/if}}
-  à activer. Chaque lien d'activation est valable 30 jours et ne peut être utilisé qu'une seule
-  fois.</p>
+  {{#if hasSingleLicense}}votre clé de licence{{else}}vos
+    {{licenseCount}}
+    clés de licence{{/if}}.</p>
 
 {{#each licenses}}
   <p style='margin-top:24px;'><strong>{{productName}}</strong></p>
@@ -18,19 +18,6 @@
       style='font-size:20px; font-weight:700; letter-spacing:4px; color:#4f39f6;'
     >{{licenseKey}}</div>
   </div>
-  <p style='text-align:center;'>
-    <a
-      href='{{activationUrl}}'
-      class='button'
-      style='display:inline-block; background-color:#4f39f6 !important; color:#ffffff !important; padding:14px 36px; text-decoration:none; border-radius:50px; font-weight:600; font-size:15px; margin:16px 0;'
-    >Activer ma licence</a>
-  </p>
-  <p class='hint' style='color:#9ca3af; font-size:13px; line-height:1.5;'>Si le bouton ne fonctionne
-    pas, copiez ce lien dans votre navigateur :</p>
-  <p
-    class='link-fallback'
-    style='word-break:break-all; font-size:13px; color:#4f39f6;'
-  >{{activationUrl}}</p>
 {{/each}}
 
 <p class='hint' style='color:#9ca3af; font-size:13px; line-height:1.5; margin-top:24px;'>Si vous

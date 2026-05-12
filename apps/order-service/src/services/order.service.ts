@@ -563,9 +563,9 @@ export class OrderService {
   async adminUpdateOrderStatus(
     orderId: string,
     status: string,
-    notes?: string,
-    trackingNumber?: string,
-    trackingUrl?: string,
+    notes?: string | null,
+    trackingNumber?: string | null,
+    trackingUrl?: string | null,
   ): Promise<Order> {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },

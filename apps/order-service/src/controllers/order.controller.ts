@@ -229,9 +229,9 @@ export class OrderController {
     data: {
       orderId: string;
       status: string;
-      notes?: string;
-      trackingNumber?: string;
-      trackingUrl?: string;
+      notes?: string | null;
+      trackingNumber?: string | null;
+      trackingUrl?: string | null;
     },
   ) {
     try {

@@ -54,6 +54,7 @@ export const CACHE_KEYS = {
   FAQ_LIST: 'content:faq',
   TOP_SERVICES: 'content:top-services',
   TOP_PRODUCTS: 'content:top-products',
+  TOP_LICENSES: 'content:top-licenses',
   HOMEPAGE: 'content:homepage',
 
   // Stock

@@ -1,4 +1,4 @@
-export type FeaturedProductType = 'saas' | 'physical';
+export type FeaturedProductType = 'saas' | 'physical' | 'license';
 
 export interface TopProductsUpdatedEvent {
   productType: FeaturedProductType;

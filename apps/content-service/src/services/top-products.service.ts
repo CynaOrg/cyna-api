@@ -70,7 +70,21 @@ export interface LocalizedTopProduct {
 
 const CONFIG_TYPE_SERVICES = 'top_services';
 const CONFIG_TYPE_PRODUCTS = 'top_products';
+const CONFIG_TYPE_LICENSES = 'top_licenses';
 const FEATURED_LIMIT = 8;
+
+function configTypeForProductType(
+  productType: FeaturedProductType,
+): typeof CONFIG_TYPE_SERVICES | typeof CONFIG_TYPE_PRODUCTS | typeof CONFIG_TYPE_LICENSES {
+  switch (productType) {
+    case 'saas':
+      return CONFIG_TYPE_SERVICES;
+    case 'physical':
+      return CONFIG_TYPE_PRODUCTS;
+    case 'license':
+      return CONFIG_TYPE_LICENSES;
+  }
+}
 
 @Injectable()
 export class TopProductsService {
@@ -84,14 +98,20 @@ export class TopProductsService {
     private readonly eventsPublisher: ContentEventsPublisher,
   ) {}
 
-  async getFullSyncSnapshot(): Promise<{ saasIds: string[]; physicalIds: string[] }> {
-    const [services, products] = await Promise.all([
+  async getFullSyncSnapshot(): Promise<{
+    saasIds: string[];
+    physicalIds: string[];
+    licenseIds: string[];
+  }> {
+    const [services, products, licenses] = await Promise.all([
       this.topProductConfigRepository.findOne({ where: { configType: CONFIG_TYPE_SERVICES } }),
       this.topProductConfigRepository.findOne({ where: { configType: CONFIG_TYPE_PRODUCTS } }),
+      this.topProductConfigRepository.findOne({ where: { configType: CONFIG_TYPE_LICENSES } }),
     ]);
     return {
       saasIds: services?.productIds ?? [],
       physicalIds: products?.productIds ?? [],
+      licenseIds: licenses?.productIds ?? [],
     };
   }
 
@@ -155,6 +175,36 @@ export class TopProductsService {
     return { config, products };
   }
 
+  async getTopLicenses(): Promise<TopProductConfig> {
+    return this.cacheService.getOrSet(
+      CACHE_KEYS.TOP_LICENSES,
+      async () => {
+        const config = await this.topProductConfigRepository.findOne({
+          where: { configType: CONFIG_TYPE_LICENSES },
+        });
+
+        if (!config) {
+          return this.topProductConfigRepository.create({
+            configType: CONFIG_TYPE_LICENSES,
+            productIds: [],
+          });
+        }
+
+        return config;
+      },
+      CACHE_TTL.MEDIUM,
+    );
+  }
+
+  async getTopLicensesWithDetails(lang?: string): Promise<{
+    config: TopProductConfig;
+    products: LocalizedTopProduct[];
+  }> {
+    const config = await this.getTopLicenses();
+    const products = await this.resolveProductDetails(config.productIds, coerceLanguage(lang));
+    return { config, products };
+  }
+
   async updateTopServices(dto: UpdateTopProductsDto): Promise<TopProductConfig> {
     return this.persistConfig(CONFIG_TYPE_SERVICES, 'saas', dto.productIds);
   }
@@ -163,8 +213,12 @@ export class TopProductsService {
     return this.persistConfig(CONFIG_TYPE_PRODUCTS, 'physical', dto.productIds);
   }
 
+  async updateTopLicenses(dto: UpdateTopProductsDto): Promise<TopProductConfig> {
+    return this.persistConfig(CONFIG_TYPE_LICENSES, 'license', dto.productIds);
+  }
+
   async toggleFeatured(dto: ToggleFeaturedDto): Promise<TopProductConfig> {
-    const configType = dto.productType === 'saas' ? CONFIG_TYPE_SERVICES : CONFIG_TYPE_PRODUCTS;
+    const configType = configTypeForProductType(dto.productType);
 
     let config = await this.topProductConfigRepository.findOne({
       where: { configType },
@@ -216,7 +270,10 @@ export class TopProductsService {
   }
 
   private async persistConfig(
-    configType: typeof CONFIG_TYPE_SERVICES | typeof CONFIG_TYPE_PRODUCTS,
+    configType:
+      | typeof CONFIG_TYPE_SERVICES
+      | typeof CONFIG_TYPE_PRODUCTS
+      | typeof CONFIG_TYPE_LICENSES,
     productType: FeaturedProductType,
     nextIds: string[],
   ): Promise<TopProductConfig> {
@@ -308,6 +365,7 @@ export class TopProductsService {
   private async invalidateTopProductsCache(): Promise<void> {
     await this.cacheService.del(CACHE_KEYS.TOP_SERVICES);
     await this.cacheService.del(CACHE_KEYS.TOP_PRODUCTS);
+    await this.cacheService.del(CACHE_KEYS.TOP_LICENSES);
     await this.cacheService.del(CACHE_KEYS.HOMEPAGE);
     await this.cacheService.delByPattern(`${CACHE_PREFIXES.CONTENT}top*`);
   }

@@ -39,6 +39,10 @@ export class ContentService {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.GET_TOP_PRODUCTS, { limit, lang });
   }
 
+  async getTopLicenses(limit?: number, lang?: string) {
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.GET_TOP_LICENSES, { limit, lang });
+  }
+
   async createContactMessage(dto: CreateContactMessageDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.CREATE_CONTACT_MESSAGE, dto);
   }
@@ -93,6 +97,14 @@ export class ContentService {
 
   async adminUpdateTopProducts(productIds: string[]): Promise<unknown> {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_PRODUCTS, { productIds });
+  }
+
+  async adminGetTopLicenses(): Promise<unknown> {
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_LICENSES, {});
+  }
+
+  async adminUpdateTopLicenses(productIds: string[]): Promise<unknown> {
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_LICENSES, { productIds });
   }
 
   // ==================== Admin - Contact Messages ====================

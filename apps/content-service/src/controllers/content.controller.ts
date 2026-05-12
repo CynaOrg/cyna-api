@@ -39,18 +39,21 @@ export class ContentController {
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.GET_HOMEPAGE)
   async getHomepage(@Payload() data?: { lang?: string }) {
     const lang = data?.lang;
-    const [carousel, heroText, topServicesData, topProductsData] = await Promise.all([
-      this.carouselService.findAllPublic(),
-      this.heroTextService.get(),
-      this.topProductsService.getTopServicesWithDetails(lang),
-      this.topProductsService.getTopProductsWithDetails(lang),
-    ]);
+    const [carousel, heroText, topServicesData, topProductsData, topLicensesData] =
+      await Promise.all([
+        this.carouselService.findAllPublic(),
+        this.heroTextService.get(),
+        this.topProductsService.getTopServicesWithDetails(lang),
+        this.topProductsService.getTopProductsWithDetails(lang),
+        this.topProductsService.getTopLicensesWithDetails(lang),
+      ]);
 
     return {
       carousel,
       heroText,
       topServices: topServicesData.products,
       topProducts: topProductsData.products,
+      topLicenses: topLicensesData.products,
     };
   }
 
@@ -71,6 +74,11 @@ export class ContentController {
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.GET_TOP_PRODUCTS)
   async getTopProducts(@Payload() data?: { lang?: string }) {
     return this.topProductsService.getTopProductsWithDetails(data?.lang);
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.GET_TOP_LICENSES)
+  async getTopLicenses(@Payload() data?: { lang?: string }) {
+    return this.topProductsService.getTopLicensesWithDetails(data?.lang);
   }
 
   // ==================== Contact Messages (Public) ====================
@@ -157,13 +165,27 @@ export class ContentController {
     return this.topProductsService.updateTopProducts(data);
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_LICENSES)
+  async adminGetTopLicenses(): Promise<TopProductConfig> {
+    return this.topProductsService.getTopLicenses();
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_LICENSES)
+  async adminUpdateTopLicenses(@Payload() data: UpdateTopProductsDto) {
+    return this.topProductsService.updateTopLicenses(data);
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.ADMIN_TOGGLE_FEATURED)
   async adminToggleFeatured(@Payload() data: ToggleFeaturedDto) {
     return this.topProductsService.toggleFeatured(data);
   }
 
   @MessagePattern(MESSAGE_PATTERNS.CONTENT.GET_TOP_PRODUCTS_FULL_SYNC)
-  async getTopProductsFullSync(): Promise<{ saasIds: string[]; physicalIds: string[] }> {
+  async getTopProductsFullSync(): Promise<{
+    saasIds: string[];
+    physicalIds: string[];
+    licenseIds: string[];
+  }> {
     return this.topProductsService.getFullSyncSnapshot();
   }
 

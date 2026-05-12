@@ -72,10 +72,7 @@ export class ContentAdminController {
   @ApiParam({ name: 'slideId', description: 'Slide ID' })
   @ApiResponse({ status: 200, description: 'Slide updated' })
   @ApiResponse({ status: 404, description: 'Slide not found' })
-  async updateSlide(
-    @Param('slideId', ParseUUIDPipe) slideId: string,
-    @Body() dto: UpdateSlideDto,
-  ) {
+  async updateSlide(@Param('slideId', ParseUUIDPipe) slideId: string, @Body() dto: UpdateSlideDto) {
     return this.contentService.adminUpdateSlide(slideId, dto);
   }
 
@@ -134,6 +131,21 @@ export class ContentAdminController {
   @ApiResponse({ status: 200, description: 'Top products updated' })
   async updateTopProducts(@Body() dto: UpdateTopConfigDto) {
     return this.contentService.adminUpdateTopProducts(dto.productIds);
+  }
+
+  @Get('top-licenses')
+  @ApiOperation({ summary: 'Get top licenses configuration (license productIds)' })
+  @ApiResponse({ status: 200, description: 'Top licenses configuration returned' })
+  async getTopLicenses() {
+    return this.contentService.adminGetTopLicenses();
+  }
+
+  @Patch('top-licenses')
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: 'Configure top licenses displayed on homepage' })
+  @ApiResponse({ status: 200, description: 'Top licenses updated' })
+  async updateTopLicenses(@Body() dto: UpdateTopConfigDto) {
+    return this.contentService.adminUpdateTopLicenses(dto.productIds);
   }
 
   // ==================== Contact Messages ====================

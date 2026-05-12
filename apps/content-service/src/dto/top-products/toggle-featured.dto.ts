@@ -5,7 +5,7 @@ export class ToggleFeaturedDto {
   @IsUUID('4', { message: 'validation.productId.isUUID' })
   productId: string;
 
-  @IsIn(['saas', 'physical'], { message: 'validation.productType.invalid' })
+  @IsIn(['saas', 'physical', 'license'], { message: 'validation.productType.invalid' })
   productType: FeaturedProductType;
 
   @IsBoolean({ message: 'validation.featured.invalid' })

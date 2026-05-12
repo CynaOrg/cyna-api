@@ -70,12 +70,14 @@ export class ProductService implements OnApplicationBootstrap {
             .send<{
               saasIds: string[];
               physicalIds: string[];
+              licenseIds: string[];
             }>(MESSAGE_PATTERNS.CONTENT.GET_TOP_PRODUCTS_FULL_SYNC, {})
             .pipe(timeout(5000)),
         );
         await this.reconcileFeaturedFromFullSync(
           snapshot.saasIds ?? [],
           snapshot.physicalIds ?? [],
+          snapshot.licenseIds ?? [],
         );
         return;
       } catch (err) {
@@ -1085,8 +1087,12 @@ export class ProductService implements OnApplicationBootstrap {
     }
   }
 
-  async reconcileFeaturedFromFullSync(saasIds: string[], physicalIds: string[]): Promise<void> {
-    const featuredIds = [...saasIds, ...physicalIds];
+  async reconcileFeaturedFromFullSync(
+    saasIds: string[],
+    physicalIds: string[],
+    licenseIds: string[],
+  ): Promise<void> {
+    const featuredIds = [...saasIds, ...physicalIds, ...licenseIds];
 
     if (featuredIds.length > 0) {
       await this.productRepository
@@ -1098,7 +1104,7 @@ export class ProductService implements OnApplicationBootstrap {
         .execute();
     }
 
-    const offTypes: ProductType[] = [ProductType.SAAS, ProductType.PHYSICAL];
+    const offTypes: ProductType[] = [ProductType.SAAS, ProductType.PHYSICAL, ProductType.LICENSE];
 
     const offQb = this.productRepository
       .createQueryBuilder()
@@ -1114,13 +1120,14 @@ export class ProductService implements OnApplicationBootstrap {
 
     await this.invalidateProductCache();
     this.logger.log(
-      `Reconciled isFeatured from full_sync (saas=${saasIds.length}, physical=${physicalIds.length})`,
+      `Reconciled isFeatured from full_sync (saas=${saasIds.length}, physical=${physicalIds.length}, license=${licenseIds.length})`,
     );
   }
 
   private toFeaturedProductType(productType: ProductType): FeaturedProductType | null {
     if (productType === ProductType.SAAS) return 'saas';
     if (productType === ProductType.PHYSICAL) return 'physical';
+    if (productType === ProductType.LICENSE) return 'license';
     return null;
   }
 

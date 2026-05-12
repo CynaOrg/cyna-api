@@ -175,6 +175,7 @@ export const MESSAGE_PATTERNS = {
     GET_CAROUSEL: { cmd: 'content.get_carousel' },
     GET_TOP_SERVICES: { cmd: 'content.get_top_services' },
     GET_TOP_PRODUCTS: { cmd: 'content.get_top_products' },
+    GET_TOP_LICENSES: { cmd: 'content.get_top_licenses' },
     CREATE_CONTACT_MESSAGE: { cmd: 'content.create_contact_message' },
     // Admin - Carousel
     ADMIN_GET_CAROUSEL: { cmd: 'content.admin_get_carousel' },
@@ -191,6 +192,8 @@ export const MESSAGE_PATTERNS = {
     ADMIN_UPDATE_TOP_SERVICES: { cmd: 'content.admin_update_top_services' },
     ADMIN_GET_TOP_PRODUCTS: { cmd: 'content.admin_get_top_products' },
     ADMIN_UPDATE_TOP_PRODUCTS: { cmd: 'content.admin_update_top_products' },
+    ADMIN_GET_TOP_LICENSES: { cmd: 'content.admin_get_top_licenses' },
+    ADMIN_UPDATE_TOP_LICENSES: { cmd: 'content.admin_update_top_licenses' },
     ADMIN_TOGGLE_FEATURED: { cmd: 'content.admin_toggle_featured' },
     GET_TOP_PRODUCTS_FULL_SYNC: { cmd: 'content.get_top_products_full_sync' },
     // Admin - Contact Messages

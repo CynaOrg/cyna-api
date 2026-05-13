@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, LessThan, IsNull } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
-import { randomInt } from 'crypto';
+import { createHash, randomInt, timingSafeEqual } from 'crypto';
 import { Admin2FACode } from '../entities/admin-2fa-code.entity';
 
 const MAX_2FA_ATTEMPTS = 5;
@@ -23,6 +23,17 @@ export class TwoFactorService {
     return randomInt(100000, 1000000).toString();
   }
 
+  private hashCode(code: string): string {
+    return createHash('sha256').update(code, 'utf8').digest('hex');
+  }
+
+  private codesMatch(inputHash: string, storedHash: string): boolean {
+    const a = Buffer.from(inputHash, 'hex');
+    const b = Buffer.from(storedHash, 'hex');
+    if (a.length !== b.length) return false;
+    return timingSafeEqual(a, b);
+  }
+
   async createCode(adminId: string): Promise<{ code: string; expiresAt: Date }> {
     await this.invalidatePreviousCodes(adminId);
 
@@ -31,7 +42,7 @@ export class TwoFactorService {
 
     const twoFactorCode = this.admin2FACodeRepository.create({
       adminId,
-      code,
+      codeHash: this.hashCode(code),
       expiresAt,
     });
 
@@ -57,7 +68,7 @@ export class TwoFactorService {
       return false;
     }
 
-    if (twoFactorCode.code !== code) {
+    if (!this.codesMatch(this.hashCode(code), twoFactorCode.codeHash)) {
       // Increment attempts on failed validation; lock out after MAX_2FA_ATTEMPTS.
       // We mark the code as used (rather than deleting) so repository state stays
       // consistent and attackers cannot distinguish "wrong code" from "locked out".

@@ -2,8 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
+import { createHash } from 'crypto';
 import { TwoFactorService } from './two-factor.service';
 import { Admin2FACode } from '../entities/admin-2fa-code.entity';
+
+const sha256 = (value: string): string => createHash('sha256').update(value, 'utf8').digest('hex');
 
 describe('TwoFactorService', () => {
   let service: TwoFactorService;
@@ -62,7 +65,7 @@ describe('TwoFactorService', () => {
   });
 
   describe('createCode', () => {
-    it('should create a new 2FA code', async () => {
+    it('should create a new 2FA code and return the cleartext code', async () => {
       const adminId = 'admin-123';
 
       const result = await service.createCode(adminId);
@@ -74,6 +77,18 @@ describe('TwoFactorService', () => {
       expect(mockRepository.delete).toHaveBeenCalled();
       expect(mockRepository.create).toHaveBeenCalled();
       expect(mockRepository.save).toHaveBeenCalled();
+    });
+
+    it('persists the SHA-256 hash, never the cleartext code', async () => {
+      const adminId = 'admin-123';
+
+      const result = await service.createCode(adminId);
+      const persisted = (mockRepository.save as jest.Mock).mock.calls[0][0];
+
+      expect(persisted.codeHash).toBe(sha256(result.code));
+      expect(persisted.codeHash).not.toBe(result.code);
+      expect(persisted.codeHash).toHaveLength(64);
+      expect('code' in persisted).toBe(false);
     });
 
     it('should set expiration to 5 minutes from now', async () => {
@@ -92,14 +107,14 @@ describe('TwoFactorService', () => {
   });
 
   describe('validateCode', () => {
-    it('should return true for valid unexpired code', async () => {
+    it('should return true when the submitted code matches the stored hash', async () => {
       const adminId = 'admin-123';
       const code = '123456';
 
       (mockRepository.findOne as jest.Mock).mockResolvedValueOnce({
         id: 'code-123',
         adminId,
-        code,
+        codeHash: sha256(code),
         expiresAt: new Date(Date.now() + 60000),
         usedAt: null,
       });
@@ -122,7 +137,7 @@ describe('TwoFactorService', () => {
       (mockRepository.findOne as jest.Mock).mockResolvedValueOnce({
         id: 'code-123',
         adminId: 'admin-123',
-        code: '123456',
+        codeHash: sha256('123456'),
         expiresAt: new Date(Date.now() - 60000),
         usedAt: null,
       });
@@ -136,7 +151,7 @@ describe('TwoFactorService', () => {
       const stored = {
         id: 'code-123',
         adminId: 'admin-123',
-        code: '999999',
+        codeHash: sha256('999999'),
         expiresAt: new Date(Date.now() + 60000),
         usedAt: null,
         attempts: 0,
@@ -155,7 +170,7 @@ describe('TwoFactorService', () => {
       const stored = {
         id: 'code-123',
         adminId: 'admin-123',
-        code: '999999',
+        codeHash: sha256('999999'),
         expiresAt: new Date(Date.now() + 60000),
         usedAt: null,
         attempts: 4,
@@ -175,6 +190,24 @@ describe('TwoFactorService', () => {
       (mockRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
 
       const result = await service.validateCode('admin-123', '999999');
+
+      expect(result).toBe(false);
+    });
+
+    it('should not match a code submitted as its own hash (no length mismatch crash)', async () => {
+      // Defensive: an attacker who sniffs the hash and replays it as the code
+      // must still be rejected, because the service re-hashes the input.
+      const code = '654321';
+      (mockRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 'code-123',
+        adminId: 'admin-123',
+        codeHash: sha256(code),
+        expiresAt: new Date(Date.now() + 60000),
+        usedAt: null,
+        attempts: 0,
+      });
+
+      const result = await service.validateCode('admin-123', sha256(code));
 
       expect(result).toBe(false);
     });

@@ -86,7 +86,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(
     new CorrelationIdInterceptor(),
     new LoggingInterceptor(),
-    new TransformInterceptor(),
+    new TransformInterceptor(i18nService),
   );
 
   // Global exception filters. I18nValidationExceptionFilter is registered AFTER

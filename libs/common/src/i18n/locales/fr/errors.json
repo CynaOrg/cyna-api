@@ -18,30 +18,63 @@
     "2faRequired": "Code de vérification 2FA requis",
     "2faInvalid": "Code 2FA invalide",
     "2faExpired": "Code 2FA expiré, veuillez en demander un nouveau",
-    "refreshTokenInvalid": "Session invalide, veuillez vous reconnecter"
+    "refreshTokenInvalid": "Session invalide, veuillez vous reconnecter",
+    "refreshTokenExpired": "Votre session a expiré, veuillez vous reconnecter",
+    "tempTokenInvalid": "Lien temporaire invalide ou expiré",
+    "tempTokenPurposeInvalid": "Token invalide pour cette opération",
+    "verificationTokenInvalid": "Lien de vérification invalide ou expiré",
+    "verificationTokenExpired": "Le lien de vérification a expiré",
+    "resetTokenInvalid": "Lien de réinitialisation invalide ou expiré",
+    "resetTokenExpired": "Le lien de réinitialisation a expiré",
+    "userServiceUnavailable": "Service utilisateur indisponible",
+    "adminNotFound": "Administrateur non trouvé",
+    "adminAccountDisabled": "Le compte administrateur a été désactivé",
+    "emailAlreadyTaken": "Cette adresse email est déjà utilisée",
+    "cannotDeactivateSelf": "Vous ne pouvez pas désactiver votre propre compte",
+    "cannotDeleteSelf": "Vous ne pouvez pas supprimer votre propre compte"
   },
   "user": {
     "notFound": "Utilisateur non trouvé",
     "emailExists": "Cette adresse email est déjà utilisée",
     "invalidPassword": "Le mot de passe actuel est incorrect",
-    "cannotDeleteWithActiveSubscriptions": "Impossible de supprimer un compte avec des abonnements actifs"
+    "cannotDeleteWithActiveSubscriptions": "Impossible de supprimer un compte avec des abonnements actifs",
+    "addressNotFound": "Adresse non trouvée",
+    "passwordIncorrect": "Mot de passe incorrect",
+    "newPasswordSameAsCurrent": "Le nouveau mot de passe doit être différent de l'ancien"
   },
   "catalog": {
     "productNotFound": "Produit non trouvé",
     "categoryNotFound": "Catégorie non trouvée",
     "categoryHasProducts": "Impossible de supprimer une catégorie contenant des produits",
-    "invalidProductType": "Type de produit invalide"
+    "invalidProductType": "Type de produit invalide",
+    "slugExists": "Ce slug de catégorie est déjà utilisé",
+    "invalidCategoryIds": "Certains identifiants de catégorie sont invalides",
+    "productSlugExists": "Ce slug de produit est déjà utilisé",
+    "productSkuExists": "Ce SKU de produit est déjà utilisé",
+    "imageNotFound": "Image non trouvée",
+    "invalidImageIds": "Certaines images ne correspondent pas à ce produit",
+    "maxImagesReached": "Ce produit a déjà atteint le nombre maximum de {max} images",
+    "invalidStorageKey": "La clé de stockage ne correspond pas au produit",
+    "stockPhysicalOnly": "La gestion du stock n'est disponible que pour les produits physiques",
+    "stockReservationPhysicalOnly": "La réservation de stock n'est disponible que pour les produits physiques",
+    "insufficientStock": "Stock insuffisant",
+    "insufficientStockReservation": "Stock insuffisant pour la réservation",
+    "reservationsNotFound": "Aucune réservation active pour ce panier",
+    "contentServiceUnavailable": "Service de contenu indisponible"
   },
   "order": {
     "cartEmpty": "Votre panier est vide",
+    "cartNotFound": "Panier non trouvé",
     "cartItemNotFound": "Article non trouvé dans le panier",
     "saasNotInCart": "Les services SaaS doivent être souscrits directement, pas via le panier",
     "productUnavailable": "Ce produit n'est plus disponible",
     "insufficientStock": "Stock insuffisant pour {productName} (disponible: {available})",
+    "insufficientStockShort": "Stock insuffisant (disponible: {available})",
     "checkoutExpired": "Votre session de paiement a expiré",
     "orderNotFound": "Commande non trouvée",
     "invalidOrderStatus": "Transition de statut invalide",
-    "cannotCancelPaidOrder": "Impossible d'annuler une commande déjà payée"
+    "cannotCancelPaidOrder": "Impossible d'annuler une commande déjà payée",
+    "catalogServiceTimeout": "Le service catalogue n'a pas répondu à temps"
   },
   "payment": {
     "failed": "Le paiement a échoué",
@@ -49,10 +82,24 @@
     "subscriptionAlreadyCancelled": "Cet abonnement est déjà annulé",
     "invalidBillingPeriod": "Période de facturation invalide",
     "paymentMethodNotFound": "Méthode de paiement non trouvée",
-    "cannotDeleteDefaultPaymentMethod": "Impossible de supprimer la méthode de paiement par défaut"
+    "cannotDeleteDefaultPaymentMethod": "Impossible de supprimer la méthode de paiement par défaut",
+    "invalidAmount": "Montant de paiement invalide",
+    "noStripePrice": "Ce produit n'a pas de prix Stripe configuré",
+    "noInvoice": "Aucune facture associée à l'abonnement",
+    "clientSecretMissing": "Impossible de récupérer le secret client de l'abonnement",
+    "subscriptionForbidden": "Vous n'êtes pas autorisé à annuler cet abonnement",
+    "subscriptionUserIdRequired": "Identifiant utilisateur requis pour annuler un abonnement",
+    "userServiceTimeout": "Le service utilisateur n'a pas répondu à temps",
+    "catalogServiceTimeout": "Le service catalogue n'a pas répondu à temps"
   },
   "content": {
     "slideNotFound": "Slide non trouvé",
-    "messageNotFound": "Message non trouvé"
+    "messageNotFound": "Message non trouvé",
+    "carouselSlideNotFound": "Slide du carousel non trouvé",
+    "carouselInvalidSlideIds": "Certains identifiants de slide sont invalides",
+    "contactMessageNotFound": "Message de contact non trouvé"
+  },
+  "analytics": {
+    "serviceNotResponding": "Le service ne répond pas"
   }
 }

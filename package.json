@@ -116,9 +116,43 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "apps/**/src/**/*.ts",
+      "libs/**/src/**/*.ts",
+      "!**/*.module.ts",
+      "!**/*.dto.ts",
+      "!**/*.entity.ts",
+      "!**/*.interface.ts",
+      "!**/*.enum.ts",
+      "!**/*.constants.ts",
+      "!**/*.config.ts",
+      "!**/main.ts",
+      "!**/index.ts",
+      "!**/migrations/**",
+      "!**/seeds/**",
+      "!**/locales/**",
+      "!**/dto/**",
+      "!**/entities/**",
+      "!**/interfaces/**",
+      "!**/enums/**",
+      "!**/test/**",
+      "!**/__mocks__/**",
+      "!**/*.d.ts",
+      "!**/*.spec.ts",
+      "!**/*.e2e-spec.ts",
+      "!**/export-openapi.ts"
     ],
     "coverageDirectory": "./coverage",
+    "coverageReporters": [
+      "text",
+      "text-summary",
+      "lcov",
+      "html"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/",
+      "/coverage/"
+    ],
     "testEnvironment": "node",
     "roots": [
       "<rootDir>/apps/",

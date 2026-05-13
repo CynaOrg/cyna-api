@@ -1,9 +1,18 @@
 import { ExecutionContext } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
+import { JWT_ALGORITHM, JWT_AUDIENCE, JWT_ISSUER } from '@cyna-api/common';
 import { OptionalJwtAuthGuard } from './optional-jwt-auth.guard';
 
 const SECRET = 'optional-jwt-secret';
+
+const signTestToken = (payload: Record<string, unknown>, overrides: jwt.SignOptions = {}) =>
+  jwt.sign(payload, SECRET, {
+    algorithm: JWT_ALGORITHM,
+    issuer: JWT_ISSUER,
+    audience: JWT_AUDIENCE,
+    ...overrides,
+  });
 
 const buildContext = (request: Record<string, unknown>): ExecutionContext =>
   ({
@@ -22,10 +31,12 @@ describe('OptionalJwtAuthGuard', () => {
   });
 
   it('should set request.user and return true for valid token', () => {
-    const token = jwt.sign(
-      { sub: 'u-1', email: 'g@cyna.io', type: 'user', role: 'customer' },
-      SECRET,
-    );
+    const token = signTestToken({
+      sub: 'u-1',
+      email: 'g@cyna.io',
+      type: 'user',
+      role: 'customer',
+    });
     const request: Record<string, unknown> = {
       headers: { authorization: `Bearer ${token}` },
     };
@@ -49,7 +60,11 @@ describe('OptionalJwtAuthGuard', () => {
   });
 
   it('should return true with user undefined when token has invalid signature (silent fail)', () => {
-    const token = jwt.sign({ sub: 'u-1', email: 'g@cyna.io', type: 'user' }, 'wrong-secret');
+    const token = jwt.sign({ sub: 'u-1', email: 'g@cyna.io', type: 'user' }, 'wrong-secret', {
+      algorithm: JWT_ALGORITHM,
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    });
     const request: Record<string, unknown> = {
       headers: { authorization: `Bearer ${token}` },
     };
@@ -60,9 +75,10 @@ describe('OptionalJwtAuthGuard', () => {
   });
 
   it('should return true with user undefined when token is expired (silent fail)', () => {
-    const token = jwt.sign({ sub: 'u-1', email: 'g@cyna.io', type: 'user' }, SECRET, {
-      expiresIn: '-1h',
-    });
+    const token = signTestToken(
+      { sub: 'u-1', email: 'g@cyna.io', type: 'user' },
+      { expiresIn: '-1h' },
+    );
     const request: Record<string, unknown> = {
       headers: { authorization: `Bearer ${token}` },
     };
@@ -84,7 +100,7 @@ describe('OptionalJwtAuthGuard', () => {
 
   it('should return true (guest) when JWT_SECRET is not configured', () => {
     configService.get.mockReturnValue(undefined);
-    const token = jwt.sign({ sub: 'u-1', email: 'g@cyna.io', type: 'user' }, SECRET);
+    const token = signTestToken({ sub: 'u-1', email: 'g@cyna.io', type: 'user' });
     const request: Record<string, unknown> = {
       headers: { authorization: `Bearer ${token}` },
     };

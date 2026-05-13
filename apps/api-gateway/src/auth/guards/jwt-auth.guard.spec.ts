@@ -2,10 +2,24 @@ import { ExecutionContext } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import * as jwt from 'jsonwebtoken';
-import { TokenExpiredException, TokenInvalidException } from '@cyna-api/common';
+import {
+  JWT_ALGORITHM,
+  JWT_AUDIENCE,
+  JWT_ISSUER,
+  TokenExpiredException,
+  TokenInvalidException,
+} from '@cyna-api/common';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 const SECRET = 'test-secret-key-for-jwt-guard';
+
+const signTestToken = (payload: Record<string, unknown>, overrides: jwt.SignOptions = {}) =>
+  jwt.sign(payload, SECRET, {
+    algorithm: JWT_ALGORITHM,
+    issuer: JWT_ISSUER,
+    audience: JWT_AUDIENCE,
+    ...overrides,
+  });
 
 const buildContext = (request: Record<string, unknown>): ExecutionContext =>
   ({
@@ -42,10 +56,12 @@ describe('JwtAuthGuard', () => {
 
   describe('with valid token in Authorization header', () => {
     it('should set request.user and return true', () => {
-      const token = jwt.sign(
-        { sub: 'user-123', email: 'tom@cyna.io', type: 'user', role: 'customer' },
-        SECRET,
-      );
+      const token = signTestToken({
+        sub: 'user-123',
+        email: 'tom@cyna.io',
+        type: 'user',
+        role: 'customer',
+      });
       const request: Record<string, unknown> = {
         headers: { authorization: `Bearer ${token}` },
       };
@@ -86,9 +102,10 @@ describe('JwtAuthGuard', () => {
 
   describe('expired token', () => {
     it('should throw TokenExpiredException (i18n-ready messageKey errors.auth.tokenExpired)', () => {
-      const token = jwt.sign({ sub: 'u1', email: 'a@b.com', type: 'user' }, SECRET, {
-        expiresIn: '-1h',
-      });
+      const token = signTestToken(
+        { sub: 'u1', email: 'a@b.com', type: 'user' },
+        { expiresIn: '-1h' },
+      );
       const ctx = buildContext({ headers: { authorization: `Bearer ${token}` } });
 
       try {
@@ -103,7 +120,11 @@ describe('JwtAuthGuard', () => {
 
   describe('invalid token signature', () => {
     it('should throw TokenInvalidException when token is signed with the wrong secret', () => {
-      const token = jwt.sign({ sub: 'u1', email: 'a@b.com', type: 'user' }, 'wrong-secret');
+      const token = jwt.sign({ sub: 'u1', email: 'a@b.com', type: 'user' }, 'wrong-secret', {
+        algorithm: JWT_ALGORITHM,
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
+      });
       const ctx = buildContext({ headers: { authorization: `Bearer ${token}` } });
 
       expect(() => guard.canActivate(ctx)).toThrow(TokenInvalidException);
@@ -118,7 +139,7 @@ describe('JwtAuthGuard', () => {
 
   describe('JWT_SECRET configuration', () => {
     it('should call configService.get with JWT_SECRET', () => {
-      const token = jwt.sign({ sub: 'u1', email: 'a@b.com', type: 'user' }, SECRET);
+      const token = signTestToken({ sub: 'u1', email: 'a@b.com', type: 'user' });
       const ctx = buildContext({ headers: { authorization: `Bearer ${token}` } });
 
       guard.canActivate(ctx);
@@ -128,7 +149,7 @@ describe('JwtAuthGuard', () => {
 
     it('should throw TokenInvalidException when JWT_SECRET is not configured', () => {
       configService.get.mockReturnValue(undefined);
-      const token = jwt.sign({ sub: 'u1', email: 'a@b.com', type: 'user' }, SECRET);
+      const token = signTestToken({ sub: 'u1', email: 'a@b.com', type: 'user' });
       const ctx = buildContext({ headers: { authorization: `Bearer ${token}` } });
 
       expect(() => guard.canActivate(ctx)).toThrow(TokenInvalidException);

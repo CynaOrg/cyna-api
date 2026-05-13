@@ -26,7 +26,8 @@ export class UserAddressController {
   }
 
   @MessagePattern(MESSAGE_PATTERNS.USER.DELETE_ADDRESS)
-  delete(@Payload() data: { userId: string; id: string }) {
-    return this.svc.delete(data.userId, data.id);
+  async delete(@Payload() data: { userId: string; id: string }) {
+    await this.svc.delete(data.userId, data.id);
+    return { success: true };
   }
 }

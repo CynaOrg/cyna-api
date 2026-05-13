@@ -19,6 +19,7 @@ import {
 import { AddProductSnapshotToLicenseKeys1776845407292 } from './migrations/1776845407292-AddProductSnapshotToLicenseKeys';
 import { AddActivationFlowToLicenseKeys1777200000000 } from './migrations/1777200000000-AddActivationFlowToLicenseKeys';
 import { AddStripeInvoiceUrlToSubscriptions1777300000001 } from './migrations/1777300000001-AddStripeInvoiceUrlToSubscriptions';
+import { CreateProcessedWebhooksTable1777600000001 } from './migrations/1777600000001-CreateProcessedWebhooksTable';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { AddStripeInvoiceUrlToSubscriptions1777300000001 } from './migrations/17
         AddProductSnapshotToLicenseKeys1776845407292,
         AddActivationFlowToLicenseKeys1777200000000,
         AddStripeInvoiceUrlToSubscriptions1777300000001,
+        CreateProcessedWebhooksTable1777600000001,
       ],
       migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
       synchronize: isDatabaseSyncEnabled(),

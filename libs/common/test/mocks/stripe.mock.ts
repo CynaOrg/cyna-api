@@ -72,6 +72,6 @@ export const buildStripeEvent = <T = Record<string, unknown>>(
   livemode: false,
   pending_webhooks: 0,
   request: { id: null, idempotency_key: null },
-  api_version: '2026-01-28.clover',
+  api_version: '2026-02-25.clover',
   object: 'event',
 });

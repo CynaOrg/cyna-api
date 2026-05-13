@@ -29,8 +29,9 @@ import {
   ApiPropertyOptional,
   ApiProperty,
 } from '@nestjs/swagger';
-import { SERVICE_NAMES, MESSAGE_PATTERNS, SubscriptionStatus } from '@cyna-api/common';
-import { JwtAdminAuthGuard, SuperAdminGuard } from '../auth/guards';
+import { SERVICE_NAMES, MESSAGE_PATTERNS, SubscriptionStatus, AdminRole } from '@cyna-api/common';
+import { AdminRolesGuard, SuperAdminGuard } from '../auth/guards';
+import { AdminRoles } from '../auth/decorators';
 import {
   IsOptional,
   IsEnum,
@@ -150,7 +151,8 @@ function rpcToHttpError(err: unknown): Observable<never> {
 
 @ApiTags('Admin - Subscriptions')
 @Controller('admin/payments/subscriptions')
-@UseGuards(JwtAdminAuthGuard, SuperAdminGuard)
+@UseGuards(AdminRolesGuard)
+@AdminRoles(AdminRole.SUPER_ADMIN, AdminRole.COMMERCIAL)
 @ApiBearerAuth('JWT-auth')
 export class SubscriptionAdminController {
   constructor(
@@ -190,6 +192,7 @@ export class SubscriptionAdminController {
   }
 
   @Patch(':id/status')
+  @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Update subscription status (super_admin only)' })
   @ApiParam({ name: 'id', description: 'Subscription ID' })
   @ApiResponse({ status: 200, description: 'Subscription status updated' })
@@ -208,10 +211,7 @@ export class SubscriptionAdminController {
     // TODO(SUB-1): implement payment.reactivate_subscription and
     // payment.pause_subscription in payment-service, then route here.
     if (dto.action !== SubscriptionActionEnum.CANCEL) {
-      throw new HttpException(
-        `Subscription action '${dto.action}' is not implemented yet`,
-        501,
-      );
+      throw new HttpException(`Subscription action '${dto.action}' is not implemented yet`, 501);
     }
 
     return firstValueFrom(
@@ -226,6 +226,7 @@ export class SubscriptionAdminController {
   }
 
   @Patch(':subscriptionId/terms')
+  @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Update subscription terms (super_admin only)' })
   @ApiParam({ name: 'subscriptionId', description: 'Subscription ID' })
   @ApiResponse({ status: 200, description: 'Subscription terms updated' })

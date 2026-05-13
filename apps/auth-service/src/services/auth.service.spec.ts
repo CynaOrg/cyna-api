@@ -414,4 +414,354 @@ describe('AuthService', () => {
       );
     });
   });
+
+  describe('callUserService - error translation (lines 74-76)', () => {
+    it('should map generic ClientProxy failure to 503 USER_SERVICE_UNAVAILABLE', async () => {
+      // No statusCode on the error means we hit the generic branch.
+      userClient.send.mockReturnValueOnce(throwError(() => new Error('boom')));
+
+      try {
+        await service.register({
+          email: 'x@example.com',
+          password: 'Password123!',
+          firstName: 'X',
+          lastName: 'Y',
+        });
+        fail('expected RpcException');
+      } catch (err) {
+        expect(err).toBeInstanceOf(RpcException);
+        expect((err as RpcException).getError()).toMatchObject({
+          statusCode: 503,
+          code: 'USER_SERVICE_UNAVAILABLE',
+        });
+      }
+    }, 20000);
+  });
+
+  describe('resendVerification - anti-enumeration (236-277)', () => {
+    it('should return identical success response when email is unknown (no event emitted)', async () => {
+      userClient.send.mockReturnValueOnce(of(null));
+
+      const result = await service.resendVerification('unknown@example.com');
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('If the email exists, a verification email has been sent');
+      expect(authEventsPublisher.emitUserRegistered).not.toHaveBeenCalled();
+      expect(emailVerificationTokenRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should return identical success response when user is already verified (no event)', async () => {
+      userClient.send.mockReturnValueOnce(of({ ...profileView, isVerified: true }));
+
+      const result = await service.resendVerification('test@example.com');
+
+      expect(result.success).toBe(true);
+      expect(result.message).toBe('If the email exists, a verification email has been sent');
+      expect(authEventsPublisher.emitUserRegistered).not.toHaveBeenCalled();
+    });
+
+    it('should delete old verification tokens and emit fresh verification event for unverified user', async () => {
+      userClient.send.mockReturnValueOnce(of({ ...profileView, isVerified: false }));
+
+      const result = await service.resendVerification('test@example.com');
+
+      expect(emailVerificationTokenRepository.delete).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-123' }),
+      );
+      expect(emailVerificationTokenRepository.save).toHaveBeenCalled();
+      expect(authEventsPublisher.emitUserRegistered).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-123',
+          email: 'test@example.com',
+          verificationToken: expect.any(String),
+        }),
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('responses for known vs unknown emails should be indistinguishable (security regression guard)', async () => {
+      userClient.send.mockReturnValueOnce(of(null));
+      const unknownResp = await service.resendVerification('unknown@example.com');
+
+      userClient.send.mockReturnValueOnce(of({ ...profileView, isVerified: true }));
+      const verifiedResp = await service.resendVerification('verified@example.com');
+
+      expect(unknownResp).toEqual(verifiedResp);
+    });
+  });
+
+  describe('forgotPassword - anti-enumeration (line 351)', () => {
+    it('should produce indistinguishable responses for unknown vs existing email', async () => {
+      userClient.send.mockReturnValueOnce(of(null));
+      const unknown = await service.forgotPassword('unknown@example.com');
+
+      userClient.send.mockReturnValueOnce(of(profileView));
+      const known = await service.forgotPassword('test@example.com');
+
+      expect(unknown.success).toBe(true);
+      expect(known.success).toBe(true);
+      expect(unknown.message).toBe(known.message);
+    });
+
+    it('should delete previous unused reset tokens before creating a new one', async () => {
+      userClient.send.mockReturnValueOnce(of(profileView));
+
+      await service.forgotPassword('test@example.com');
+
+      expect(passwordResetTokenRepository.delete).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-123' }),
+      );
+      expect(passwordResetTokenRepository.save).toHaveBeenCalled();
+    });
+  });
+
+  describe('resetPassword - additional branches (407-456)', () => {
+    it('should throw TOKEN_EXPIRED when reset token is past expiresAt', async () => {
+      (passwordResetTokenRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        userId: 'user-123',
+        token: 'hashed-token',
+        expiresAt: new Date(Date.now() - 60000),
+        usedAt: null,
+      });
+
+      try {
+        await service.resetPassword('expired-token', 'NewPassword123!');
+        fail('expected RpcException');
+      } catch (err) {
+        expect((err as RpcException).getError()).toMatchObject({
+          statusCode: 400,
+          code: 'TOKEN_EXPIRED',
+        });
+      }
+    });
+
+    it('should mark token as used (usedAt) after successful password reset', async () => {
+      const tok = {
+        userId: 'user-123',
+        token: 'hashed-token',
+        expiresAt: new Date(Date.now() + 60000),
+        usedAt: null,
+      };
+      (passwordResetTokenRepository.findOne as jest.Mock).mockResolvedValueOnce(tok);
+      userClient.send.mockReturnValueOnce(of(profileView)).mockReturnValueOnce(of(undefined));
+
+      await service.resetPassword('raw-token', 'NewPassword123!');
+
+      expect(passwordResetTokenRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ usedAt: expect.any(Date) }),
+      );
+    });
+
+    it('should revoke all existing refresh tokens (kill sessions) on reset', async () => {
+      (passwordResetTokenRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        userId: 'user-123',
+        token: 'hashed-token',
+        expiresAt: new Date(Date.now() + 60000),
+        usedAt: null,
+      });
+      userClient.send.mockReturnValueOnce(of(profileView)).mockReturnValueOnce(of(undefined));
+
+      await service.resetPassword('raw-token', 'NewPassword123!');
+
+      expect(refreshTokenRepository.update).toHaveBeenCalledWith(
+        expect.objectContaining({ userId: 'user-123' }),
+        expect.objectContaining({ revokedAt: expect.any(Date) }),
+      );
+    });
+  });
+
+  describe('refreshToken - grace period + edge cases (558-600)', () => {
+    it('should throw INVALID_REFRESH_TOKEN when neither active nor grace-period token found', async () => {
+      (refreshTokenRepository.findOne as jest.Mock)
+        .mockResolvedValueOnce(null) // active lookup
+        .mockResolvedValueOnce(null); // grace lookup
+
+      try {
+        await service.refreshToken('unknown-token');
+        fail('expected RpcException');
+      } catch (err) {
+        expect((err as RpcException).getError()).toMatchObject({
+          statusCode: 401,
+          code: 'INVALID_REFRESH_TOKEN',
+        });
+      }
+    });
+
+    it('should issue new pair via grace period when token was recently revoked', async () => {
+      const recent = {
+        id: 'rt-grace',
+        userId: 'user-123',
+        token: 'hashed-token',
+        expiresAt: new Date(Date.now() + 60000),
+        revokedAt: new Date(Date.now() - 1000),
+      };
+      (refreshTokenRepository.findOne as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(recent);
+      userClient.send.mockReturnValueOnce(of(profileView));
+
+      const result = await service.refreshToken('raw-token');
+
+      expect(result.accessToken).toBe('access-token');
+      expect(result.refreshToken).toBeDefined();
+    });
+
+    it('grace period: should throw INVALID_REFRESH_TOKEN if recovered token lacks userId', async () => {
+      const orphan = {
+        id: 'rt-grace',
+        userId: null,
+        token: 'hashed-token',
+        expiresAt: new Date(Date.now() + 60000),
+        revokedAt: new Date(Date.now() - 1000),
+      };
+      (refreshTokenRepository.findOne as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(orphan);
+
+      try {
+        await service.refreshToken('raw-token');
+        fail('expected RpcException');
+      } catch (err) {
+        expect((err as RpcException).getError()).toMatchObject({
+          statusCode: 401,
+          code: 'INVALID_REFRESH_TOKEN',
+        });
+      }
+    });
+
+    it('grace period: should throw 403 ACCOUNT_DISABLED if user is inactive', async () => {
+      (refreshTokenRepository.findOne as jest.Mock)
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'rt-grace',
+          userId: 'user-123',
+          token: 'hashed-token',
+          expiresAt: new Date(Date.now() + 60000),
+          revokedAt: new Date(Date.now() - 1000),
+        });
+      userClient.send.mockReturnValueOnce(of({ ...profileView, isActive: false }));
+
+      try {
+        await service.refreshToken('raw-token');
+        fail('expected RpcException');
+      } catch (err) {
+        expect((err as RpcException).getError()).toMatchObject({
+          statusCode: 403,
+          code: 'ACCOUNT_DISABLED',
+        });
+      }
+    });
+
+    it('should throw REFRESH_TOKEN_EXPIRED when active token is past expiresAt', async () => {
+      (refreshTokenRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 'rt-1',
+        userId: 'user-123',
+        token: 'hashed-token',
+        expiresAt: new Date(Date.now() - 60000),
+        revokedAt: null,
+      });
+
+      try {
+        await service.refreshToken('raw-token');
+        fail('expected RpcException');
+      } catch (err) {
+        expect((err as RpcException).getError()).toMatchObject({
+          statusCode: 401,
+          code: 'REFRESH_TOKEN_EXPIRED',
+        });
+      }
+    });
+
+    it('should throw INVALID_REFRESH_TOKEN when active token has no userId (line 472)', async () => {
+      (refreshTokenRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        id: 'rt-1',
+        userId: null,
+        token: 'hashed-token',
+        expiresAt: new Date(Date.now() + 60000),
+        revokedAt: null,
+      });
+
+      try {
+        await service.refreshToken('raw-token');
+        fail('expected RpcException');
+      } catch (err) {
+        expect((err as RpcException).getError()).toMatchObject({
+          statusCode: 401,
+          code: 'INVALID_REFRESH_TOKEN',
+        });
+      }
+    });
+  });
+
+  describe('createRefreshToken - max active sessions limit', () => {
+    it('should revoke oldest sessions when active sessions reach MAX_ACTIVE_SESSIONS (5)', async () => {
+      // 5 existing active sessions => creating one more triggers revocation of the oldest.
+      const existing = Array.from({ length: 5 }).map((_, i) => ({
+        id: `rt-${i}`,
+        createdAt: new Date(2026, 0, i + 1),
+      }));
+      (refreshTokenRepository.find as jest.Mock).mockResolvedValueOnce(existing);
+
+      const stored = {
+        id: 'rt-1',
+        userId: 'user-123',
+        token: 'hashed-token',
+        expiresAt: new Date(Date.now() + 60000),
+        revokedAt: null,
+      };
+      (refreshTokenRepository.findOne as jest.Mock).mockResolvedValueOnce(stored);
+      userClient.send.mockReturnValueOnce(of(profileView));
+
+      await service.refreshToken('raw-token');
+
+      // The update call that revokes oldest tokens passes an array of ids.
+      const updateCalls = (refreshTokenRepository.update as jest.Mock).mock.calls;
+      const arrayCall = updateCalls.find((c) => Array.isArray(c[0]));
+      expect(arrayCall).toBeDefined();
+      expect(arrayCall![1]).toMatchObject({ revokedAt: expect.any(Date) });
+    });
+  });
+
+  describe('logout - flows (464, 472)', () => {
+    it('with refresh token: revokes single session via update', async () => {
+      await service.logout('user-123', 'raw-token');
+      const args = (refreshTokenRepository.update as jest.Mock).mock.calls[0];
+      expect(args[0]).toHaveProperty('token');
+    });
+
+    it('without refresh token: does NOT call update (other devices preserved)', async () => {
+      await service.logout('user-123');
+      expect(refreshTokenRepository.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('cleanupExpiredTokens (584-600)', () => {
+    it('should delete expired verification, reset, and refresh tokens and aggregate counts', async () => {
+      (emailVerificationTokenRepository.delete as jest.Mock).mockResolvedValueOnce({ affected: 3 });
+      (passwordResetTokenRepository.delete as jest.Mock).mockResolvedValueOnce({ affected: 2 });
+      (refreshTokenRepository.delete as jest.Mock).mockResolvedValueOnce({ affected: 4 });
+
+      const result = await service.cleanupExpiredTokens();
+
+      expect(result).toEqual({
+        verificationTokens: 3,
+        resetTokens: 2,
+        refreshTokens: 4,
+      });
+    });
+
+    it('should default to 0 when affected is undefined', async () => {
+      (emailVerificationTokenRepository.delete as jest.Mock).mockResolvedValueOnce({});
+      (passwordResetTokenRepository.delete as jest.Mock).mockResolvedValueOnce({});
+      (refreshTokenRepository.delete as jest.Mock).mockResolvedValueOnce({});
+
+      const result = await service.cleanupExpiredTokens();
+
+      expect(result).toEqual({
+        verificationTokens: 0,
+        resetTokens: 0,
+        refreshTokens: 0,
+      });
+    });
+  });
 });

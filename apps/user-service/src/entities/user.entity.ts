@@ -7,7 +7,10 @@ export class User extends BaseEntity {
   @Index('idx_user_email')
   email: string;
 
-  @Column({ name: 'password_hash', type: 'varchar', length: 255 })
+  // select: false keeps the bcrypt hash out of any default findOne / find /
+  // save round-trip. Endpoints that need the hash for verification must opt in
+  // explicitly via QueryBuilder.addSelect('user.passwordHash').
+  @Column({ name: 'password_hash', type: 'varchar', length: 255, select: false })
   passwordHash: string;
 
   @Column({ name: 'first_name', type: 'varchar', length: 100 })

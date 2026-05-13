@@ -9,7 +9,9 @@ export class Admin extends BaseEntity {
   @Index('idx_admin_email')
   email: string;
 
-  @Column({ name: 'password_hash', type: 'varchar', length: 255 })
+  // select: false keeps the bcrypt hash out of any default findOne / find /
+  // save round-trip. adminLogin opts in explicitly via addSelect.
+  @Column({ name: 'password_hash', type: 'varchar', length: 255, select: false })
   passwordHash: string;
 
   @Column({ name: 'first_name', type: 'varchar', length: 100 })

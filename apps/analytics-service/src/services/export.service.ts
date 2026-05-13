@@ -254,7 +254,7 @@ export class ExportService {
             this.logger.warn(`Service timeout for pattern: ${JSON.stringify(pattern)}`);
             throw new RpcException({
               statusCode: 503,
-              message: 'Service is not responding',
+              message: 'errors.common.serviceUnavailable',
               code: 'SERVICE_TIMEOUT',
             });
           }

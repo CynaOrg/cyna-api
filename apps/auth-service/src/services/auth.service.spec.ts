@@ -445,7 +445,7 @@ describe('AuthService', () => {
       const result = await service.resendVerification('unknown@example.com');
 
       expect(result.success).toBe(true);
-      expect(result.message).toBe('If the email exists, a verification email has been sent');
+      expect(result.message).toBe('common.messages.verificationEmailSentSilent');
       expect(authEventsPublisher.emitUserRegistered).not.toHaveBeenCalled();
       expect(emailVerificationTokenRepository.save).not.toHaveBeenCalled();
     });
@@ -456,7 +456,7 @@ describe('AuthService', () => {
       const result = await service.resendVerification('test@example.com');
 
       expect(result.success).toBe(true);
-      expect(result.message).toBe('If the email exists, a verification email has been sent');
+      expect(result.message).toBe('common.messages.verificationEmailSentSilent');
       expect(authEventsPublisher.emitUserRegistered).not.toHaveBeenCalled();
     });
 

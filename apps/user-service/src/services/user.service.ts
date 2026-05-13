@@ -37,7 +37,7 @@ export class UserService {
     if (existing) {
       throw new RpcException({
         statusCode: 409,
-        message: 'Email already registered',
+        message: 'errors.user.emailExists',
         code: 'EMAIL_EXISTS',
       });
     }
@@ -91,7 +91,7 @@ export class UserService {
     if (!user) {
       throw new RpcException({
         statusCode: 404,
-        message: 'User not found',
+        message: 'errors.user.notFound',
         code: 'USER_NOT_FOUND',
       });
     }
@@ -128,7 +128,7 @@ export class UserService {
     if (dto.vatNumber !== undefined) user.vatNumber = dto.vatNumber;
     const saved = await this.userRepository.save(user);
     this.logger.log(`Profile updated for user: ${saved.id}`, 'UserService');
-    return { message: 'Profile updated successfully', user: this.toProfileView(saved) };
+    return { message: 'common.messages.profileUpdated', user: this.toProfileView(saved) };
   }
 
   async updatePassword(userId: string, dto: UpdatePasswordDto): Promise<{ message: string }> {
@@ -137,14 +137,14 @@ export class UserService {
     if (!valid) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Current password is incorrect',
+        message: 'errors.user.invalidPassword',
         code: 'INVALID_CURRENT_PASSWORD',
       });
     }
     if (dto.currentPassword === dto.newPassword) {
       throw new RpcException({
         statusCode: 400,
-        message: 'New password must be different from current password',
+        message: 'errors.user.newPasswordSameAsCurrent',
         code: 'SAME_PASSWORD',
       });
     }
@@ -158,7 +158,7 @@ export class UserService {
     });
 
     this.logger.log(`Password updated for user: ${user.id}`, 'UserService');
-    return { message: 'Password updated successfully' };
+    return { message: 'common.messages.passwordUpdated' };
   }
 
   async updateLanguage(
@@ -172,7 +172,7 @@ export class UserService {
       `Language updated for user: ${saved.id} to ${dto.preferredLanguage}`,
       'UserService',
     );
-    return { message: 'Language preference updated successfully', user: this.toProfileView(saved) };
+    return { message: 'common.messages.languageUpdated', user: this.toProfileView(saved) };
   }
 
   async deleteAccount(userId: string, dto: DeleteAccountDto): Promise<{ message: string }> {
@@ -181,7 +181,7 @@ export class UserService {
     if (!valid) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Password is incorrect',
+        message: 'errors.user.passwordIncorrect',
         code: 'INVALID_PASSWORD',
       });
     }
@@ -195,7 +195,7 @@ export class UserService {
     });
 
     this.logger.log(`Account soft-deleted for user: ${user.id}`, 'UserService');
-    return { message: 'Account deleted successfully' };
+    return { message: 'common.messages.accountDeleted' };
   }
 
   private async findActiveUserOrThrow(
@@ -212,14 +212,14 @@ export class UserService {
     if (!user) {
       throw new RpcException({
         statusCode: 404,
-        message: 'User not found',
+        message: 'errors.user.notFound',
         code: 'USER_NOT_FOUND',
       });
     }
     if (!user.isActive) {
       throw new RpcException({
         statusCode: 403,
-        message: 'Account is disabled',
+        message: 'errors.auth.accountDisabled',
         code: 'ACCOUNT_DISABLED',
       });
     }

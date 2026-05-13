@@ -66,7 +66,7 @@ export class ContactMessageService {
       this.logger.warn(`Contact message not found: ${id}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Contact message not found',
+        message: 'errors.content.contactMessageNotFound',
         code: 'CONTACT_MESSAGE_NOT_FOUND',
       });
     }
@@ -86,7 +86,7 @@ export class ContactMessageService {
       this.logger.warn(`Contact message not found: ${id}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Contact message not found',
+        message: 'errors.content.contactMessageNotFound',
         code: 'CONTACT_MESSAGE_NOT_FOUND',
       });
     }

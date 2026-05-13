@@ -75,7 +75,7 @@ export class AuthService {
             () =>
               new RpcException({
                 statusCode: 503,
-                message: 'User service unavailable',
+                message: 'errors.auth.userServiceUnavailable',
                 code: 'USER_SERVICE_UNAVAILABLE',
               }),
           );
@@ -121,7 +121,7 @@ export class AuthService {
     this.logger.log(`User registered: ${user.id}`, 'AuthService');
 
     return {
-      message: 'Registration successful. Please check your email to verify your account.',
+      message: 'common.messages.registrationSuccess',
       user: UserResponseDto.fromProfileView(user),
     };
   }
@@ -135,7 +135,7 @@ export class AuthService {
     if (!user) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid credentials',
+        message: 'errors.auth.invalidCredentials',
         code: 'INVALID_CREDENTIALS',
       });
     }
@@ -143,7 +143,7 @@ export class AuthService {
     if (!user.isActive) {
       throw new RpcException({
         statusCode: 403,
-        message: 'Account is disabled',
+        message: 'errors.auth.accountDisabled',
         code: 'ACCOUNT_DISABLED',
       });
     }
@@ -152,7 +152,7 @@ export class AuthService {
     if (!isPasswordValid) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid credentials',
+        message: 'errors.auth.invalidCredentials',
         code: 'INVALID_CREDENTIALS',
       });
     }
@@ -160,7 +160,7 @@ export class AuthService {
     if (!user.isVerified) {
       throw new RpcException({
         statusCode: 403,
-        message: 'Email not verified',
+        message: 'errors.auth.emailNotVerified',
         code: 'EMAIL_NOT_VERIFIED',
       });
     }
@@ -198,7 +198,7 @@ export class AuthService {
     if (!emailVerificationToken) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Invalid or expired verification token',
+        message: 'errors.auth.verificationTokenInvalid',
         code: 'INVALID_TOKEN',
       });
     }
@@ -206,7 +206,7 @@ export class AuthService {
     if (emailVerificationToken.expiresAt < new Date()) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Verification token has expired',
+        message: 'errors.auth.verificationTokenExpired',
         code: 'TOKEN_EXPIRED',
       });
     }
@@ -228,7 +228,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'Email verified successfully',
+      message: 'common.messages.emailVerified',
     };
   }
 
@@ -243,7 +243,7 @@ export class AuthService {
     if (!user || user.isVerified) {
       return {
         success: true,
-        message: 'If the email exists, a verification email has been sent',
+        message: 'common.messages.verificationEmailSentSilent',
       };
     }
 
@@ -276,7 +276,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'If the email exists, a verification email has been sent',
+      message: 'common.messages.verificationEmailSentSilent',
     };
   }
 
@@ -290,7 +290,7 @@ export class AuthService {
     if (!user) {
       return {
         success: true,
-        message: 'If the email exists, a password reset email has been sent',
+        message: 'common.messages.passwordResetEmailSentSilent',
       };
     }
 
@@ -322,7 +322,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'If the email exists, a password reset email has been sent',
+      message: 'common.messages.passwordResetEmailSentSilent',
     };
   }
 
@@ -342,7 +342,7 @@ export class AuthService {
     if (!passwordResetToken) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Invalid or expired reset token',
+        message: 'errors.auth.resetTokenInvalid',
         code: 'INVALID_TOKEN',
       });
     }
@@ -350,7 +350,7 @@ export class AuthService {
     if (passwordResetToken.expiresAt < new Date()) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Reset token has expired',
+        message: 'errors.auth.resetTokenExpired',
         code: 'TOKEN_EXPIRED',
       });
     }
@@ -385,7 +385,7 @@ export class AuthService {
 
     return {
       success: true,
-      message: 'Password reset successfully',
+      message: 'common.messages.passwordReset',
     };
   }
 
@@ -418,7 +418,7 @@ export class AuthService {
         if (!refreshToken.userId) {
           throw new RpcException({
             statusCode: 401,
-            message: 'Invalid refresh token',
+            message: 'errors.auth.refreshTokenInvalid',
             code: 'INVALID_REFRESH_TOKEN',
           });
         }
@@ -430,7 +430,7 @@ export class AuthService {
         if (!user.isActive) {
           throw new RpcException({
             statusCode: 403,
-            message: 'Account is disabled',
+            message: 'errors.auth.accountDisabled',
             code: 'ACCOUNT_DISABLED',
           });
         }
@@ -455,7 +455,7 @@ export class AuthService {
 
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid refresh token',
+        message: 'errors.auth.refreshTokenInvalid',
         code: 'INVALID_REFRESH_TOKEN',
       });
     }
@@ -463,7 +463,7 @@ export class AuthService {
     if (refreshToken.expiresAt < new Date()) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Refresh token has expired',
+        message: 'errors.auth.refreshTokenExpired',
         code: 'REFRESH_TOKEN_EXPIRED',
       });
     }
@@ -471,7 +471,7 @@ export class AuthService {
     if (!refreshToken.userId) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid refresh token',
+        message: 'errors.auth.refreshTokenInvalid',
         code: 'INVALID_REFRESH_TOKEN',
       });
     }
@@ -483,7 +483,7 @@ export class AuthService {
     if (!user.isActive) {
       throw new RpcException({
         statusCode: 403,
-        message: 'Account is disabled',
+        message: 'errors.auth.accountDisabled',
         code: 'ACCOUNT_DISABLED',
       });
     }

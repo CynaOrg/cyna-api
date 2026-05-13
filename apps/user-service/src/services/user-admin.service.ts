@@ -72,7 +72,7 @@ export class UserAdminService {
     if (!user) {
       throw new RpcException({
         statusCode: 404,
-        message: 'User not found',
+        message: 'errors.user.notFound',
         code: 'USER_NOT_FOUND',
       });
     }
@@ -87,7 +87,7 @@ export class UserAdminService {
     if (!user) {
       throw new RpcException({
         statusCode: 404,
-        message: 'User not found',
+        message: 'errors.user.notFound',
         code: 'USER_NOT_FOUND',
       });
     }

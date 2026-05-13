@@ -38,7 +38,7 @@ export class AdminAuthService {
     if (!admin) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid credentials',
+        message: 'errors.auth.invalidCredentials',
         code: 'INVALID_CREDENTIALS',
       });
     }
@@ -46,7 +46,7 @@ export class AdminAuthService {
     if (!admin.isActive) {
       throw new RpcException({
         statusCode: 403,
-        message: 'Admin account is disabled',
+        message: 'errors.auth.adminAccountDisabled',
         code: 'ACCOUNT_DISABLED',
       });
     }
@@ -55,7 +55,7 @@ export class AdminAuthService {
     if (!isPasswordValid) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid credentials',
+        message: 'errors.auth.invalidCredentials',
         code: 'INVALID_CREDENTIALS',
       });
     }
@@ -82,7 +82,7 @@ export class AdminAuthService {
     return {
       requires2FA: true,
       tempToken,
-      message: 'A verification code has been sent to your email',
+      message: 'common.messages.2faCodeSent',
     };
   }
 
@@ -94,7 +94,7 @@ export class AdminAuthService {
     } catch {
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid or expired temporary token',
+        message: 'errors.auth.tempTokenInvalid',
         code: 'INVALID_TEMP_TOKEN',
       });
     }
@@ -102,7 +102,7 @@ export class AdminAuthService {
     if (payload.purpose !== '2fa') {
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid token purpose',
+        message: 'errors.auth.tempTokenPurposeInvalid',
         code: 'INVALID_TOKEN_PURPOSE',
       });
     }
@@ -114,7 +114,7 @@ export class AdminAuthService {
     if (!admin) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Admin not found',
+        message: 'errors.auth.adminNotFound',
         code: 'ADMIN_NOT_FOUND',
       });
     }
@@ -122,7 +122,7 @@ export class AdminAuthService {
     if (!admin.isActive) {
       throw new RpcException({
         statusCode: 403,
-        message: 'Admin account is disabled',
+        message: 'errors.auth.adminAccountDisabled',
         code: 'ACCOUNT_DISABLED',
       });
     }
@@ -131,7 +131,7 @@ export class AdminAuthService {
     if (!isCodeValid) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid or expired 2FA code',
+        message: 'errors.auth.2faInvalid',
         code: 'INVALID_2FA_CODE',
       });
     }
@@ -168,7 +168,7 @@ export class AdminAuthService {
     } catch {
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid or expired temporary token',
+        message: 'errors.auth.tempTokenInvalid',
         code: 'INVALID_TEMP_TOKEN',
       });
     }
@@ -176,7 +176,7 @@ export class AdminAuthService {
     if (payload.purpose !== '2fa') {
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid token purpose',
+        message: 'errors.auth.tempTokenPurposeInvalid',
         code: 'INVALID_TOKEN_PURPOSE',
       });
     }
@@ -188,7 +188,7 @@ export class AdminAuthService {
     if (!admin) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Admin not found',
+        message: 'errors.auth.adminNotFound',
         code: 'ADMIN_NOT_FOUND',
       });
     }
@@ -196,7 +196,7 @@ export class AdminAuthService {
     if (!admin.isActive) {
       throw new RpcException({
         statusCode: 403,
-        message: 'Admin account is disabled',
+        message: 'errors.auth.adminAccountDisabled',
         code: 'ACCOUNT_DISABLED',
       });
     }
@@ -223,7 +223,7 @@ export class AdminAuthService {
     return {
       requires2FA: true,
       tempToken: newTempToken,
-      message: 'A new verification code has been sent to your email',
+      message: 'common.messages.2faCodeResent',
     };
   }
 
@@ -241,7 +241,7 @@ export class AdminAuthService {
     if (!refreshToken || !refreshToken.admin) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Invalid refresh token',
+        message: 'errors.auth.refreshTokenInvalid',
         code: 'INVALID_REFRESH_TOKEN',
       });
     }
@@ -249,7 +249,7 @@ export class AdminAuthService {
     if (refreshToken.expiresAt < new Date()) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Refresh token has expired',
+        message: 'errors.auth.refreshTokenExpired',
         code: 'REFRESH_TOKEN_EXPIRED',
       });
     }
@@ -259,7 +259,7 @@ export class AdminAuthService {
     if (!admin.isActive) {
       throw new RpcException({
         statusCode: 403,
-        message: 'Admin account is disabled',
+        message: 'errors.auth.adminAccountDisabled',
         code: 'ACCOUNT_DISABLED',
       });
     }
@@ -313,7 +313,7 @@ export class AdminAuthService {
     if (!admin) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Admin not found',
+        message: 'errors.auth.adminNotFound',
         code: 'ADMIN_NOT_FOUND',
       });
     }
@@ -321,7 +321,7 @@ export class AdminAuthService {
     if (!admin.isActive) {
       throw new RpcException({
         statusCode: 403,
-        message: 'Admin account is disabled',
+        message: 'errors.auth.adminAccountDisabled',
         code: 'ACCOUNT_DISABLED',
       });
     }
@@ -366,7 +366,7 @@ export class AdminAuthService {
     if (!admin) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Admin not found',
+        message: 'errors.auth.adminNotFound',
         code: 'ADMIN_NOT_FOUND',
       });
     }
@@ -388,7 +388,7 @@ export class AdminAuthService {
     if (existing) {
       throw new RpcException({
         statusCode: 409,
-        message: 'Email already taken',
+        message: 'errors.auth.emailAlreadyTaken',
         code: 'EMAIL_ALREADY_EXISTS',
       });
     }
@@ -435,7 +435,7 @@ export class AdminAuthService {
     if (requestAdminId !== undefined && requestAdminId === adminId && dto.isActive === false) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Cannot deactivate your own account',
+        message: 'errors.auth.cannotDeactivateSelf',
         code: 'CANNOT_DEACTIVATE_SELF',
       });
     }
@@ -447,7 +447,7 @@ export class AdminAuthService {
     if (!admin) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Admin not found',
+        message: 'errors.auth.adminNotFound',
         code: 'ADMIN_NOT_FOUND',
       });
     }
@@ -477,7 +477,7 @@ export class AdminAuthService {
     if (adminId === requestAdminId) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Cannot delete your own account',
+        message: 'errors.auth.cannotDeleteSelf',
         code: 'CANNOT_DELETE_SELF',
       });
     }
@@ -489,7 +489,7 @@ export class AdminAuthService {
     if (!admin) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Admin not found',
+        message: 'errors.auth.adminNotFound',
         code: 'ADMIN_NOT_FOUND',
       });
     }
@@ -501,7 +501,7 @@ export class AdminAuthService {
       'AdminAuthService',
     );
 
-    return { success: true, message: 'Admin account deleted' };
+    return { success: true, message: 'common.messages.adminAccountDeleted' };
   }
 
   private async createRefreshToken(adminId: string): Promise<string> {

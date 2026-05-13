@@ -35,7 +35,15 @@ describe('AdminAuthService', () => {
     adminRepository = {
       findOne: jest.fn(),
       save: jest.fn().mockImplementation((entity) => Promise.resolve(entity)),
-    };
+      // adminLogin reads via createQueryBuilder().addSelect('admin.passwordHash')
+      // since the column is select:false. We make the QB getOne() delegate to
+      // findOne so the existing mockResolvedValueOnce setups keep working.
+      createQueryBuilder: jest.fn(() => ({
+        addSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        getOne: jest.fn(() => (adminRepository.findOne as jest.Mock)()),
+      })),
+    } as unknown as Partial<Repository<Admin>>;
 
     refreshTokenRepository = {
       create: jest.fn().mockImplementation((entity) => entity),

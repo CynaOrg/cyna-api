@@ -24,13 +24,30 @@ describe('UserService', () => {
         UserService,
         {
           provide: getRepositoryToken(User),
-          useValue: {
-            findOne: jest.fn(),
-            create: jest.fn(),
-            save: jest.fn(),
-            update: jest.fn(),
-            createQueryBuilder: jest.fn(),
-          },
+          useValue: (() => {
+            const repo: {
+              findOne: jest.Mock;
+              create: jest.Mock;
+              save: jest.Mock;
+              update: jest.Mock;
+              createQueryBuilder: jest.Mock;
+            } = {
+              findOne: jest.fn(),
+              create: jest.fn(),
+              save: jest.fn(),
+              update: jest.fn(),
+              createQueryBuilder: jest.fn(),
+            };
+            // findByEmailForLogin / findActiveUserOrThrow now go through a
+            // QueryBuilder (passwordHash is select:false). Delegate getOne()
+            // to findOne so existing mockResolvedValueOnce setups keep working.
+            repo.createQueryBuilder.mockImplementation(() => ({
+              addSelect: jest.fn().mockReturnThis(),
+              where: jest.fn().mockReturnThis(),
+              getOne: jest.fn(() => repo.findOne()),
+            }));
+            return repo;
+          })(),
         },
         {
           provide: 'NOTIFICATION_SERVICE',

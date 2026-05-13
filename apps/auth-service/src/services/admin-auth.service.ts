@@ -28,9 +28,12 @@ export class AdminAuthService {
   ) {}
 
   async adminLogin(dto: AdminLoginDto): Promise<Admin2FAResponseDto> {
-    const admin = await this.adminRepository.findOne({
-      where: { email: dto.email },
-    });
+    // passwordHash is select:false on the entity; opt in explicitly here.
+    const admin = await this.adminRepository
+      .createQueryBuilder('admin')
+      .addSelect('admin.passwordHash')
+      .where('admin.email = :email', { email: dto.email })
+      .getOne();
 
     if (!admin) {
       throw new RpcException({

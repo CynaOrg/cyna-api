@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
-import { ValidationPipe, Logger } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
+import { I18nValidationPipe } from 'nestjs-i18n';
 import { AnalyticsModule } from './analytics.module';
 
 const logger = new Logger('AnalyticsService');
@@ -22,7 +23,7 @@ async function bootstrap() {
   });
 
   app.useGlobalPipes(
-    new ValidationPipe({
+    new I18nValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,

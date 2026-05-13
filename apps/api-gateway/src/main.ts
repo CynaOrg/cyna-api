@@ -1,9 +1,9 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
+import { Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule } from '@nestjs/swagger';
 import { createOpenApiDocument } from './swagger.factory';
-import { I18nService } from 'nestjs-i18n';
+import { I18nService, I18nValidationPipe, I18nValidationExceptionFilter } from 'nestjs-i18n';
 import helmet from 'helmet';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
@@ -67,9 +67,12 @@ async function bootstrap() {
     exclude: [{ path: 'webhooks/stripe', method: RequestMethod.POST }],
   });
 
-  // Global validation pipe
+  // Global validation pipe — I18nValidationPipe extends ValidationPipe and
+  // lets class-validator messages be i18n keys (e.g. 'validation.slug.required')
+  // which are resolved against the current request locale by the matching
+  // I18nValidationExceptionFilter below.
   app.useGlobalPipes(
-    new ValidationPipe({
+    new I18nValidationPipe({
       transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -86,8 +89,15 @@ async function bootstrap() {
     new TransformInterceptor(),
   );
 
-  // Global exception filter
-  app.useGlobalFilters(new GlobalExceptionFilter(i18nService));
+  // Global exception filters. I18nValidationExceptionFilter is registered AFTER
+  // GlobalExceptionFilter so it catches I18nValidationException first (NestJS
+  // applies filters in reverse registration order, last one wins on type match).
+  // detailedErrors:false collapses the nested validation tree into a flat array
+  // of translated strings, matching the response shape expected by the filter.
+  app.useGlobalFilters(
+    new GlobalExceptionFilter(i18nService),
+    new I18nValidationExceptionFilter({ detailedErrors: false }),
+  );
 
   // Swagger documentation
   if (swaggerEnabled) {

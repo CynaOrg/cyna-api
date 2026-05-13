@@ -3,7 +3,13 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { CynaConfigModule, LoggerModule, SERVICE_NAMES, CynaCacheModule } from '@cyna-api/common';
+import {
+  CynaConfigModule,
+  LoggerModule,
+  SERVICE_NAMES,
+  CynaCacheModule,
+  isDatabaseSyncEnabled,
+} from '@cyna-api/common';
 import { S3Module } from '@cyna-api/s3';
 import { CarouselSlide, HeroText, TopProductConfig, ContactMessage } from './entities';
 import {
@@ -34,7 +40,7 @@ import { ContentDataSeeder } from './seeds';
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
       entities: [CarouselSlide, HeroText, TopProductConfig, ContactMessage],
-      synchronize: process.env.DATABASE_SYNC === 'true',
+      synchronize: isDatabaseSyncEnabled(),
       logging: process.env.DATABASE_LOGGING === 'true',
     }),
     TypeOrmModule.forFeature([CarouselSlide, HeroText, TopProductConfig, ContactMessage]),

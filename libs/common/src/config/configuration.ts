@@ -3,6 +3,8 @@
  * Centralizes all environment variables into a typed configuration object
  */
 
+import { isDatabaseSyncEnabled } from './database-safety';
+
 export interface AppConfiguration {
   app: {
     name: string;
@@ -79,7 +81,7 @@ export default (): AppConfiguration => ({
     username: process.env.DATABASE_USER || 'cyna',
     password: process.env.DATABASE_PASSWORD || 'cyna_dev',
     database: process.env.DATABASE_NAME || 'cyna_db',
-    synchronize: process.env.DATABASE_SYNC === 'true',
+    synchronize: isDatabaseSyncEnabled(),
     logging: process.env.DATABASE_LOGGING === 'true',
   },
   redis: {

@@ -18,8 +18,11 @@ export class Admin2FACode {
   @Index('idx_2fa_admin')
   adminId: string;
 
-  @Column({ type: 'varchar', length: 6 })
-  code: string;
+  // SHA-256 hex digest of the 6-digit code. The cleartext code is delivered
+  // to the admin by email and never persisted; only its hash is stored so a
+  // database dump cannot leak active 2FA codes.
+  @Column({ name: 'code', type: 'varchar', length: 64 })
+  codeHash: string;
 
   @Column({ name: 'expires_at', type: 'timestamptz' })
   @Index('idx_2fa_expires')

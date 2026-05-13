@@ -28,6 +28,7 @@ import { AuthController, AdminAuthController } from './controllers';
 import { AuthEventsPublisher } from './events/auth-events.publisher';
 import { CleanupService } from './cron/cleanup.service';
 import { AdminSeedService } from './seeds/admin-seed.service';
+import { HashAdmin2FACodes1777600000000 } from './migrations/1777600000000-HashAdmin2FACodes';
 
 @Module({
   imports: [
@@ -43,6 +44,8 @@ import { AdminSeedService } from './seeds/admin-seed.service';
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
       entities: [Admin, Admin2FACode, PasswordResetToken, EmailVerificationToken, RefreshToken],
+      migrations: [HashAdmin2FACodes1777600000000],
+      migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
       synchronize: isDatabaseSyncEnabled(),
       logging: process.env.DATABASE_LOGGING === 'true',
     }),

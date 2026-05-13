@@ -18,30 +18,63 @@
     "2faRequired": "2FA verification code required",
     "2faInvalid": "Invalid 2FA code",
     "2faExpired": "2FA code expired, please request a new one",
-    "refreshTokenInvalid": "Invalid session, please log in again"
+    "refreshTokenInvalid": "Invalid session, please log in again",
+    "refreshTokenExpired": "Your session has expired, please log in again",
+    "tempTokenInvalid": "Invalid or expired temporary link",
+    "tempTokenPurposeInvalid": "Invalid token for this operation",
+    "verificationTokenInvalid": "Invalid or expired verification link",
+    "verificationTokenExpired": "Verification link has expired",
+    "resetTokenInvalid": "Invalid or expired reset link",
+    "resetTokenExpired": "Reset link has expired",
+    "userServiceUnavailable": "User service unavailable",
+    "adminNotFound": "Administrator not found",
+    "adminAccountDisabled": "The administrator account has been disabled",
+    "emailAlreadyTaken": "This email address is already in use",
+    "cannotDeactivateSelf": "You cannot deactivate your own account",
+    "cannotDeleteSelf": "You cannot delete your own account"
   },
   "user": {
     "notFound": "User not found",
     "emailExists": "This email address is already in use",
     "invalidPassword": "Current password is incorrect",
-    "cannotDeleteWithActiveSubscriptions": "Cannot delete account with active subscriptions"
+    "cannotDeleteWithActiveSubscriptions": "Cannot delete account with active subscriptions",
+    "addressNotFound": "Address not found",
+    "passwordIncorrect": "Password is incorrect",
+    "newPasswordSameAsCurrent": "New password must be different from the current one"
   },
   "catalog": {
     "productNotFound": "Product not found",
     "categoryNotFound": "Category not found",
     "categoryHasProducts": "Cannot delete a category containing products",
-    "invalidProductType": "Invalid product type"
+    "invalidProductType": "Invalid product type",
+    "slugExists": "This category slug is already in use",
+    "invalidCategoryIds": "Some category IDs are invalid",
+    "productSlugExists": "This product slug is already in use",
+    "productSkuExists": "This product SKU is already in use",
+    "imageNotFound": "Image not found",
+    "invalidImageIds": "Some image IDs do not belong to this product",
+    "maxImagesReached": "Product already has the maximum of {max} images",
+    "invalidStorageKey": "Storage key does not match the product",
+    "stockPhysicalOnly": "Stock management is only available for physical products",
+    "stockReservationPhysicalOnly": "Stock reservation is only available for physical products",
+    "insufficientStock": "Insufficient stock",
+    "insufficientStockReservation": "Insufficient stock for reservation",
+    "reservationsNotFound": "No active reservations found for this cart",
+    "contentServiceUnavailable": "Content service unavailable"
   },
   "order": {
     "cartEmpty": "Your cart is empty",
+    "cartNotFound": "Cart not found",
     "cartItemNotFound": "Item not found in cart",
     "saasNotInCart": "SaaS services must be subscribed directly, not via cart",
     "productUnavailable": "This product is no longer available",
     "insufficientStock": "Insufficient stock for {productName} (available: {available})",
+    "insufficientStockShort": "Insufficient stock (available: {available})",
     "checkoutExpired": "Your checkout session has expired",
     "orderNotFound": "Order not found",
     "invalidOrderStatus": "Invalid status transition",
-    "cannotCancelPaidOrder": "Cannot cancel an already paid order"
+    "cannotCancelPaidOrder": "Cannot cancel an already paid order",
+    "catalogServiceTimeout": "Catalog service did not respond in time"
   },
   "payment": {
     "failed": "Payment failed",
@@ -49,10 +82,24 @@
     "subscriptionAlreadyCancelled": "This subscription is already cancelled",
     "invalidBillingPeriod": "Invalid billing period",
     "paymentMethodNotFound": "Payment method not found",
-    "cannotDeleteDefaultPaymentMethod": "Cannot delete default payment method"
+    "cannotDeleteDefaultPaymentMethod": "Cannot delete default payment method",
+    "invalidAmount": "Invalid payment amount",
+    "noStripePrice": "Product does not have a Stripe price configured",
+    "noInvoice": "No invoice on subscription",
+    "clientSecretMissing": "Failed to get client secret from subscription",
+    "subscriptionForbidden": "Not authorized to cancel this subscription",
+    "subscriptionUserIdRequired": "User ID is required for user-initiated cancellations",
+    "userServiceTimeout": "User service did not respond in time",
+    "catalogServiceTimeout": "Catalog service did not respond in time"
   },
   "content": {
     "slideNotFound": "Slide not found",
-    "messageNotFound": "Message not found"
+    "messageNotFound": "Message not found",
+    "carouselSlideNotFound": "Carousel slide not found",
+    "carouselInvalidSlideIds": "Some slide IDs are invalid",
+    "contactMessageNotFound": "Contact message not found"
+  },
+  "analytics": {
+    "serviceNotResponding": "Service is not responding"
   }
 }

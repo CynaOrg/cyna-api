@@ -2,10 +2,18 @@ import { ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import * as jwt from 'jsonwebtoken';
-import { TokenInvalidException } from '@cyna-api/common';
+import { JWT_ALGORITHM, JWT_AUDIENCE, JWT_ISSUER, TokenInvalidException } from '@cyna-api/common';
 import { JwtAdminAuthGuard } from './jwt-admin-auth.guard';
 
 const SECRET = 'admin-test-secret';
+
+const signTestToken = (payload: Record<string, unknown>, overrides: jwt.SignOptions = {}) =>
+  jwt.sign(payload, SECRET, {
+    algorithm: JWT_ALGORITHM,
+    issuer: JWT_ISSUER,
+    audience: JWT_AUDIENCE,
+    ...overrides,
+  });
 
 const buildContext = (request: Record<string, unknown>): ExecutionContext =>
   ({
@@ -29,10 +37,12 @@ describe('JwtAdminAuthGuard', () => {
   });
 
   it('should return true for valid admin token', () => {
-    const token = jwt.sign(
-      { sub: 'admin-1', email: 'admin@cyna.io', type: 'admin', role: 'super_admin' },
-      SECRET,
-    );
+    const token = signTestToken({
+      sub: 'admin-1',
+      email: 'admin@cyna.io',
+      type: 'admin',
+      role: 'super_admin',
+    });
     const request: Record<string, unknown> = {
       headers: { authorization: `Bearer ${token}` },
     };
@@ -45,17 +55,19 @@ describe('JwtAdminAuthGuard', () => {
   });
 
   it('should throw ForbiddenException for valid user token with type=user', () => {
-    const token = jwt.sign(
-      { sub: 'user-1', email: 'user@cyna.io', type: 'user', role: 'customer' },
-      SECRET,
-    );
+    const token = signTestToken({
+      sub: 'user-1',
+      email: 'user@cyna.io',
+      type: 'user',
+      role: 'customer',
+    });
     const ctx = buildContext({ headers: { authorization: `Bearer ${token}` } });
 
     expect(() => guard.canActivate(ctx)).toThrow(ForbiddenException);
   });
 
   it('should throw ForbiddenException with message "Admin access required"', () => {
-    const token = jwt.sign({ sub: 'u', email: 'u@u.com', type: 'user' }, SECRET);
+    const token = signTestToken({ sub: 'u', email: 'u@u.com', type: 'user' });
     const ctx = buildContext({ headers: { authorization: `Bearer ${token}` } });
 
     expect(() => guard.canActivate(ctx)).toThrow('Admin access required');

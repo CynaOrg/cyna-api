@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
+import { JWT_ALGORITHM, JWT_AUDIENCE, JWT_ISSUER } from '@cyna-api/common';
 import { JwtPayload } from '../interfaces';
 
 /**
@@ -28,7 +29,11 @@ export class OptionalJwtAuthGuard implements CanActivate {
         return true;
       }
 
-      const payload = jwt.verify(token, secret) as JwtPayload;
+      const payload = jwt.verify(token, secret, {
+        algorithms: [JWT_ALGORITHM],
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
+      }) as JwtPayload;
 
       request.user = {
         id: payload.sub,

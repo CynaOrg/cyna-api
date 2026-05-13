@@ -210,9 +210,12 @@ describe('TokenService', () => {
 
     it('should throw TokenExpiredError when access token is expired', () => {
       const jwtLib = jest.requireActual('jsonwebtoken') as typeof import('jsonwebtoken');
-      // sign with negative expiresIn -> already expired
+      // sign with negative expiresIn -> already expired (issuer/audience must match)
       const expired = jwtLib.sign({ sub: 'x', email: 'x@x', type: 'user' }, mockSecret, {
         expiresIn: -10,
+        algorithm: 'HS256',
+        issuer: 'cyna-api',
+        audience: 'cyna-clients',
       });
 
       expect(() => service.verifyAccessToken(expired)).toThrow(/expired/i);
@@ -228,6 +231,9 @@ describe('TokenService', () => {
       const jwtLib = jest.requireActual('jsonwebtoken') as typeof import('jsonwebtoken');
       const expired = jwtLib.sign({ sub: 'x', email: 'x@x', purpose: '2fa' }, mockSecret, {
         expiresIn: -10,
+        algorithm: 'HS256',
+        issuer: 'cyna-api',
+        audience: 'cyna-clients',
       });
 
       expect(() => service.verifyTempToken(expired)).toThrow(/expired/i);

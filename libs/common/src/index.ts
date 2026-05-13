@@ -48,3 +48,6 @@ export * from './utils';
 
 // Constants
 export * from './constants';
+
+// Auth (JWT identity claims)
+export * from './auth';

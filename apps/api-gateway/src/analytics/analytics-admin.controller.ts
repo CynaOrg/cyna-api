@@ -1,13 +1,16 @@
 import { Controller, Get, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
+import { AdminRole } from '@cyna-api/common';
 import { AnalyticsService } from './analytics.service';
-import { JwtAdminAuthGuard, SuperAdminGuard } from '../auth/guards';
+import { AdminRolesGuard } from '../auth/guards';
+import { AdminRoles } from '../auth/decorators';
 import { AnalyticsQueryDto, ExportQueryDto } from './dto';
 
 @ApiTags('Admin - Analytics')
 @Controller('admin/analytics')
-@UseGuards(JwtAdminAuthGuard, SuperAdminGuard)
+@UseGuards(AdminRolesGuard)
+@AdminRoles(AdminRole.SUPER_ADMIN, AdminRole.COMMERCIAL)
 @ApiBearerAuth('JWT-auth')
 export class AnalyticsAdminController {
   constructor(private readonly analyticsService: AnalyticsService) {}

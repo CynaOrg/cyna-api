@@ -21,8 +21,9 @@ import {
   throwError,
   TimeoutError,
 } from 'rxjs';
-import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
-import { JwtAdminAuthGuard, SuperAdminGuard } from '../auth/guards';
+import { SERVICE_NAMES, MESSAGE_PATTERNS, AdminRole } from '@cyna-api/common';
+import { AdminRolesGuard, SuperAdminGuard } from '../auth/guards';
+import { AdminRoles } from '../auth/decorators';
 import { AdminOrderQueryDto, UpdateOrderStatusDto } from './dto';
 
 /**
@@ -45,7 +46,8 @@ function rpcToHttpError(err: unknown): Observable<never> {
 
 @ApiTags('Admin - Orders')
 @Controller('admin/orders')
-@UseGuards(JwtAdminAuthGuard, SuperAdminGuard)
+@UseGuards(AdminRolesGuard)
+@AdminRoles(AdminRole.SUPER_ADMIN, AdminRole.COMMERCIAL)
 @ApiBearerAuth('JWT-auth')
 export class OrderAdminController {
   constructor(@Inject(SERVICE_NAMES.ORDER) private readonly orderClient: ClientProxy) {}
@@ -79,6 +81,7 @@ export class OrderAdminController {
   }
 
   @Patch(':orderId/status')
+  @UseGuards(SuperAdminGuard)
   @ApiOperation({ summary: 'Update order status (super admin only)' })
   @ApiParam({ name: 'orderId', description: 'Order ID' })
   @ApiResponse({ status: 200, description: 'Order status updated' })

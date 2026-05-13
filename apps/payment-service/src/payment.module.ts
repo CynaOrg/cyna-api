@@ -1,7 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { CynaConfigModule, LoggerModule, SERVICE_NAMES } from '@cyna-api/common';
+import {
+  CynaConfigModule,
+  LoggerModule,
+  SERVICE_NAMES,
+  isDatabaseSyncEnabled,
+} from '@cyna-api/common';
 import { Subscription, LicenseKey, ProcessedWebhook } from './entities';
 import { PaymentController, WebhookEventController } from './controllers';
 import {
@@ -33,7 +38,7 @@ import { AddStripeInvoiceUrlToSubscriptions1777300000001 } from './migrations/17
         AddStripeInvoiceUrlToSubscriptions1777300000001,
       ],
       migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
-      synchronize: process.env.DATABASE_SYNC === 'true',
+      synchronize: isDatabaseSyncEnabled(),
       logging: process.env.DATABASE_LOGGING === 'true',
     }),
     TypeOrmModule.forFeature([Subscription, LicenseKey, ProcessedWebhook]),

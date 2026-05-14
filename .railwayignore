@@ -1,2 +1,1 @@
-# Reserved for future use. Dockerfile has been moved to docs/docker/ so
-# Railway falls back to Railpack auto-detection.
+# Reserved for future use. Railway falls back to Railpack auto-detection.

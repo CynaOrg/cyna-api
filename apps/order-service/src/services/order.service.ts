@@ -316,6 +316,30 @@ export class OrderService {
 
     this.logger.log(`Order created: ${savedOrder.orderNumber} (${savedOrder.id})`);
 
+    // Dev convenience: when running locally without a `stripe listen` tunnel,
+    // Stripe never POSTs a webhook back to localhost so the order would stay
+    // PENDING forever and stay hidden from the customer dashboard. With
+    // LOCAL_AUTO_CONFIRM_PAYMENTS=true the service flips the order to PAID
+    // 3 seconds after creation as if the webhook had arrived. NEVER enable
+    // this in production.
+    if (
+      process.env.LOCAL_AUTO_CONFIRM_PAYMENTS === 'true' &&
+      process.env.NODE_ENV !== 'production'
+    ) {
+      const intentId = data.stripePaymentIntentId;
+      const orderNumber = savedOrder.orderNumber;
+      setTimeout(() => {
+        this.handlePaymentConfirmed(intentId).catch((err) =>
+          this.logger.error(
+            `Dev auto-confirm failed for order ${orderNumber}: ${(err as Error).message}`,
+          ),
+        );
+      }, 3000);
+      this.logger.warn(
+        `LOCAL_AUTO_CONFIRM_PAYMENTS=true — order ${savedOrder.orderNumber} will auto-mark PAID in 3s`,
+      );
+    }
+
     // Reload with items
     const reloaded = await this.orderRepository.findOne({
       where: { id: savedOrder.id },

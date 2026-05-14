@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import {
   CynaConfigModule,
+  HealthModule,
   LoggerModule,
   SERVICE_NAMES,
   CynaCacheModule,
@@ -18,6 +19,7 @@ import { analyticsConfig } from './config';
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('analytics-service'),
     ConfigModule.forFeature(analyticsConfig),
     LoggerModule,
     ScheduleModule.forRoot(),

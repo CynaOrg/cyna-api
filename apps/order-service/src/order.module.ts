@@ -4,6 +4,7 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ScheduleModule } from '@nestjs/schedule';
 import {
   CynaConfigModule,
+  HealthModule,
   LoggerModule,
   SERVICE_NAMES,
   CynaCacheModule,
@@ -21,6 +22,7 @@ import { AddAbandonedNotifiedAtToCarts1777400000000 } from './migrations/1777400
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('order-service'),
     LoggerModule,
     ScheduleModule.forRoot(),
     CynaCacheModule.forRoot({ useMemoryFallback: true }),

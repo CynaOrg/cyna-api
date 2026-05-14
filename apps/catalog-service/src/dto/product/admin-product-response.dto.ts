@@ -1,9 +1,4 @@
-import {
-  Product,
-  ProductType,
-  ProductImage,
-  ProductCharacteristic,
-} from '../../entities';
+import { Product, ProductType, ProductImage, ProductCharacteristic } from '../../entities';
 
 /**
  * Admin product image DTO - exposes both FR and EN alt texts so the

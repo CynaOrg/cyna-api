@@ -251,6 +251,37 @@ describe('CheckoutController', () => {
       expect(result.clientSecret).toBe('cs_existing');
     });
 
+    it('should fall back to CREATE_PAYMENT_INTENT when RETRIEVE throws', async () => {
+      orderClient.send.mockReturnValueOnce(
+        of({
+          id: 'o',
+          orderNumber: 'N',
+          total: 100,
+          currency: 'EUR',
+          stripePaymentIntentId: 'pi_existing',
+        }),
+      );
+      // First payment call (RETRIEVE) → error: catchError swallows + falls through
+      paymentClient.send
+        .mockReturnValueOnce(throwError(() => new Error('rpc unavailable')))
+        .mockReturnValueOnce(
+          of({
+            clientSecret: 'cs_new',
+            paymentIntentId: 'pi_new',
+            amount: 100,
+            currency: 'EUR',
+          }),
+        );
+
+      const result = await controller.createPaymentIntent(
+        { ...baseBody(), email: 'a@b.com' } as CheckoutPaymentIntentDto,
+        reqWithUser({ id: 'u', email: 'a@b.com', type: 'user' }),
+      );
+
+      expect(paymentClient.send).toHaveBeenCalledTimes(2);
+      expect(result.paymentIntentId).toBe('pi_new');
+    });
+
     it('should fall back to CREATE_PAYMENT_INTENT when retrieve returns non-reusable', async () => {
       orderClient.send.mockReturnValueOnce(
         of({

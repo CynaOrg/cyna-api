@@ -20,7 +20,7 @@ import {
   ApiQuery,
   ApiHeader,
 } from '@nestjs/swagger';
-import { BillingPeriod } from '@cyna-api/common';
+import { BillingPeriod, Public } from '@cyna-api/common';
 import { JwtAuthGuard, OptionalJwtAuthGuard } from '../auth/guards';
 import { CurrentUser, SessionId } from '../auth/decorators';
 import { CartService } from './cart.service';
@@ -43,6 +43,7 @@ export class CartController {
   constructor(private readonly cartService: CartService) {}
 
   @Get()
+  @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({ name: 'X-Session-Id', required: false, description: 'Guest session UUID' })
@@ -54,6 +55,7 @@ export class CartController {
   }
 
   @Post('items')
+  @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({ name: 'X-Session-Id', required: false, description: 'Guest session UUID' })
@@ -70,6 +72,7 @@ export class CartController {
   }
 
   @Patch('items/:productId')
+  @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({ name: 'X-Session-Id', required: false, description: 'Guest session UUID' })
@@ -90,6 +93,7 @@ export class CartController {
   }
 
   @Delete('items/:productId')
+  @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({ name: 'X-Session-Id', required: false, description: 'Guest session UUID' })
@@ -109,6 +113,7 @@ export class CartController {
   }
 
   @Delete()
+  @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiHeader({ name: 'X-Session-Id', required: false, description: 'Guest session UUID' })

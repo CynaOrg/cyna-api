@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import {
   CynaConfigModule,
+  HealthModule,
   LoggerModule,
   SERVICE_NAMES,
   isDatabaseSyncEnabled,
@@ -24,6 +25,7 @@ import { CreateProcessedWebhooksTable1777600000001 } from './migrations/17776000
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('payment-service'),
     LoggerModule,
     TypeOrmModule.forRoot({
       type: 'postgres',

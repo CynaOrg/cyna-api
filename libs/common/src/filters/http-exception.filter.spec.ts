@@ -156,7 +156,7 @@ describe('GlobalExceptionFilter', () => {
     });
 
     it('should translate string message containing a dot via i18n', async () => {
-      const { host, response } = buildHost();
+      const { host } = buildHost();
       const exc = new HttpException(
         { message: 'errors.common.internal' },
         HttpStatus.INTERNAL_SERVER_ERROR,
@@ -207,6 +207,56 @@ describe('GlobalExceptionFilter', () => {
       await filter.catch(exc, host);
 
       expect(response.status).toHaveBeenCalledWith(404);
+    });
+
+    it('should map a generic 401 HttpException to UNAUTHORIZED code', async () => {
+      const { host, response } = buildHost();
+      const exc = new HttpException('go away', HttpStatus.UNAUTHORIZED);
+
+      await filter.catch(exc, host);
+
+      const payload = response.json.mock.calls[0][0];
+      expect(response.status).toHaveBeenCalledWith(401);
+      expect(payload.error.code).toBe(ERROR_CODES.UNAUTHORIZED);
+    });
+
+    it('should map a generic 409 HttpException to CONFLICT code', async () => {
+      const { host, response } = buildHost();
+      const exc = new HttpException('conflict', HttpStatus.CONFLICT);
+
+      await filter.catch(exc, host);
+
+      const payload = response.json.mock.calls[0][0];
+      expect(response.status).toHaveBeenCalledWith(409);
+      expect(payload.error.code).toBe(ERROR_CODES.CONFLICT);
+    });
+
+    it('should map a generic 503 HttpException to SERVICE_UNAVAILABLE code', async () => {
+      const { host, response } = buildHost();
+      const exc = new HttpException('down', HttpStatus.SERVICE_UNAVAILABLE);
+
+      await filter.catch(exc, host);
+
+      const payload = response.json.mock.calls[0][0];
+      expect(response.status).toHaveBeenCalledWith(503);
+      expect(payload.error.code).toBe(ERROR_CODES.SERVICE_UNAVAILABLE);
+    });
+
+    it('should fall back to translated internal message when response has no message', async () => {
+      const { host, response } = buildHost();
+      // Empty object response — neither `message` nor `error` provided.
+      const exc = new HttpException({}, HttpStatus.BAD_REQUEST);
+
+      await filter.catch(exc, host);
+
+      const payload = response.json.mock.calls[0][0];
+      expect(response.status).toHaveBeenCalledWith(400);
+      expect(payload.error.code).toBe(ERROR_CODES.BAD_REQUEST);
+      // translateMessage was invoked with the internal-error key as the fallback
+      expect(i18n.translate).toHaveBeenCalledWith(
+        'errors.common.internal',
+        expect.objectContaining({ lang: 'fr' }),
+      );
     });
   });
 

@@ -1,5 +1,5 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
-import { Observable, from } from 'rxjs';
+import { Observable } from 'rxjs';
 import { mergeMap } from 'rxjs/operators';
 import { I18nService, I18nContext } from 'nestjs-i18n';
 import { getCorrelationId } from '@cyna-api/common/logger';

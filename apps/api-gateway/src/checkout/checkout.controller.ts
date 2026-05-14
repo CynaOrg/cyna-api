@@ -11,7 +11,7 @@ import {
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom, timeout, retry, catchError, throwError, TimeoutError } from 'rxjs';
-import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
+import { SERVICE_NAMES, MESSAGE_PATTERNS, Public } from '@cyna-api/common';
 import { OptionalJwtAuthGuard } from '../auth/guards';
 import { Request } from 'express';
 import { CheckoutPaymentIntentDto } from './dto/checkout-payment-intent.dto';
@@ -31,6 +31,7 @@ export class CheckoutController {
     @Inject(SERVICE_NAMES.PAYMENT) private readonly paymentClient: ClientProxy,
   ) {}
 
+  @Public()
   @UseGuards(OptionalJwtAuthGuard)
   @Post('payment-intent')
   @ApiOperation({ summary: 'Create a Stripe PaymentIntent for the current cart' })

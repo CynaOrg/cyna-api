@@ -1,11 +1,15 @@
 import { Module } from '@nestjs/common';
-import { CynaConfigModule, LoggerModule } from '@cyna-api/common';
+import { CynaConfigModule, HealthModule, LoggerModule } from '@cyna-api/common';
 import { EmailModule } from './email/email.module';
 import { HandlersModule } from './handlers/handlers.module';
-import { HealthController } from './health/health.controller';
 
 @Module({
-  imports: [CynaConfigModule, LoggerModule, EmailModule, HandlersModule],
-  controllers: [HealthController],
+  imports: [
+    CynaConfigModule,
+    HealthModule.forService('notification-service'),
+    LoggerModule,
+    EmailModule,
+    HandlersModule,
+  ],
 })
 export class NotificationModule {}

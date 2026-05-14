@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import {
   CynaConfigModule,
+  HealthModule,
   LoggerModule,
   SERVICE_NAMES,
   isDatabaseSyncEnabled,
@@ -33,6 +34,7 @@ import { HashAdmin2FACodes1777600000000 } from './migrations/1777600000000-HashA
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('auth-service'),
     LoggerModule,
     ConfigModule.forFeature(authConfig),
     ScheduleModule.forRoot(),

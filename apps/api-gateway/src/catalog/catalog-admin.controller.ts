@@ -98,9 +98,7 @@ export class CatalogAdminController {
     status: 200,
     description: 'Paginated list of products with both FR and EN fields and full images[]',
   })
-  async findAllProducts(
-    @Query() query: ProductQueryDto,
-  ): Promise<PaginatedAdminProductResponse> {
+  async findAllProducts(@Query() query: ProductQueryDto): Promise<PaginatedAdminProductResponse> {
     return this.catalogService.findAllProductsAdmin(query);
   }
 

@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import {
   CynaConfigModule,
+  HealthModule,
   LoggerModule,
   SERVICE_NAMES,
   CynaCacheModule,
@@ -29,6 +30,7 @@ import { AddImageUploadColumns1739451600000 } from './migrations/1739451600000-A
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('catalog-service'),
     ConfigModule.forFeature(catalogConfig),
     LoggerModule,
     S3Module,

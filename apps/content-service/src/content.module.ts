@@ -5,6 +5,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import {
   CynaConfigModule,
+  HealthModule,
   LoggerModule,
   SERVICE_NAMES,
   CynaCacheModule,
@@ -27,6 +28,7 @@ import { ContentDataSeeder } from './seeds';
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('content-service'),
     ConfigModule.forFeature(contentConfig),
     LoggerModule,
     ScheduleModule.forRoot(),

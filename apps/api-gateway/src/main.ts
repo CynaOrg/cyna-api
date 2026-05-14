@@ -62,9 +62,15 @@ async function bootstrap() {
     ],
   });
 
-  // Global prefix (exclude webhook endpoint)
+  // Global prefix — exclude webhook endpoint (raw body needs the bare path)
+  // and health probes so Railway hits /health, /ready, /live directly.
   app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`, {
-    exclude: [{ path: 'webhooks/stripe', method: RequestMethod.POST }],
+    exclude: [
+      { path: 'webhooks/stripe', method: RequestMethod.POST },
+      { path: 'health', method: RequestMethod.GET },
+      { path: 'ready', method: RequestMethod.GET },
+      { path: 'live', method: RequestMethod.GET },
+    ],
   });
 
   // Global validation pipe — I18nValidationPipe extends ValidationPipe and

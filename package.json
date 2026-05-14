@@ -116,6 +116,9 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "setupFiles": [
+      "<rootDir>/jest.setup.ts"
+    ],
     "collectCoverageFrom": [
       "apps/**/src/**/*.ts",
       "libs/**/src/**/*.ts",

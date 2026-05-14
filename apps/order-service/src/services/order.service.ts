@@ -633,5 +633,26 @@ export class OrderService {
   async updateStripePaymentIntentId(orderId: string, stripePaymentIntentId: string): Promise<void> {
     await this.orderRepository.update(orderId, { stripePaymentIntentId });
     this.logger.log(`Order ${orderId} updated with payment intent ${stripePaymentIntentId}`);
+
+    // Dev convenience: see comment in createOrderFromCart. The Stripe intent
+    // ID is only known here (the gateway creates the order with an empty
+    // intent ID then patches it after the payment service responds), so this
+    // is where we schedule the local auto-confirm.
+    if (
+      process.env.LOCAL_AUTO_CONFIRM_PAYMENTS === 'true' &&
+      process.env.NODE_ENV !== 'production' &&
+      stripePaymentIntentId
+    ) {
+      setTimeout(() => {
+        this.handlePaymentConfirmed(stripePaymentIntentId).catch((err) =>
+          this.logger.error(
+            `Dev auto-confirm failed for order ${orderId}: ${(err as Error).message}`,
+          ),
+        );
+      }, 3000);
+      this.logger.warn(
+        `LOCAL_AUTO_CONFIRM_PAYMENTS=true — order ${orderId} will auto-mark PAID in 3s`,
+      );
+    }
   }
 }

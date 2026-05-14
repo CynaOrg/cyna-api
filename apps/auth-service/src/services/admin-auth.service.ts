@@ -494,12 +494,9 @@ export class AdminAuthService {
       });
     }
 
-    await this.adminRepository.softRemove(admin);
+    await this.adminRepository.remove(admin);
 
-    this.logger.log(
-      `Admin deleted (soft): ${admin.id} by admin ${requestAdminId}`,
-      'AdminAuthService',
-    );
+    this.logger.log(`Admin deleted: ${admin.id} by admin ${requestAdminId}`, 'AdminAuthService');
 
     return { success: true, message: 'common.messages.adminAccountDeleted' };
   }

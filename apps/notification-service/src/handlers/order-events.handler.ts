@@ -38,25 +38,7 @@ export class OrderEventsHandler {
       'OrderEventsHandler',
     );
     try {
-      const subjects: Record<Language, string> = {
-        [Language.FR]: `Votre commande ${data.orderNumber} est expédiée`,
-        [Language.EN]: `Your order ${data.orderNumber} has shipped`,
-      };
-      const html = this.emailTemplateService.render('order-shipped', data.language, {
-        ...this.baseVars(),
-        orderNumber: data.orderNumber,
-        trackingNumber: data.trackingNumber,
-        trackingUrl: data.trackingUrl,
-        preheader:
-          data.language === Language.EN
-            ? `Order ${data.orderNumber} is on its way`
-            : `Commande ${data.orderNumber} en route`,
-      });
-      await this.emailService.sendEmail({
-        to: data.email,
-        subject: this.pickSubject(subjects, data.language),
-        html,
-      });
+      await this.processOrderShipped(data);
     } catch (err) {
       this.logger.error(
         `Failed to handle ORDER.SHIPPED for order ${data.orderId}: ${err instanceof Error ? err.message : String(err)}`,
@@ -66,6 +48,28 @@ export class OrderEventsHandler {
     }
   }
 
+  private async processOrderShipped(data: OrderShippedEvent): Promise<void> {
+    const subjects: Record<Language, string> = {
+      [Language.FR]: `Votre commande ${data.orderNumber} est expédiée`,
+      [Language.EN]: `Your order ${data.orderNumber} has shipped`,
+    };
+    const html = this.emailTemplateService.render('order-shipped', data.language, {
+      ...this.baseVars(),
+      orderNumber: data.orderNumber,
+      trackingNumber: data.trackingNumber,
+      trackingUrl: data.trackingUrl,
+      preheader:
+        data.language === Language.EN
+          ? `Order ${data.orderNumber} is on its way`
+          : `Commande ${data.orderNumber} en route`,
+    });
+    await this.emailService.sendEmail({
+      to: data.email,
+      subject: this.pickSubject(subjects, data.language),
+      html,
+    });
+  }
+
   @EventPattern(EVENT_PATTERNS.ORDER.CHECKOUT_EXPIRED)
   async handleCartAbandoned(@Payload() data: CartAbandonedEvent): Promise<void> {
     this.logger.log(
@@ -73,24 +77,7 @@ export class OrderEventsHandler {
       'OrderEventsHandler',
     );
     try {
-      const subjects: Record<Language, string> = {
-        [Language.FR]: 'Votre panier vous attend sur CYNA',
-        [Language.EN]: 'Your cart is waiting at CYNA',
-      };
-      const html = this.emailTemplateService.render('cart-abandoned', data.language, {
-        ...this.baseVars(),
-        itemsSummary: data.itemsSummary,
-        itemCount: data.itemCount,
-        preheader:
-          data.language === Language.EN
-            ? 'Complete your checkout — your cart is still saved'
-            : 'Finalisez votre commande — votre panier est conservé',
-      });
-      await this.emailService.sendEmail({
-        to: data.email,
-        subject: this.pickSubject(subjects, data.language),
-        html,
-      });
+      await this.processCartAbandoned(data);
     } catch (err) {
       this.logger.error(
         `Failed to handle ORDER.CHECKOUT_EXPIRED for cart ${data.cartId}: ${err instanceof Error ? err.message : String(err)}`,
@@ -98,5 +85,26 @@ export class OrderEventsHandler {
         'OrderEventsHandler',
       );
     }
+  }
+
+  private async processCartAbandoned(data: CartAbandonedEvent): Promise<void> {
+    const subjects: Record<Language, string> = {
+      [Language.FR]: 'Votre panier vous attend sur CYNA',
+      [Language.EN]: 'Your cart is waiting at CYNA',
+    };
+    const html = this.emailTemplateService.render('cart-abandoned', data.language, {
+      ...this.baseVars(),
+      itemsSummary: data.itemsSummary,
+      itemCount: data.itemCount,
+      preheader:
+        data.language === Language.EN
+          ? 'Complete your checkout — your cart is still saved'
+          : 'Finalisez votre commande — votre panier est conservé',
+    });
+    await this.emailService.sendEmail({
+      to: data.email,
+      subject: this.pickSubject(subjects, data.language),
+      html,
+    });
   }
 }

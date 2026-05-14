@@ -159,32 +159,29 @@ export class OrderService {
       });
     }
 
-    // 2. Get products from catalog to calculate prices server-side
+    // 2. Get products from catalog to calculate prices server-side.
+    // Single batched RPC call to avoid N+1 round-trips over RabbitMQ.
     const productIds = cart.items.map((item: { productId: string }) => item.productId);
-    const products = await Promise.all(
-      productIds.map((productId: string) =>
-        firstValueFrom(
-          this.catalogClient
-            .send(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID, { id: productId })
-            .pipe(
-              timeout(5000),
-              retry(2),
-              catchError((err) => {
-                if (err instanceof TimeoutError) {
-                  return throwError(
-                    () =>
-                      new RpcException({
-                        statusCode: 503,
-                        message: 'errors.order.catalogServiceTimeout',
-                        code: 'CATALOG_SERVICE_TIMEOUT',
-                      }),
-                  );
-                }
-                return throwError(() => err);
-              }),
-            ),
+    const products = await firstValueFrom(
+      this.catalogClient
+        .send<CatalogProduct[]>(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_IDS, { ids: productIds })
+        .pipe(
+          timeout(5000),
+          retry({ count: 2, delay: 1000 }),
+          catchError((err) => {
+            if (err instanceof TimeoutError) {
+              return throwError(
+                () =>
+                  new RpcException({
+                    statusCode: 503,
+                    message: 'errors.order.catalogServiceTimeout',
+                    code: 'CATALOG_SERVICE_TIMEOUT',
+                  }),
+              );
+            }
+            return throwError(() => err);
+          }),
         ),
-      ),
     );
 
     const productMap = new Map(products.map((p: CatalogProduct) => [p.id, p]));

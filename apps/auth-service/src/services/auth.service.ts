@@ -1,12 +1,14 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { Injectable, Inject, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, IsNull, LessThan, MoreThan } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, throwError } from 'rxjs';
 import { timeout, retry, catchError } from 'rxjs/operators';
+import { createHash } from 'crypto';
 import {
   CynaLoggerService,
+  CynaCacheService,
   Language,
   SERVICE_NAMES,
   MESSAGE_PATTERNS,
@@ -28,6 +30,11 @@ export class AuthService {
   private readonly emailVerificationExpiryHours: number;
   private readonly passwordResetExpiryHours: number;
 
+  // Login lockout config (anti credential stuffing). Counters are keyed by a
+  // sha256 of the email so cleartext addresses never sit in Redis.
+  private static readonly LOGIN_LOCKOUT_MAX_ATTEMPTS = 10;
+  private static readonly LOGIN_LOCKOUT_WINDOW_SECONDS = 15 * 60; // 15 minutes
+
   constructor(
     @InjectRepository(EmailVerificationToken)
     private readonly emailVerificationTokenRepository: Repository<EmailVerificationToken>,
@@ -42,6 +49,9 @@ export class AuthService {
     private readonly authEventsPublisher: AuthEventsPublisher,
     private readonly configService: ConfigService,
     private readonly logger: CynaLoggerService,
+    // Optional so tests and bootstraps that don't wire the cache still work.
+    // In production the auth-service registers CynaCacheModule and this is set.
+    @Optional() private readonly cacheService?: CynaCacheService,
   ) {
     this.emailVerificationExpiryHours = this.configService.get<number>(
       'auth.tokens.emailVerificationExpiryHours',
@@ -126,13 +136,50 @@ export class AuthService {
     };
   }
 
+  /**
+   * Increment the per-email failure counter with a 15-minute sliding window.
+   * Best-effort: cache errors must not block a legitimate login flow, so
+   * any failure here is swallowed (CynaCacheService already logs internally).
+   */
+  private async incrementLoginFailures(key: string): Promise<void> {
+    if (!this.cacheService) return;
+    const current = (await this.cacheService.get<number>(key)) ?? 0;
+    await this.cacheService.set(key, current + 1, AuthService.LOGIN_LOCKOUT_WINDOW_SECONDS);
+  }
+
+  /**
+   * Build the Redis key for the per-email login failure counter. We hash the
+   * email so it never appears in cleartext in the cache backend.
+   */
+  private getLoginFailKey(email: string): string {
+    const hash = createHash('sha256').update(email.toLowerCase().trim()).digest('hex');
+    return `login:fail:${hash}`;
+  }
+
   async validateUser(dto: LoginUserDto): Promise<AuthResponseDto> {
+    // Pre-check lockout counter. Only enforced when a cache backend is wired —
+    // local/test environments without Redis behave as before.
+    const lockoutKey = this.getLoginFailKey(dto.email);
+    if (this.cacheService) {
+      const attempts = (await this.cacheService.get<number>(lockoutKey)) ?? 0;
+      if (attempts >= AuthService.LOGIN_LOCKOUT_MAX_ATTEMPTS) {
+        throw new RpcException({
+          statusCode: 429,
+          message: 'errors.auth.tooManyAttempts',
+          code: 'TOO_MANY_ATTEMPTS',
+        });
+      }
+    }
+
     const user = await this.callUserService<UserCredentialsView | null>(
       MESSAGE_PATTERNS.USER.FIND_BY_EMAIL_FOR_LOGIN,
       { email: dto.email },
     );
 
     if (!user) {
+      // Count unknown-email attempts too so attackers cannot enumerate by
+      // staying under the threshold across different addresses.
+      await this.incrementLoginFailures(lockoutKey);
       throw new RpcException({
         statusCode: 401,
         message: 'errors.auth.invalidCredentials',
@@ -150,6 +197,7 @@ export class AuthService {
 
     const isPasswordValid = await this.passwordService.compare(dto.password, user.passwordHash);
     if (!isPasswordValid) {
+      await this.incrementLoginFailures(lockoutKey);
       throw new RpcException({
         statusCode: 401,
         message: 'errors.auth.invalidCredentials',
@@ -163,6 +211,12 @@ export class AuthService {
         message: 'errors.auth.emailNotVerified',
         code: 'EMAIL_NOT_VERIFIED',
       });
+    }
+
+    // Successful credentials check — clear the failure counter so a previously
+    // throttled user is not penalised after a correct login.
+    if (this.cacheService) {
+      await this.cacheService.del(lockoutKey);
     }
 
     const accessToken = this.tokenService.generateAccessToken({

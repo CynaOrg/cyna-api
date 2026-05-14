@@ -289,13 +289,17 @@ describe('LicenseService', () => {
 
     it('should throw NotFoundException when license does not exist', async () => {
       (licenseKeyRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
-      await expect(service.findByIdForUser('lic-1', 'user-1')).rejects.toThrow('License not found');
+      await expect(service.findByIdForUser('lic-1', 'user-1')).rejects.toThrow(
+        'errors.license.notFound',
+      );
     });
 
     it('should throw NotFoundException when license belongs to another user', async () => {
       // findOne with userId filter returns null if ownership does not match
       (licenseKeyRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
-      await expect(service.findByIdForUser('lic-1', 'user-2')).rejects.toThrow('License not found');
+      await expect(service.findByIdForUser('lic-1', 'user-2')).rejects.toThrow(
+        'errors.license.notFound',
+      );
     });
   });
 
@@ -382,7 +386,7 @@ describe('LicenseService', () => {
     it('throws NotFoundException when token does not match any license', async () => {
       (licenseKeyRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
       await expect(service.activate('bogus-token')).rejects.toThrow(
-        'Invalid or expired activation link',
+        'errors.license.invalidActivationLink',
       );
     });
 
@@ -395,7 +399,7 @@ describe('LicenseService', () => {
       (licenseKeyRepository.findOne as jest.Mock).mockResolvedValueOnce(expired);
 
       await expect(service.activate('any-token')).rejects.toThrow(
-        'Invalid or expired activation link',
+        'errors.license.invalidActivationLink',
       );
       expect(licenseKeyRepository.save).not.toHaveBeenCalled();
     });

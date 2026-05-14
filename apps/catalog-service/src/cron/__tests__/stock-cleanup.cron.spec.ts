@@ -3,7 +3,7 @@ import { StockCleanupCron } from '../stock-cleanup.cron';
 import { StockService } from '../../services/stock.service';
 import { CynaLoggerService } from '@cyna-api/common';
 
-// Mock du logger
+// Logger mock
 const mockLogger = {
   log: jest.fn(),
   warn: jest.fn(),
@@ -11,12 +11,12 @@ const mockLogger = {
   debug: jest.fn(),
 };
 
-// Mock du StockService
+// StockService mock
 const mockStockService = {
   cleanupExpiredReservations: jest.fn(),
 };
 
-// Tests du StockCleanupCron
+// StockCleanupCron tests
 describe('StockCleanupCron', () => {
   let cron: StockCleanupCron;
   let stockService: jest.Mocked<StockService>;
@@ -46,9 +46,9 @@ describe('StockCleanupCron', () => {
     jest.clearAllMocks();
   });
 
-  // Tests du handler cron
+  // Cron handler tests
   describe('cleanupExpiredReservations()', () => {
-    // Verifie que le cron appelle cleanupExpiredReservations du service
+    // Verifies the cron calls cleanupExpiredReservations on the service
     it('should call stockService.cleanupExpiredReservations', async () => {
       mockStockService.cleanupExpiredReservations.mockResolvedValue(0);
 
@@ -57,7 +57,7 @@ describe('StockCleanupCron', () => {
       expect(stockService.cleanupExpiredReservations).toHaveBeenCalledTimes(1);
     });
 
-    // Verifie que le nombre de reservations nettoyees est loggue si > 0
+    // Verifies the count of cleaned-up reservations is logged when > 0
     it('should log the number of cleaned up reservations if count > 0', async () => {
       mockStockService.cleanupExpiredReservations.mockResolvedValue(5);
 
@@ -69,7 +69,7 @@ describe('StockCleanupCron', () => {
       );
     });
 
-    // Verifie qu'aucun log n'est emis si aucune reservation n'est nettoyee
+    // Verifies no log is emitted when no reservations are cleaned up
     it('should not log if no reservations cleaned up', async () => {
       mockStockService.cleanupExpiredReservations.mockResolvedValue(0);
 
@@ -78,7 +78,7 @@ describe('StockCleanupCron', () => {
       expect(logger.log).not.toHaveBeenCalled();
     });
 
-    // Verifie que les erreurs sont capturees et loggees
+    // Verifies errors are caught and logged
     it('should catch and log errors', async () => {
       const error = new Error('Database connection failed');
       mockStockService.cleanupExpiredReservations.mockRejectedValue(error);
@@ -92,7 +92,7 @@ describe('StockCleanupCron', () => {
       );
     });
 
-    // Verifie que les erreurs non-Error sont gerees correctement
+    // Verifies non-Error exceptions are handled correctly
     it('should handle non-Error exceptions', async () => {
       mockStockService.cleanupExpiredReservations.mockRejectedValue('Unknown error');
 

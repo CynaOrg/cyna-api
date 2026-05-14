@@ -36,32 +36,7 @@ export class ContentEventsHandler {
       'ContentEventsHandler',
     );
     try {
-      if (!data.email || !data.name || !data.subject) {
-        this.logger.warn(
-          `Skipping contact auto-reply: missing required fields (messageId=${data.messageId ?? 'n/a'})`,
-          'ContentEventsHandler',
-        );
-        return;
-      }
-      const language = coerceLanguage(data.language);
-      const subjects: Record<Language, string> = {
-        [Language.FR]: 'Nous avons bien reçu votre message',
-        [Language.EN]: "We've received your message",
-      };
-      const html = this.emailTemplateService.render('contact-auto-reply', language, {
-        ...this.baseVars(),
-        name: data.name,
-        subject: data.subject,
-        preheader:
-          language === Language.EN
-            ? "Thanks for reaching out — we'll get back to you within 48h"
-            : 'Merci pour votre message — réponse sous 48h',
-      });
-      await this.emailService.sendEmail({
-        to: data.email,
-        subject: subjects[language] ?? subjects[Language.FR],
-        html,
-      });
+      await this.processContactMessageReceived(data);
     } catch (err) {
       this.logger.error(
         `Failed to handle CONTENT.CONTACT_MESSAGE_RECEIVED: ${err instanceof Error ? err.message : String(err)}`,
@@ -69,5 +44,34 @@ export class ContentEventsHandler {
         'ContentEventsHandler',
       );
     }
+  }
+
+  private async processContactMessageReceived(data: Partial<ContactAutoReplyEvent>): Promise<void> {
+    if (!data.email || !data.name || !data.subject) {
+      this.logger.warn(
+        `Skipping contact auto-reply: missing required fields (messageId=${data.messageId ?? 'n/a'})`,
+        'ContentEventsHandler',
+      );
+      return;
+    }
+    const language = coerceLanguage(data.language);
+    const subjects: Record<Language, string> = {
+      [Language.FR]: 'Nous avons bien reçu votre message',
+      [Language.EN]: "We've received your message",
+    };
+    const html = this.emailTemplateService.render('contact-auto-reply', language, {
+      ...this.baseVars(),
+      name: data.name,
+      subject: data.subject,
+      preheader:
+        language === Language.EN
+          ? "Thanks for reaching out — we'll get back to you within 48h"
+          : 'Merci pour votre message — réponse sous 48h',
+    });
+    await this.emailService.sendEmail({
+      to: data.email,
+      subject: subjects[language] ?? subjects[Language.FR],
+      html,
+    });
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable, Inject, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { Repository, SelectQueryBuilder, In } from 'typeorm';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout, catchError } from 'rxjs';
 import { TimeoutError } from 'rxjs';
@@ -357,6 +357,28 @@ export class ProductService implements OnApplicationBootstrap {
     await this.cacheService.set(cacheKey, product, CACHE_TTL.MEDIUM);
 
     return product;
+  }
+
+  /**
+   * Batch lookup by ids. Returns products in the same order as the input ids
+   * (missing ids are simply omitted). Used by order-service to avoid N+1 RPC
+   * round-trips when enriching a cart.
+   */
+  async findByIds(ids: string[]): Promise<Product[]> {
+    if (!ids || ids.length === 0) {
+      return [];
+    }
+
+    // Deduplicate while preserving order
+    const uniqueIds = Array.from(new Set(ids));
+
+    const products = await this.productRepository.find({
+      where: { id: In(uniqueIds) },
+      relations: ['category', 'images', 'characteristics'],
+    });
+
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    return uniqueIds.map((id) => productMap.get(id)).filter((p): p is Product => p !== undefined);
   }
 
   async update(id: string, dto: UpdateProductDto): Promise<Product> {

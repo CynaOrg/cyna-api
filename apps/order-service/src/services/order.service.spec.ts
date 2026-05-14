@@ -177,9 +177,7 @@ describe('OrderService', () => {
 
   describe('createOrderFromCart', () => {
     beforeEach(() => {
-      catalogClient.send
-        .mockReturnValueOnce(of(mockProducts[0]))
-        .mockReturnValueOnce(of(mockProducts[1]));
+      catalogClient.send.mockReturnValueOnce(of(mockProducts));
       // First findOne call is the idempotency check (no existing pending
       // order for this cart); subsequent calls return the reloaded order.
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
@@ -266,7 +264,7 @@ describe('OrderService', () => {
       };
       (cartService.getCart as jest.Mock).mockResolvedValueOnce(singleTypeCart);
       catalogClient.send.mockReset();
-      catalogClient.send.mockReturnValueOnce(of(mockProducts[0]));
+      catalogClient.send.mockReturnValueOnce(of([mockProducts[0]]));
       // First findOne call is the idempotency check (no existing pending
       // order for this cart); subsequent calls return the reloaded order.
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
@@ -332,9 +330,7 @@ describe('OrderService', () => {
 
     it('should set customerEmail for guest orders (no userId)', async () => {
       catalogClient.send.mockReset();
-      catalogClient.send
-        .mockReturnValueOnce(of(mockProducts[0]))
-        .mockReturnValueOnce(of(mockProducts[1]));
+      catalogClient.send.mockReturnValueOnce(of(mockProducts));
       // First findOne call is the idempotency check (no existing pending
       // order for this cart); subsequent calls return the reloaded order.
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
@@ -360,9 +356,7 @@ describe('OrderService', () => {
 
     it('should set customerEmail for logged-in user orders', async () => {
       catalogClient.send.mockReset();
-      catalogClient.send
-        .mockReturnValueOnce(of(mockProducts[0]))
-        .mockReturnValueOnce(of(mockProducts[1]));
+      catalogClient.send.mockReturnValueOnce(of(mockProducts));
       // First findOne call is the idempotency check (no existing pending
       // order for this cart); subsequent calls return the reloaded order.
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
@@ -600,9 +594,7 @@ describe('OrderService', () => {
 
   describe('createOrderFromCart notification snapshot', () => {
     beforeEach(() => {
-      catalogClient.send
-        .mockReturnValueOnce(of(mockProducts[0]))
-        .mockReturnValueOnce(of(mockProducts[1]));
+      catalogClient.send.mockReturnValueOnce(of(mockProducts));
       // First findOne call is the idempotency check (no existing pending
       // order for this cart); subsequent calls return the reloaded order.
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
@@ -740,7 +732,7 @@ describe('OrderService', () => {
         id: 'cart-1',
         items: [{ productId: 'prod-3', quantity: 1, billingPeriod: 'one_time' }],
       });
-      catalogClient.send.mockReturnValueOnce(of({ ...mockProducts[0], id: 'prod-OTHER' }));
+      catalogClient.send.mockReturnValueOnce(of([{ ...mockProducts[0], id: 'prod-OTHER' }]));
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
 
       await expect(
@@ -762,13 +754,15 @@ describe('OrderService', () => {
         items: [{ productId: 'prod-1', quantity: 1, billingPeriod: 'monthly' }],
       });
       catalogClient.send.mockReturnValueOnce(
-        of({
-          id: 'prod-1',
-          priceMonthly: 9.99,
-          priceYearly: 99,
-          priceUnit: 49.99,
-          productType: ProductType.SAAS,
-        }),
+        of([
+          {
+            id: 'prod-1',
+            priceMonthly: 9.99,
+            priceYearly: 99,
+            priceUnit: 49.99,
+            productType: ProductType.SAAS,
+          },
+        ]),
       );
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
         id: 'order-new',
@@ -795,13 +789,15 @@ describe('OrderService', () => {
         items: [{ productId: 'prod-1', quantity: 1, billingPeriod: 'yearly' }],
       });
       catalogClient.send.mockReturnValueOnce(
-        of({
-          id: 'prod-1',
-          priceMonthly: 9.99,
-          priceYearly: 99,
-          priceUnit: 49.99,
-          productType: ProductType.SAAS,
-        }),
+        of([
+          {
+            id: 'prod-1',
+            priceMonthly: 9.99,
+            priceYearly: 99,
+            priceUnit: 49.99,
+            productType: ProductType.SAAS,
+          },
+        ]),
       );
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
         id: 'order-new',
@@ -822,9 +818,7 @@ describe('OrderService', () => {
     });
 
     it('retries on unique-violation (23505) and succeeds on the next attempt', async () => {
-      catalogClient.send
-        .mockReturnValueOnce(of(mockProducts[0]))
-        .mockReturnValueOnce(of(mockProducts[1]));
+      catalogClient.send.mockReturnValueOnce(of(mockProducts));
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null).mockResolvedValue({
         id: 'order-new',
         items: [],
@@ -847,9 +841,7 @@ describe('OrderService', () => {
     });
 
     it('rethrows non-unique-violation errors from save without retrying', async () => {
-      catalogClient.send
-        .mockReturnValueOnce(of(mockProducts[0]))
-        .mockReturnValueOnce(of(mockProducts[1]));
+      catalogClient.send.mockReturnValueOnce(of(mockProducts));
       (orderRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
 
       const fatal = Object.assign(new Error('disk full'), { code: 'IO_ERR' });

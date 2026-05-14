@@ -1,6 +1,6 @@
 import { Injectable, Inject, HttpException, HttpStatus } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
+import { firstValueFrom, timeout, catchError, retry, throwError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import {
   CreateContactMessageDto,
@@ -24,25 +24,38 @@ export class ContentService {
   // ==================== Public ====================
 
   async getHomepage(lang?: string) {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.GET_HOMEPAGE, { lang });
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.GET_HOMEPAGE, { lang }, { retry: true });
   }
 
   async getCarousel(lang?: string) {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.GET_CAROUSEL, { lang });
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.GET_CAROUSEL, { lang }, { retry: true });
   }
 
   async getTopServices(limit?: number, lang?: string) {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.GET_TOP_SERVICES, { limit, lang });
+    return this.sendMessage(
+      MESSAGE_PATTERNS.CONTENT.GET_TOP_SERVICES,
+      { limit, lang },
+      { retry: true },
+    );
   }
 
   async getTopProducts(limit?: number, lang?: string) {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.GET_TOP_PRODUCTS, { limit, lang });
+    return this.sendMessage(
+      MESSAGE_PATTERNS.CONTENT.GET_TOP_PRODUCTS,
+      { limit, lang },
+      { retry: true },
+    );
   }
 
   async getTopLicenses(limit?: number, lang?: string) {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.GET_TOP_LICENSES, { limit, lang });
+    return this.sendMessage(
+      MESSAGE_PATTERNS.CONTENT.GET_TOP_LICENSES,
+      { limit, lang },
+      { retry: true },
+    );
   }
 
+  // No retry: mutation, must stay idempotent
   async createContactMessage(dto: CreateContactMessageDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.CREATE_CONTACT_MESSAGE, dto);
   }
@@ -50,25 +63,30 @@ export class ContentService {
   // ==================== Admin - Carousel ====================
 
   async adminGetCarousel() {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_CAROUSEL, {});
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_CAROUSEL, {}, { retry: true });
   }
 
+  // No retry: mutation, must stay idempotent
   async adminCreateSlide(dto: CreateSlideDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_CREATE_SLIDE, dto);
   }
 
+  // No retry: mutation, must stay idempotent
   async adminUpdateSlide(slideId: string, dto: UpdateSlideDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_SLIDE, { id: slideId, dto });
   }
 
+  // No retry: mutation, must stay idempotent
   async adminDeleteSlide(slideId: string) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_DELETE_SLIDE, { id: slideId });
   }
 
+  // No retry: mutation, must stay idempotent
   async adminReorderCarousel(slideIds: string[]) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_REORDER_CAROUSEL, { slideIds });
   }
 
+  // No retry: mutation, must stay idempotent
   async adminRequestCarouselUploadUrl(dto: RequestContentUploadUrlDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.CAROUSEL_REQUEST_UPLOAD_URL, dto);
   }
@@ -76,33 +94,37 @@ export class ContentService {
   // ==================== Admin - Hero & Top Products ====================
 
   async adminGetHeroText(): Promise<unknown> {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_HERO_TEXT, {});
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_HERO_TEXT, {}, { retry: true });
   }
 
+  // No retry: mutation, must stay idempotent
   async adminUpdateHeroText(dto: UpdateHeroTextDto): Promise<unknown> {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_HERO_TEXT, dto);
   }
 
   async adminGetTopServices(): Promise<unknown> {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_SERVICES, {});
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_SERVICES, {}, { retry: true });
   }
 
+  // No retry: mutation, must stay idempotent
   async adminUpdateTopServices(productIds: string[]): Promise<unknown> {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_SERVICES, { productIds });
   }
 
   async adminGetTopProducts(): Promise<unknown> {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_PRODUCTS, {});
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_PRODUCTS, {}, { retry: true });
   }
 
+  // No retry: mutation, must stay idempotent
   async adminUpdateTopProducts(productIds: string[]): Promise<unknown> {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_PRODUCTS, { productIds });
   }
 
   async adminGetTopLicenses(): Promise<unknown> {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_LICENSES, {});
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_TOP_LICENSES, {}, { retry: true });
   }
 
+  // No retry: mutation, must stay idempotent
   async adminUpdateTopLicenses(productIds: string[]): Promise<unknown> {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_TOP_LICENSES, { productIds });
   }
@@ -110,9 +132,12 @@ export class ContentService {
   // ==================== Admin - Contact Messages ====================
 
   async adminGetContactMessages(query: ContactMessageQueryDto) {
-    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_CONTACT_MESSAGES, query);
+    return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_GET_CONTACT_MESSAGES, query, {
+      retry: true,
+    });
   }
 
+  // No retry: mutation, must stay idempotent
   async adminUpdateContactMessage(messageId: string, dto: UpdateContactMessageDto) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_UPDATE_CONTACT_MESSAGE, {
       id: messageId,
@@ -120,6 +145,7 @@ export class ContentService {
     });
   }
 
+  // No retry: mutation, must stay idempotent
   async adminDeleteContactMessage(messageId: string) {
     return this.sendMessage(MESSAGE_PATTERNS.CONTENT.ADMIN_DELETE_CONTACT_MESSAGE, {
       id: messageId,
@@ -128,10 +154,15 @@ export class ContentService {
 
   // ==================== Private Helper ====================
 
-  private async sendMessage<T>(pattern: { cmd: string }, data: T) {
+  private async sendMessage<T>(
+    pattern: { cmd: string },
+    data: T,
+    options: { retry?: boolean } = {},
+  ) {
+    const obs = this.contentClient.send(pattern, data).pipe(timeout(this.TIMEOUT));
+    const withRetry = options.retry ? obs.pipe(retry({ count: 2, delay: 1000 })) : obs;
     return firstValueFrom(
-      this.contentClient.send(pattern, data).pipe(
-        timeout(this.TIMEOUT),
+      withRetry.pipe(
         catchError((err) => {
           if (err && typeof err === 'object' && 'statusCode' in err) {
             const statusCode = err.statusCode || HttpStatus.INTERNAL_SERVER_ERROR;

@@ -91,6 +91,7 @@ export const MESSAGE_PATTERNS = {
     PRODUCT_FIND_ALL_ADMIN: { cmd: 'catalog.product.findAllAdmin' },
     PRODUCT_FIND_BY_SLUG: { cmd: 'catalog.product.findBySlug' },
     PRODUCT_FIND_BY_ID: { cmd: 'catalog.product.findById' },
+    PRODUCT_FIND_BY_IDS: { cmd: 'catalog.product.findByIds' },
     PRODUCT_FIND_BY_ID_ADMIN: { cmd: 'catalog.product.findByIdAdmin' },
     PRODUCT_SEARCH: { cmd: 'catalog.product.search' },
     PRODUCT_FIND_FEATURED: { cmd: 'catalog.product.findFeatured' },

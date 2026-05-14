@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import {
+  CynaCacheModule,
   CynaConfigModule,
   HealthModule,
   LoggerModule,
@@ -37,6 +38,9 @@ import { HashAdmin2FACodes1777600000000 } from './migrations/1777600000000-HashA
     HealthModule.forService('auth-service'),
     LoggerModule,
     ConfigModule.forFeature(authConfig),
+    // Memory fallback enabled so a Redis outage degrades the lockout to a
+    // per-instance counter rather than disabling login entirely.
+    CynaCacheModule.forRoot({ useMemoryFallback: true }),
     ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',

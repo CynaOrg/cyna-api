@@ -31,6 +31,7 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./apps/api-gateway/test/jest-e2e.json --forceExit",
+    "seed:dev": "node scripts/seed-dev.js",
     "openapi:export": "ts-node -r tsconfig-paths/register --project apps/api-gateway/tsconfig.app.json apps/api-gateway/src/export-openapi.ts"
   },
   "dependencies": {

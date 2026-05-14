@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, LessThan, Repository } from 'typeorm';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom, timeout, catchError, of } from 'rxjs';
 import {
@@ -442,5 +442,13 @@ export class CartService {
     await this.invalidateCartCache({ sessionId });
 
     return this.getCart({ userId });
+  }
+
+  async cleanupExpiredGuestCarts(): Promise<number> {
+    const result = await this.cartRepository.delete({
+      userId: IsNull(),
+      expiresAt: LessThan(new Date()),
+    });
+    return result.affected ?? 0;
   }
 }

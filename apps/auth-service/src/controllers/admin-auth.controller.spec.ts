@@ -38,6 +38,30 @@ describe('AdminAuthController', () => {
         admin: {},
       }),
       logout: jest.fn().mockResolvedValue({ success: true }),
+      getMe: jest.fn().mockResolvedValue({
+        id: 'admin-123',
+        email: 'admin@example.com',
+        firstName: 'Admin',
+        lastName: 'User',
+        role: AdminRole.SUPER_ADMIN,
+      }),
+      getAdmins: jest.fn().mockResolvedValue([
+        { id: 'admin-1', email: 'a@x.com' },
+        { id: 'admin-2', email: 'b@x.com' },
+      ]),
+      getAdmin: jest.fn().mockResolvedValue({
+        id: 'admin-123',
+        email: 'admin@example.com',
+      }),
+      createAdmin: jest.fn().mockResolvedValue({
+        id: 'admin-new',
+        email: 'new@example.com',
+      }),
+      updateAdmin: jest.fn().mockResolvedValue({
+        id: 'admin-123',
+        firstName: 'Updated',
+      }),
+      deleteAdmin: jest.fn().mockResolvedValue({ success: true }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -118,6 +142,112 @@ describe('AdminAuthController', () => {
 
       expect(result.success).toBe(true);
       expect(adminAuthService.logout).toHaveBeenCalledWith('admin-123', 'refresh-token');
+    });
+
+    it('should logout admin without refresh token', async () => {
+      const dto = { adminId: 'admin-123' };
+
+      const result = await controller.logout(dto);
+
+      expect(result.success).toBe(true);
+      expect(adminAuthService.logout).toHaveBeenCalledWith('admin-123', undefined);
+    });
+  });
+
+  describe('getMe', () => {
+    it('should return current admin info', async () => {
+      const result = await controller.getMe({ adminId: 'admin-123' });
+
+      expect(result.id).toBe('admin-123');
+      expect(adminAuthService.getMe).toHaveBeenCalledWith('admin-123');
+    });
+  });
+
+  describe('getAdmins', () => {
+    it('should return list of all admins', async () => {
+      const result = await controller.getAdmins({});
+
+      expect(result).toHaveLength(2);
+      expect(adminAuthService.getAdmins).toHaveBeenCalled();
+    });
+  });
+
+  describe('getAdmin', () => {
+    it('should return a single admin by id', async () => {
+      const result = await controller.getAdmin({ adminId: 'admin-123' });
+
+      expect(result.id).toBe('admin-123');
+      expect(adminAuthService.getAdmin).toHaveBeenCalledWith('admin-123');
+    });
+  });
+
+  describe('createAdmin', () => {
+    it('should create a new admin', async () => {
+      const dto = {
+        email: 'new@example.com',
+        password: 'Password123!',
+        firstName: 'New',
+        lastName: 'Admin',
+        role: AdminRole.COMMERCIAL,
+      };
+
+      const result = await controller.createAdmin(dto);
+
+      expect(result.id).toBe('admin-new');
+      expect(adminAuthService.createAdmin).toHaveBeenCalledWith(dto);
+    });
+  });
+
+  describe('updateAdmin', () => {
+    it('should update admin and pass requestAdminId separately', async () => {
+      const dto = {
+        adminId: 'admin-123',
+        requestAdminId: 'admin-req',
+        firstName: 'Updated',
+        lastName: 'Name',
+        role: AdminRole.COMMERCIAL,
+        isActive: true,
+      };
+
+      const result = await controller.updateAdmin(dto);
+
+      expect(result.firstName).toBe('Updated');
+      expect(adminAuthService.updateAdmin).toHaveBeenCalledWith(
+        'admin-123',
+        {
+          firstName: 'Updated',
+          lastName: 'Name',
+          role: AdminRole.COMMERCIAL,
+          isActive: true,
+        },
+        'admin-req',
+      );
+    });
+
+    it('should update admin without requestAdminId', async () => {
+      const dto = {
+        adminId: 'admin-123',
+        firstName: 'Updated',
+      };
+
+      await controller.updateAdmin(dto);
+
+      expect(adminAuthService.updateAdmin).toHaveBeenCalledWith(
+        'admin-123',
+        { firstName: 'Updated' },
+        undefined,
+      );
+    });
+  });
+
+  describe('deleteAdmin', () => {
+    it('should delete admin', async () => {
+      const dto = { adminId: 'admin-123', requestAdminId: 'admin-req' };
+
+      const result = await controller.deleteAdmin(dto);
+
+      expect(result.success).toBe(true);
+      expect(adminAuthService.deleteAdmin).toHaveBeenCalledWith('admin-123', 'admin-req');
     });
   });
 });

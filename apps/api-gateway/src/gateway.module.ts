@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { CynaConfigModule, LoggerModule, CynaI18nModule, RabbitMQModule } from '@cyna-api/common';
+import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
 import { ProfileModule } from './profile/profile.module';
@@ -55,6 +56,13 @@ import { ContentModule } from './content/content.module';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    // JwtAuthGuard registered as a global APP_GUARD so new endpoints are
+    // authenticated by default. Public routes must be marked with @Public().
+    // ThrottlerGuard runs first because it does not depend on auth state.
+    {
+      provide: APP_GUARD,
+      useClass: JwtAuthGuard,
     },
   ],
 })

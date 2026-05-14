@@ -102,7 +102,7 @@ export class SubscriptionService {
     if (!subscription) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Subscription not found',
+        message: 'errors.payment.subscriptionNotFound',
         code: 'SUBSCRIPTION_NOT_FOUND',
       });
     }
@@ -111,14 +111,14 @@ export class SubscriptionService {
       if (!userId) {
         throw new RpcException({
           statusCode: 400,
-          message: 'userId is required for user-initiated cancellations',
+          message: 'errors.payment.subscriptionUserIdRequired',
           code: 'SUBSCRIPTION_USER_ID_REQUIRED',
         });
       }
       if (subscription.userId !== userId) {
         throw new RpcException({
           statusCode: 403,
-          message: 'Not authorized to cancel this subscription',
+          message: 'errors.payment.subscriptionForbidden',
           code: 'SUBSCRIPTION_FORBIDDEN',
         });
       }
@@ -151,7 +151,7 @@ export class SubscriptionService {
       this.logger.warn(`Subscription ${stripeSubscription.id} not found locally during sync`);
       throw new RpcException({
         statusCode: 404,
-        message: `Subscription ${stripeSubscription.id} not found locally`,
+        message: 'errors.payment.subscriptionNotFound',
         code: 'SUBSCRIPTION_NOT_FOUND',
       });
     }
@@ -198,7 +198,7 @@ export class SubscriptionService {
     if (!subscription) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Subscription not found',
+        message: 'errors.payment.subscriptionNotFound',
         code: 'SUBSCRIPTION_NOT_FOUND',
       });
     }

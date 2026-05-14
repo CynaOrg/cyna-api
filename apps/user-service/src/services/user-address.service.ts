@@ -68,7 +68,7 @@ export class UserAddressService {
       if (!existing) {
         throw new RpcException({
           statusCode: 404,
-          message: 'Address not found',
+          message: 'errors.user.addressNotFound',
           code: 'ADDRESS_NOT_FOUND',
         });
       }
@@ -112,7 +112,7 @@ export class UserAddressService {
       if (!existing) {
         throw new RpcException({
           statusCode: 404,
-          message: 'Address not found',
+          message: 'errors.user.addressNotFound',
           code: 'ADDRESS_NOT_FOUND',
         });
       }

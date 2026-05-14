@@ -37,7 +37,7 @@ export class ImageService {
     if (!product) {
       throw new RpcException({
         statusCode: 404,
-        message: `Product ${dto.productId} not found`,
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -49,8 +49,9 @@ export class ImageService {
     if (imageCount >= MAX_IMAGES_PER_PRODUCT) {
       throw new RpcException({
         statusCode: 400,
-        message: `Product already has the maximum of ${MAX_IMAGES_PER_PRODUCT} images`,
+        message: 'errors.catalog.maxImagesReached',
         code: 'MAX_IMAGES_REACHED',
+        details: { max: MAX_IMAGES_PER_PRODUCT },
       });
     }
 
@@ -84,7 +85,7 @@ export class ImageService {
     if (!product) {
       throw new RpcException({
         statusCode: 404,
-        message: `Product ${dto.productId} not found`,
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -93,7 +94,7 @@ export class ImageService {
     if (!dto.storageKey.startsWith(expectedPrefix)) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Storage key does not match the product',
+        message: 'errors.catalog.invalidStorageKey',
         code: 'INVALID_STORAGE_KEY',
       });
     }
@@ -106,8 +107,9 @@ export class ImageService {
     if (existingImages.length >= MAX_IMAGES_PER_PRODUCT) {
       throw new RpcException({
         statusCode: 400,
-        message: `Product already has the maximum of ${MAX_IMAGES_PER_PRODUCT} images`,
+        message: 'errors.catalog.maxImagesReached',
         code: 'MAX_IMAGES_REACHED',
+        details: { max: MAX_IMAGES_PER_PRODUCT },
       });
     }
 
@@ -157,7 +159,7 @@ export class ImageService {
     if (!image) {
       throw new RpcException({
         statusCode: 404,
-        message: `Image ${imageId} not found for product ${productId}`,
+        message: 'errors.catalog.imageNotFound',
         code: 'IMAGE_NOT_FOUND',
       });
     }

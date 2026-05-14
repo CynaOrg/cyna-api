@@ -156,4 +156,114 @@ describe('TokenService', () => {
       expect(ms).toBe(7 * 24 * 60 * 60 * 1000);
     });
   });
+
+  describe('parseExpiryToSeconds - branches (lines 78, 82, 86)', () => {
+    const buildService = (accessExpiry: string, refreshExpiry: string): TokenService => {
+      return new TokenService({
+        get: jest.fn((key: string, def?: string) => {
+          const cfg: Record<string, string> = {
+            'auth.jwt.secret': mockSecret,
+            'auth.jwt.accessTokenExpiry': accessExpiry,
+            'auth.jwt.refreshTokenExpiry': refreshExpiry,
+          };
+          return cfg[key] ?? def;
+        }),
+      } as unknown as ConfigService);
+    };
+
+    it('should parse seconds suffix "s" (line 78)', () => {
+      const svc = buildService('30s', '1d');
+      expect(svc.getAccessTokenExpirySeconds()).toBe(30);
+    });
+
+    it('should parse hours suffix "h" (line 82)', () => {
+      const svc = buildService('2h', '1d');
+      expect(svc.getAccessTokenExpirySeconds()).toBe(2 * 60 * 60);
+    });
+
+    it('should parse days suffix "d"', () => {
+      const svc = buildService('1d', '7d');
+      expect(svc.getAccessTokenExpirySeconds()).toBe(24 * 60 * 60);
+    });
+
+    it('should fallback to 900 seconds when format is invalid (line 86 / regex no-match)', () => {
+      const svc = buildService('garbage', 'also-bad');
+      expect(svc.getAccessTokenExpirySeconds()).toBe(900);
+      expect(svc.getRefreshTokenExpiryMs()).toBe(900 * 1000);
+    });
+  });
+
+  describe('verifyAccessToken - failure branches', () => {
+    it('should throw for malformed token', () => {
+      expect(() => service.verifyAccessToken('not.a.real.jwt')).toThrow();
+    });
+
+    it('should throw when access token is signed with a different secret', () => {
+      const signed = (jest.requireActual('jsonwebtoken') as typeof import('jsonwebtoken')).sign(
+        { sub: 'x', email: 'x@x', type: 'user' },
+        'completely-different-secret',
+        { expiresIn: 60 },
+      );
+
+      expect(() => service.verifyAccessToken(signed)).toThrow();
+    });
+
+    it('should throw TokenExpiredError when access token is expired', () => {
+      const jwtLib = jest.requireActual('jsonwebtoken') as typeof import('jsonwebtoken');
+      // sign with negative expiresIn -> already expired (issuer/audience must match)
+      const expired = jwtLib.sign({ sub: 'x', email: 'x@x', type: 'user' }, mockSecret, {
+        expiresIn: -10,
+        algorithm: 'HS256',
+        issuer: 'cyna-api',
+        audience: 'cyna-clients',
+      });
+
+      expect(() => service.verifyAccessToken(expired)).toThrow(/expired/i);
+    });
+  });
+
+  describe('verifyTempToken - failure branches', () => {
+    it('should throw for malformed temp token', () => {
+      expect(() => service.verifyTempToken('garbage')).toThrow();
+    });
+
+    it('should throw when temp token has expired', () => {
+      const jwtLib = jest.requireActual('jsonwebtoken') as typeof import('jsonwebtoken');
+      const expired = jwtLib.sign({ sub: 'x', email: 'x@x', purpose: '2fa' }, mockSecret, {
+        expiresIn: -10,
+        algorithm: 'HS256',
+        issuer: 'cyna-api',
+        audience: 'cyna-clients',
+      });
+
+      expect(() => service.verifyTempToken(expired)).toThrow(/expired/i);
+    });
+  });
+
+  describe('hashToken - SHA-256 deterministic + matches known vector', () => {
+    it('should hash to SHA-256 of input (matches Node crypto directly)', () => {
+      const crypto = jest.requireActual('crypto') as typeof import('crypto');
+      const expected = crypto.createHash('sha256').update('refresh-token-raw').digest('hex');
+      expect(service.hashToken('refresh-token-raw')).toBe(expected);
+    });
+
+    it('should produce different hashes for different inputs', () => {
+      const a = service.hashToken('token-a');
+      const b = service.hashToken('token-b');
+      expect(a).not.toBe(b);
+    });
+  });
+
+  describe('constructor - JWT secret validation', () => {
+    it('should throw when JWT secret is missing', () => {
+      const cfg = {
+        get: jest.fn((key: string, def?: string) => {
+          if (key === 'auth.jwt.secret') return undefined;
+          return def;
+        }),
+      } as unknown as ConfigService;
+
+      expect(() => new TokenService(cfg)).toThrow('JWT_SECRET environment variable is required');
+    });
+  });
 });

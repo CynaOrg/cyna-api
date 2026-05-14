@@ -140,7 +140,7 @@ export class OrderService {
     if (!cartEntity) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Cart not found',
+        message: 'errors.order.cartNotFound',
         code: 'CART_NOT_FOUND',
       });
     }
@@ -154,7 +154,7 @@ export class OrderService {
     if (!cart || !cart.items || cart.items.length === 0) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Cart is empty',
+        message: 'errors.order.cartEmpty',
         code: 'CART_EMPTY',
       });
     }
@@ -175,7 +175,7 @@ export class OrderService {
                     () =>
                       new RpcException({
                         statusCode: 503,
-                        message: 'Catalog service timeout',
+                        message: 'errors.order.catalogServiceTimeout',
                         code: 'CATALOG_SERVICE_TIMEOUT',
                       }),
                   );
@@ -443,7 +443,7 @@ export class OrderService {
     if (!order) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Order not found',
+        message: 'errors.order.orderNotFound',
         code: 'ORDER_NOT_FOUND',
       });
     }
@@ -575,7 +575,7 @@ export class OrderService {
     if (!order) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Order not found',
+        message: 'errors.order.orderNotFound',
         code: 'ORDER_NOT_FOUND',
       });
     }

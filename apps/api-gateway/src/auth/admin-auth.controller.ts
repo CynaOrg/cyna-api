@@ -16,14 +16,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagg
 import { Throttle } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import { ClientProxy } from '@nestjs/microservices';
-import {
-  Observable,
-  firstValueFrom,
-  timeout,
-  catchError,
-  throwError,
-  TimeoutError,
-} from 'rxjs';
+import { Observable, firstValueFrom, timeout, catchError, throwError, TimeoutError } from 'rxjs';
 import { Public, SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
 import { AuthService } from './auth.service';
 import { AdminLoginDto, Verify2FADto, Resend2FADto, RefreshTokenDto, LogoutDto } from './dto';
@@ -88,12 +81,10 @@ export class AdminAuthController {
     // a business outcome, not a transient failure — retrying triples latency
     // and the gateway's RPC client already handles transient connection drops.
     return firstValueFrom(
-      this.authClient
-        .send(MESSAGE_PATTERNS.AUTH.ADMIN_GET_ME, { adminId: req.user.id })
-        .pipe(
-          timeout(5000),
-          catchError((err) => rpcToHttpError(err)),
-        ),
+      this.authClient.send(MESSAGE_PATTERNS.AUTH.ADMIN_GET_ME, { adminId: req.user.id }).pipe(
+        timeout(5000),
+        catchError((err) => rpcToHttpError(err)),
+      ),
     );
   }
 
@@ -242,6 +233,6 @@ export class AdminAuthController {
       path: '/',
     });
 
-    return { message: 'Logged out successfully' };
+    return { message: 'common.messages.loggedOut' };
   }
 }

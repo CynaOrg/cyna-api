@@ -46,6 +46,7 @@ describe('AuthController', () => {
         user: {},
       }),
       logout: jest.fn().mockResolvedValue({ success: true }),
+      revokeAllUserRefreshTokens: jest.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -148,6 +149,52 @@ describe('AuthController', () => {
 
       expect(result.success).toBe(true);
       expect(authService.logout).toHaveBeenCalledWith('user-123', 'refresh-token');
+    });
+  });
+
+  describe('resendVerification', () => {
+    it('should resend verification email', async () => {
+      const dto = { email: 'test@example.com' };
+
+      const result = await controller.resendVerification(dto);
+
+      expect(result.success).toBe(true);
+      expect(authService.resendVerification).toHaveBeenCalledWith('test@example.com');
+    });
+  });
+
+  describe('handleUserDeleted', () => {
+    it('should revoke all refresh tokens on user deletion', async () => {
+      await controller.handleUserDeleted({ userId: 'user-123' });
+
+      expect(authService.revokeAllUserRefreshTokens).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should swallow errors and not throw when revoke fails', async () => {
+      (authService.revokeAllUserRefreshTokens as jest.Mock).mockRejectedValueOnce(
+        new Error('db failure'),
+      );
+
+      await expect(controller.handleUserDeleted({ userId: 'user-fail' })).resolves.toBeUndefined();
+      expect(authService.revokeAllUserRefreshTokens).toHaveBeenCalledWith('user-fail');
+    });
+  });
+
+  describe('handleUserPasswordChanged', () => {
+    it('should revoke all refresh tokens on password change', async () => {
+      await controller.handleUserPasswordChanged({ userId: 'user-123' });
+
+      expect(authService.revokeAllUserRefreshTokens).toHaveBeenCalledWith('user-123');
+    });
+
+    it('should swallow errors when revoke fails', async () => {
+      (authService.revokeAllUserRefreshTokens as jest.Mock).mockRejectedValueOnce(
+        new Error('db failure'),
+      );
+
+      await expect(
+        controller.handleUserPasswordChanged({ userId: 'user-fail' }),
+      ).resolves.toBeUndefined();
     });
   });
 });

@@ -48,3 +48,11 @@ export * from './utils';
 
 // Constants
 export * from './constants';
+
+// Auth (JWT identity claims)
+export * from './auth';
+
+// Health (shared healthcheck for hybrid microservices)
+export * from './health/health.module';
+export * from './health/health.controller';
+export * from './health/health.constants';

@@ -218,7 +218,7 @@ export class CartService {
     if (!product) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Product not found or unavailable',
+        message: 'errors.order.productUnavailable',
         code: 'PRODUCT_UNAVAILABLE',
       });
     }
@@ -226,7 +226,7 @@ export class CartService {
     if (!product.isAvailable) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Product is not available',
+        message: 'errors.order.productUnavailable',
         code: 'PRODUCT_UNAVAILABLE',
       });
     }
@@ -254,8 +254,9 @@ export class CartService {
       if (quantity < 1) {
         throw new RpcException({
           statusCode: 400,
-          message: `Insufficient stock. Available: ${product.stockQuantity}`,
+          message: 'errors.order.insufficientStockShort',
           code: 'INSUFFICIENT_STOCK',
+          details: { available: product.stockQuantity },
         });
       }
     }
@@ -287,7 +288,7 @@ export class CartService {
     if (!cart) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Cart not found',
+        message: 'errors.order.cartNotFound',
         code: 'CART_NOT_FOUND',
       });
     }
@@ -305,7 +306,7 @@ export class CartService {
     if (!item) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Cart item not found',
+        message: 'errors.order.cartItemNotFound',
         code: 'CART_ITEM_NOT_FOUND',
       });
     }
@@ -334,7 +335,7 @@ export class CartService {
     if (!cart) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Cart not found',
+        message: 'errors.order.cartNotFound',
         code: 'CART_NOT_FOUND',
       });
     }
@@ -352,7 +353,7 @@ export class CartService {
     if (result.affected === 0) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Cart item not found',
+        message: 'errors.order.cartItemNotFound',
         code: 'CART_ITEM_NOT_FOUND',
       });
     }

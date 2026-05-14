@@ -69,7 +69,7 @@ export class CarouselService {
       this.logger.warn(`Carousel slide not found: ${id}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Carousel slide not found',
+        message: 'errors.content.carouselSlideNotFound',
         code: 'CAROUSEL_SLIDE_NOT_FOUND',
       });
     }
@@ -91,7 +91,7 @@ export class CarouselService {
       this.logger.warn(`Carousel slide not found: ${id}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Carousel slide not found',
+        message: 'errors.content.carouselSlideNotFound',
         code: 'CAROUSEL_SLIDE_NOT_FOUND',
       });
     }
@@ -111,7 +111,7 @@ export class CarouselService {
       this.logger.warn(`Some carousel slide IDs not found during reorder`);
       throw new RpcException({
         statusCode: 400,
-        message: 'Some slide IDs are invalid',
+        message: 'errors.content.carouselInvalidSlideIds',
         code: 'CAROUSEL_INVALID_SLIDE_IDS',
       });
     }

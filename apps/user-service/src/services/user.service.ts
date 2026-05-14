@@ -37,7 +37,7 @@ export class UserService {
     if (existing) {
       throw new RpcException({
         statusCode: 409,
-        message: 'Email already registered',
+        message: 'errors.user.emailExists',
         code: 'EMAIL_EXISTS',
       });
     }
@@ -66,7 +66,13 @@ export class UserService {
   }
 
   async findByEmailForLogin(email: string): Promise<UserCredentialsView | null> {
-    const user = await this.userRepository.findOne({ where: { email } });
+    // passwordHash is select:false; opt in explicitly here, this is the only
+    // entry point that needs the bcrypt hash for password verification.
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.passwordHash')
+      .where('user.email = :email', { email })
+      .getOne();
     if (!user) return null;
     return {
       id: user.id,
@@ -85,7 +91,7 @@ export class UserService {
     if (!user) {
       throw new RpcException({
         statusCode: 404,
-        message: 'User not found',
+        message: 'errors.user.notFound',
         code: 'USER_NOT_FOUND',
       });
     }
@@ -122,23 +128,23 @@ export class UserService {
     if (dto.vatNumber !== undefined) user.vatNumber = dto.vatNumber;
     const saved = await this.userRepository.save(user);
     this.logger.log(`Profile updated for user: ${saved.id}`, 'UserService');
-    return { message: 'Profile updated successfully', user: this.toProfileView(saved) };
+    return { message: 'common.messages.profileUpdated', user: this.toProfileView(saved) };
   }
 
   async updatePassword(userId: string, dto: UpdatePasswordDto): Promise<{ message: string }> {
-    const user = await this.findActiveUserOrThrow(userId);
+    const user = await this.findActiveUserOrThrow(userId, { withPasswordHash: true });
     const valid = await this.comparePassword(dto.currentPassword, user.passwordHash);
     if (!valid) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Current password is incorrect',
+        message: 'errors.user.invalidPassword',
         code: 'INVALID_CURRENT_PASSWORD',
       });
     }
     if (dto.currentPassword === dto.newPassword) {
       throw new RpcException({
         statusCode: 400,
-        message: 'New password must be different from current password',
+        message: 'errors.user.newPasswordSameAsCurrent',
         code: 'SAME_PASSWORD',
       });
     }
@@ -152,7 +158,7 @@ export class UserService {
     });
 
     this.logger.log(`Password updated for user: ${user.id}`, 'UserService');
-    return { message: 'Password updated successfully' };
+    return { message: 'common.messages.passwordUpdated' };
   }
 
   async updateLanguage(
@@ -166,16 +172,16 @@ export class UserService {
       `Language updated for user: ${saved.id} to ${dto.preferredLanguage}`,
       'UserService',
     );
-    return { message: 'Language preference updated successfully', user: this.toProfileView(saved) };
+    return { message: 'common.messages.languageUpdated', user: this.toProfileView(saved) };
   }
 
   async deleteAccount(userId: string, dto: DeleteAccountDto): Promise<{ message: string }> {
-    const user = await this.findActiveUserOrThrow(userId);
+    const user = await this.findActiveUserOrThrow(userId, { withPasswordHash: true });
     const valid = await this.comparePassword(dto.password, user.passwordHash);
     if (!valid) {
       throw new RpcException({
         statusCode: 401,
-        message: 'Password is incorrect',
+        message: 'errors.user.passwordIncorrect',
         code: 'INVALID_PASSWORD',
       });
     }
@@ -189,22 +195,31 @@ export class UserService {
     });
 
     this.logger.log(`Account soft-deleted for user: ${user.id}`, 'UserService');
-    return { message: 'Account deleted successfully' };
+    return { message: 'common.messages.accountDeleted' };
   }
 
-  private async findActiveUserOrThrow(userId: string): Promise<User> {
-    const user = await this.userRepository.findOne({ where: { id: userId } });
+  private async findActiveUserOrThrow(
+    userId: string,
+    options: { withPasswordHash?: boolean } = {},
+  ): Promise<User> {
+    const qb = this.userRepository
+      .createQueryBuilder('user')
+      .where('user.id = :id', { id: userId });
+    if (options.withPasswordHash) {
+      qb.addSelect('user.passwordHash');
+    }
+    const user = await qb.getOne();
     if (!user) {
       throw new RpcException({
         statusCode: 404,
-        message: 'User not found',
+        message: 'errors.user.notFound',
         code: 'USER_NOT_FOUND',
       });
     }
     if (!user.isActive) {
       throw new RpcException({
         statusCode: 403,
-        message: 'Account is disabled',
+        message: 'errors.auth.accountDisabled',
         code: 'ACCOUNT_DISABLED',
       });
     }

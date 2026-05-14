@@ -52,16 +52,20 @@ const mockCategoryService = {
   findById: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
+  reorder: jest.fn(),
 };
 
 // Mock du ProductService
 const mockProductService = {
   create: jest.fn(),
   findAll: jest.fn(),
+  findAllAdmin: jest.fn(),
   findBySlug: jest.fn(),
   findById: jest.fn(),
+  findByIdAdmin: jest.fn(),
   update: jest.fn(),
   delete: jest.fn(),
+  bulkDelete: jest.fn(),
   search: jest.fn(),
   findFeatured: jest.fn(),
   findByCategory: jest.fn(),
@@ -69,6 +73,7 @@ const mockProductService = {
   deleteImage: jest.fn(),
   setPrimaryImage: jest.fn(),
   reorderImages: jest.fn(),
+  syncFeaturedFromTopProducts: jest.fn(),
 };
 
 // Mock du StockService
@@ -195,6 +200,29 @@ describe('CatalogController', () => {
         expect(mockCategoryService.findById).toHaveBeenCalledWith('cat-001');
       });
     });
+
+    describe('findAllCategoriesAdmin()', () => {
+      it('should call categoryService.findAll and return raw entities', async () => {
+        const categories = [createMockCategory()];
+        mockCategoryService.findAll.mockResolvedValue(categories);
+
+        const result = await controller.findAllCategoriesAdmin({ isActive: true });
+
+        expect(mockCategoryService.findAll).toHaveBeenCalledWith({ isActive: true });
+        expect(result).toBe(categories);
+      });
+    });
+
+    describe('reorderCategories()', () => {
+      it('should call categoryService.reorder with the provided ids', async () => {
+        const categories = [createMockCategory()];
+        mockCategoryService.reorder.mockResolvedValue(categories);
+
+        await controller.reorderCategories({ categoryIds: ['a', 'b', 'c'] });
+
+        expect(mockCategoryService.reorder).toHaveBeenCalledWith(['a', 'b', 'c']);
+      });
+    });
   });
 
   // ==================== Product Endpoints ====================
@@ -297,6 +325,84 @@ describe('CatalogController', () => {
 
         expect(mockProductService.findFeatured).toHaveBeenCalledWith(5);
       });
+
+      it('should default to limit=10 when not provided', async () => {
+        mockProductService.findFeatured.mockResolvedValue([]);
+
+        await controller.findFeaturedProducts({});
+
+        expect(mockProductService.findFeatured).toHaveBeenCalledWith(10);
+      });
+    });
+
+    describe('bulkDeleteProducts()', () => {
+      it('should call productService.bulkDelete with ids', async () => {
+        mockProductService.bulkDelete.mockResolvedValue({
+          deletedCount: 2,
+          failedIds: [],
+        });
+
+        const result = await controller.bulkDeleteProducts({ productIds: ['p1', 'p2'] });
+
+        expect(mockProductService.bulkDelete).toHaveBeenCalledWith(['p1', 'p2']);
+        expect(result.deletedCount).toBe(2);
+      });
+    });
+
+    describe('findAllProductsAdmin()', () => {
+      it('should call productService.findAllAdmin and return paginated admin DTO', async () => {
+        mockProductService.findAllAdmin.mockResolvedValue({
+          data: [createMockProduct()],
+          meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        });
+
+        await controller.findAllProductsAdmin({ page: 1, limit: 20 });
+
+        expect(mockProductService.findAllAdmin).toHaveBeenCalledWith({ page: 1, limit: 20 });
+      });
+    });
+
+    describe('findProductById()', () => {
+      it('should call productService.findById', async () => {
+        const product = createMockProduct();
+        mockProductService.findById.mockResolvedValue(product);
+
+        const result = await controller.findProductById({ id: 'prod-001' });
+
+        expect(mockProductService.findById).toHaveBeenCalledWith('prod-001');
+        expect(result).toBe(product);
+      });
+    });
+
+    describe('findProductByIdAdmin()', () => {
+      it('should call productService.findByIdAdmin', async () => {
+        const product = createMockProduct();
+        mockProductService.findByIdAdmin.mockResolvedValue(product);
+
+        await controller.findProductByIdAdmin({ id: 'prod-001' });
+
+        expect(mockProductService.findByIdAdmin).toHaveBeenCalledWith('prod-001');
+      });
+    });
+
+    describe('findProductsByCategory()', () => {
+      it('should call productService.findByCategory and return paginated DTO', async () => {
+        mockProductService.findByCategory.mockResolvedValue({
+          data: [createMockProduct()],
+          meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        });
+
+        await controller.findProductsByCategory({
+          categoryId: 'cat-001',
+          query: { page: 1, limit: 20, lang: Language.EN },
+        });
+
+        expect(mockProductService.findByCategory).toHaveBeenCalledWith('cat-001', {
+          page: 1,
+          limit: 20,
+          lang: Language.EN,
+        });
+      });
     });
   });
 
@@ -365,6 +471,38 @@ describe('CatalogController', () => {
           'img-002',
           'img-001',
         ]);
+      });
+    });
+
+    describe('requestImageUploadUrl()', () => {
+      it('should call imageService.requestUploadUrl', async () => {
+        mockImageService.requestUploadUrl.mockResolvedValue({
+          uploadUrl: 'https://s3/upload',
+          imageKey: 'key',
+        });
+
+        const result = await controller.requestImageUploadUrl({
+          productId: 'prod-001',
+          fileName: 'a.png',
+          contentType: 'image/png',
+          fileSize: 1000,
+        } as never);
+
+        expect(mockImageService.requestUploadUrl).toHaveBeenCalled();
+        expect(result.uploadUrl).toBeDefined();
+      });
+    });
+
+    describe('confirmImageUpload()', () => {
+      it('should call imageService.confirmUpload', async () => {
+        mockImageService.confirmUpload.mockResolvedValue({ id: 'img-1' });
+
+        await controller.confirmImageUpload({
+          productId: 'prod-001',
+          imageKey: 'key',
+        } as never);
+
+        expect(mockImageService.confirmUpload).toHaveBeenCalled();
       });
     });
   });
@@ -460,6 +598,40 @@ describe('CatalogController', () => {
 
         expect(mockStockService.confirmReservation).toHaveBeenCalledWith('cart-001');
         expect(result).toEqual({ success: true });
+      });
+    });
+  });
+
+  describe('Content Sync Events', () => {
+    describe('handleTopProductsUpdated()', () => {
+      it('should call productService.syncFeaturedFromTopProducts', async () => {
+        mockProductService.syncFeaturedFromTopProducts.mockResolvedValue(undefined);
+
+        await controller.handleTopProductsUpdated({
+          productType: ProductType.SAAS,
+          added: ['p-1'],
+          removed: ['p-2'],
+        } as never);
+
+        expect(mockProductService.syncFeaturedFromTopProducts).toHaveBeenCalledWith(
+          ProductType.SAAS,
+          ['p-1'],
+          ['p-2'],
+        );
+      });
+
+      it('should default added/removed to empty arrays when missing', async () => {
+        mockProductService.syncFeaturedFromTopProducts.mockResolvedValue(undefined);
+
+        await controller.handleTopProductsUpdated({
+          productType: ProductType.SAAS,
+        } as never);
+
+        expect(mockProductService.syncFeaturedFromTopProducts).toHaveBeenCalledWith(
+          ProductType.SAAS,
+          [],
+          [],
+        );
       });
     });
   });

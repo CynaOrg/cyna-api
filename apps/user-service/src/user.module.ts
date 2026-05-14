@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { CynaConfigModule, LoggerModule, SERVICE_NAMES } from '@cyna-api/common';
+import {
+  CynaConfigModule,
+  HealthModule,
+  LoggerModule,
+  SERVICE_NAMES,
+  isDatabaseSyncEnabled,
+} from '@cyna-api/common';
 import { User } from './entities/user.entity';
 import { UserAddress } from './entities/user-address.entity';
 import { UserController } from './controllers/user.controller';
@@ -22,6 +28,7 @@ if (isProduction && !process.env.DATABASE_PASSWORD) {
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('user-service'),
     LoggerModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -33,7 +40,7 @@ if (isProduction && !process.env.DATABASE_PASSWORD) {
       entities: [User, UserAddress],
       migrations: [CreateUserAddressesTable1745500000000, AddDeletedAtToUserAddresses1745500000001],
       migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
-      synchronize: !isProduction && process.env.DATABASE_SYNC === 'true',
+      synchronize: isDatabaseSyncEnabled(),
       logging: process.env.DATABASE_LOGGING === 'true',
     }),
     TypeOrmModule.forFeature([User, UserAddress]),

@@ -39,7 +39,7 @@ export class PaymentService {
     if (amountInCents <= 0) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Invalid payment amount',
+        message: 'errors.payment.invalidAmount',
         code: 'INVALID_AMOUNT',
       });
     }
@@ -367,7 +367,7 @@ export class PaymentService {
               () =>
                 new RpcException({
                   statusCode: 503,
-                  message: 'User service timeout',
+                  message: 'errors.payment.userServiceTimeout',
                   code: 'USER_SERVICE_TIMEOUT',
                 }),
             );
@@ -407,7 +407,7 @@ export class PaymentService {
                 () =>
                   new RpcException({
                     statusCode: 503,
-                    message: 'Catalog service timeout',
+                    message: 'errors.payment.catalogServiceTimeout',
                     code: 'CATALOG_SERVICE_TIMEOUT',
                   }),
               );
@@ -420,7 +420,7 @@ export class PaymentService {
     if (!product) {
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -432,7 +432,7 @@ export class PaymentService {
     if (!stripePriceId) {
       throw new RpcException({
         statusCode: 400,
-        message: 'Product does not have a Stripe price configured',
+        message: 'errors.payment.noStripePrice',
         code: 'STRIPE_PRICE_NOT_CONFIGURED',
       });
     }
@@ -491,7 +491,7 @@ export class PaymentService {
     if (!invoice) {
       throw new RpcException({
         statusCode: 500,
-        message: 'No invoice on subscription',
+        message: 'errors.payment.noInvoice',
         code: 'SUBSCRIPTION_NO_INVOICE',
       });
     }
@@ -501,7 +501,7 @@ export class PaymentService {
     if (!clientSecret) {
       throw new RpcException({
         statusCode: 500,
-        message: 'Failed to get client secret from subscription',
+        message: 'errors.payment.clientSecretMissing',
         code: 'SUBSCRIPTION_CLIENT_SECRET_MISSING',
       });
     }

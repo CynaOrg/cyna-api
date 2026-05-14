@@ -197,6 +197,6 @@ export class AuthController {
       ...(isProduction && { domain: '.cyna.it' }),
     });
 
-    return { message: 'Logged out successfully' };
+    return { message: 'common.messages.loggedOut' };
   }
 }

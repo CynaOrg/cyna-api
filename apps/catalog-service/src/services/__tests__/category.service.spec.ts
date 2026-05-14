@@ -396,5 +396,91 @@ describe('CategoryService', () => {
         }),
       });
     });
+
+    it('should return cached category without hitting repository', async () => {
+      const cached = createMockCategory({ id: 'cat-cached' });
+      mockCacheService.get.mockResolvedValueOnce(cached);
+
+      const result = await service.findById('cat-cached');
+
+      expect(result).toEqual(cached);
+      expect(repository.findOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findBySlug() — cached', () => {
+    it('should return cached category without hitting repository', async () => {
+      const cached = createMockCategory({ slug: 'services-cached' });
+      mockCacheService.get.mockResolvedValueOnce(cached);
+
+      const result = await service.findBySlug('services-cached');
+
+      expect(result).toEqual(cached);
+      expect(queryBuilder.getOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('update() — extra branches', () => {
+    it('should throw RpcException 404 when category does not exist', async () => {
+      repository.findOne.mockResolvedValue(null);
+
+      await expect(service.update('missing', { nameFr: 'X' })).rejects.toMatchObject({
+        error: expect.objectContaining({
+          statusCode: 404,
+          code: 'CATEGORY_NOT_FOUND',
+        }),
+      });
+    });
+
+    it('should invalidate cache for new slug when slug is changed', async () => {
+      const existing = createMockCategory({ id: 'cat-1', slug: 'old-slug' });
+      repository.findOne
+        .mockResolvedValueOnce(existing) // findById
+        .mockResolvedValueOnce(null); // new slug not taken
+      repository.save.mockImplementation((c) => Promise.resolve(c as Category));
+
+      await service.update('cat-1', { slug: 'new-slug', nameFr: 'X' });
+
+      // Verifie que del a ete appele avec une cle contenant le nouveau slug
+      const delCalls = (mockCacheService.del as jest.Mock).mock.calls.flat();
+      expect(delCalls.some((k: string) => typeof k === 'string' && k.includes('new-slug'))).toBe(
+        true,
+      );
+    });
+  });
+
+  describe('reorder()', () => {
+    it('should reorder categories and update displayOrder', async () => {
+      const categoryIds = ['cat-1', 'cat-2', 'cat-3'];
+      const categories = [
+        createMockCategory({ id: 'cat-1', displayOrder: 5 }),
+        createMockCategory({ id: 'cat-2', displayOrder: 5 }),
+        createMockCategory({ id: 'cat-3', displayOrder: 5 }),
+      ];
+
+      repository.find
+        .mockResolvedValueOnce(categories) // initial find
+        .mockResolvedValueOnce(categories); // final reload
+      repository.save.mockResolvedValue(categories as never);
+
+      const result = await service.reorder(categoryIds);
+
+      expect(categories[0].displayOrder).toBe(0);
+      expect(categories[1].displayOrder).toBe(1);
+      expect(categories[2].displayOrder).toBe(2);
+      expect(repository.save).toHaveBeenCalledWith(categories);
+      expect(result).toEqual(categories);
+    });
+
+    it('should throw RpcException 400 when some ids are missing', async () => {
+      repository.find.mockResolvedValueOnce([createMockCategory({ id: 'cat-1' })]);
+
+      await expect(service.reorder(['cat-1', 'cat-2'])).rejects.toMatchObject({
+        error: expect.objectContaining({
+          statusCode: 400,
+          code: 'CATEGORY_INVALID_IDS',
+        }),
+      });
+    });
   });
 });

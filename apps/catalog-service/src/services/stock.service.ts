@@ -56,7 +56,7 @@ export class StockService {
       this.logger.warn(`Product not found: ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -65,7 +65,7 @@ export class StockService {
       this.logger.warn(`Stock management not available for non-physical product: ${productId}`);
       throw new RpcException({
         statusCode: 400,
-        message: 'Stock management is only available for physical products',
+        message: 'errors.catalog.stockPhysicalOnly',
         code: 'STOCK_NOT_APPLICABLE',
       });
     }
@@ -104,7 +104,7 @@ export class StockService {
       this.logger.warn(`Product not found: ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -136,7 +136,7 @@ export class StockService {
       this.logger.warn(`Product not found: ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -159,7 +159,7 @@ export class StockService {
       this.logger.warn(`Product not found: ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -168,7 +168,7 @@ export class StockService {
       this.logger.warn(`Stock reservation not applicable for non-physical product: ${productId}`);
       throw new RpcException({
         statusCode: 400,
-        message: 'Stock reservation is only available for physical products',
+        message: 'errors.catalog.stockReservationPhysicalOnly',
         code: 'STOCK_NOT_APPLICABLE',
       });
     }
@@ -202,7 +202,7 @@ export class StockService {
       );
       throw new RpcException({
         statusCode: 400,
-        message: 'Insufficient stock for reservation',
+        message: 'errors.catalog.insufficientStockReservation',
         code: 'INSUFFICIENT_STOCK',
         details: {
           requested: quantity,
@@ -293,7 +293,7 @@ export class StockService {
       this.logger.warn(`No active reservations found for cart: ${cartId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'No active reservations found for this cart',
+        message: 'errors.catalog.reservationsNotFound',
         code: 'RESERVATIONS_NOT_FOUND',
       });
     }

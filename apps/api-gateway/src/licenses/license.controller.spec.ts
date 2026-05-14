@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { of, throwError } from 'rxjs';
+import { of, throwError, TimeoutError } from 'rxjs';
 import { HttpException } from '@nestjs/common';
 import { SERVICE_NAMES } from '@cyna-api/common';
 import { Request } from 'express';
@@ -154,6 +154,18 @@ describe('LicenseController', () => {
       } catch (err) {
         expect(err).toBeInstanceOf(HttpException);
         expect((err as HttpException).getStatus()).toBe(404);
+      }
+    });
+
+    it('maps a TimeoutError to HttpException 503 (Payment service timeout)', async () => {
+      paymentClient.send.mockReturnValueOnce(throwError(() => new TimeoutError()));
+
+      try {
+        await controller.activateLicense({ token: 'whatever' });
+        fail('expected HttpException to be thrown');
+      } catch (err) {
+        expect(err).toBeInstanceOf(HttpException);
+        expect((err as HttpException).getStatus()).toBe(503);
       }
     });
   });

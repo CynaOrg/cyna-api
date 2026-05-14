@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { CynaConfigModule, LoggerModule, SERVICE_NAMES } from '@cyna-api/common';
+import {
+  CynaConfigModule,
+  HealthModule,
+  LoggerModule,
+  SERVICE_NAMES,
+  isDatabaseSyncEnabled,
+} from '@cyna-api/common';
 import { Subscription, LicenseKey, ProcessedWebhook } from './entities';
 import { PaymentController, WebhookEventController } from './controllers';
 import {
@@ -14,10 +20,12 @@ import {
 import { AddProductSnapshotToLicenseKeys1776845407292 } from './migrations/1776845407292-AddProductSnapshotToLicenseKeys';
 import { AddActivationFlowToLicenseKeys1777200000000 } from './migrations/1777200000000-AddActivationFlowToLicenseKeys';
 import { AddStripeInvoiceUrlToSubscriptions1777300000001 } from './migrations/1777300000001-AddStripeInvoiceUrlToSubscriptions';
+import { CreateProcessedWebhooksTable1777600000001 } from './migrations/1777600000001-CreateProcessedWebhooksTable';
 
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('payment-service'),
     LoggerModule,
     TypeOrmModule.forRoot({
       type: 'postgres',
@@ -31,9 +39,10 @@ import { AddStripeInvoiceUrlToSubscriptions1777300000001 } from './migrations/17
         AddProductSnapshotToLicenseKeys1776845407292,
         AddActivationFlowToLicenseKeys1777200000000,
         AddStripeInvoiceUrlToSubscriptions1777300000001,
+        CreateProcessedWebhooksTable1777600000001,
       ],
       migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
-      synchronize: process.env.DATABASE_SYNC === 'true',
+      synchronize: isDatabaseSyncEnabled(),
       logging: process.env.DATABASE_LOGGING === 'true',
     }),
     TypeOrmModule.forFeature([Subscription, LicenseKey, ProcessedWebhook]),

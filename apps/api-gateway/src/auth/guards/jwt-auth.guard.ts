@@ -2,7 +2,14 @@ import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import * as jwt from 'jsonwebtoken';
-import { IS_PUBLIC_KEY, TokenExpiredException, TokenInvalidException } from '@cyna-api/common';
+import {
+  IS_PUBLIC_KEY,
+  JWT_ALGORITHM,
+  JWT_AUDIENCE,
+  JWT_ISSUER,
+  TokenExpiredException,
+  TokenInvalidException,
+} from '@cyna-api/common';
 import { JwtPayload } from '../interfaces';
 
 /**
@@ -38,7 +45,11 @@ export class JwtAuthGuard implements CanActivate {
         throw new Error('JWT_SECRET not configured');
       }
 
-      const payload = jwt.verify(token, secret) as JwtPayload;
+      const payload = jwt.verify(token, secret, {
+        algorithms: [JWT_ALGORITHM],
+        issuer: JWT_ISSUER,
+        audience: JWT_AUDIENCE,
+      }) as JwtPayload;
 
       // 4. Attach user to request
       request.user = {

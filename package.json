@@ -61,11 +61,11 @@
     "jsonwebtoken": "^9.0.2",
     "nest-winston": "^1.10.2",
     "nestjs-i18n": "^10.5.0",
-    "nodemailer": "^6.9.8",
+    "nodemailer": "^6.10.1",
     "pg": "^8.17.2",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
-    "stripe": "^20.3.1",
+    "stripe": "^20.4.1",
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.28",
     "uuid": "^11.0.5",
@@ -116,9 +116,43 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "apps/**/src/**/*.ts",
+      "libs/**/src/**/*.ts",
+      "!**/*.module.ts",
+      "!**/*.dto.ts",
+      "!**/*.entity.ts",
+      "!**/*.interface.ts",
+      "!**/*.enum.ts",
+      "!**/*.constants.ts",
+      "!**/*.config.ts",
+      "!**/main.ts",
+      "!**/index.ts",
+      "!**/migrations/**",
+      "!**/seeds/**",
+      "!**/locales/**",
+      "!**/dto/**",
+      "!**/entities/**",
+      "!**/interfaces/**",
+      "!**/enums/**",
+      "!**/test/**",
+      "!**/__mocks__/**",
+      "!**/*.d.ts",
+      "!**/*.spec.ts",
+      "!**/*.e2e-spec.ts",
+      "!**/export-openapi.ts"
     ],
     "coverageDirectory": "./coverage",
+    "coverageReporters": [
+      "text",
+      "text-summary",
+      "lcov",
+      "html"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/dist/",
+      "/coverage/"
+    ],
     "testEnvironment": "node",
     "roots": [
       "<rootDir>/apps/",

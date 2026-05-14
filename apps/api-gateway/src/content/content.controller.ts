@@ -1,10 +1,12 @@
 import { Controller, Get, Post, Query, Body } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
+import { Public } from '@cyna-api/common';
 import { ContentService } from './content.service';
 import { CreateContactMessageDto } from './dto';
 
 @ApiTags('Content')
 @Controller('content')
+@Public()
 export class ContentController {
   constructor(private readonly contentService: ContentService) {}
 

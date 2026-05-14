@@ -3,7 +3,13 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { CynaConfigModule, LoggerModule, SERVICE_NAMES } from '@cyna-api/common';
+import {
+  CynaConfigModule,
+  HealthModule,
+  LoggerModule,
+  SERVICE_NAMES,
+  isDatabaseSyncEnabled,
+} from '@cyna-api/common';
 import authConfig from './config/auth.config';
 import {
   Admin,
@@ -23,10 +29,12 @@ import { AuthController, AdminAuthController } from './controllers';
 import { AuthEventsPublisher } from './events/auth-events.publisher';
 import { CleanupService } from './cron/cleanup.service';
 import { AdminSeedService } from './seeds/admin-seed.service';
+import { HashAdmin2FACodes1777600000000 } from './migrations/1777600000000-HashAdmin2FACodes';
 
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('auth-service'),
     LoggerModule,
     ConfigModule.forFeature(authConfig),
     ScheduleModule.forRoot(),
@@ -38,7 +46,9 @@ import { AdminSeedService } from './seeds/admin-seed.service';
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
       entities: [Admin, Admin2FACode, PasswordResetToken, EmailVerificationToken, RefreshToken],
-      synchronize: process.env.DATABASE_SYNC === 'true',
+      migrations: [HashAdmin2FACodes1777600000000],
+      migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
+      synchronize: isDatabaseSyncEnabled(),
       logging: process.env.DATABASE_LOGGING === 'true',
     }),
     TypeOrmModule.forFeature([

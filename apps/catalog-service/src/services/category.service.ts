@@ -31,7 +31,7 @@ export class CategoryService {
       this.logger.warn(`Category slug already exists: ${dto.slug}`);
       throw new RpcException({
         statusCode: 409,
-        message: 'Category slug already exists',
+        message: 'errors.catalog.slugExists',
         code: 'CATEGORY_SLUG_EXISTS',
       });
     }
@@ -105,7 +105,7 @@ export class CategoryService {
       this.logger.warn(`Category not found: ${slug}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Category not found',
+        message: 'errors.catalog.categoryNotFound',
         code: 'CATEGORY_NOT_FOUND',
       });
     }
@@ -132,7 +132,7 @@ export class CategoryService {
       this.logger.warn(`Category not found: ${id}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Category not found',
+        message: 'errors.catalog.categoryNotFound',
         code: 'CATEGORY_NOT_FOUND',
       });
     }
@@ -151,7 +151,7 @@ export class CategoryService {
       this.logger.warn(`Category not found: ${id}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Category not found',
+        message: 'errors.catalog.categoryNotFound',
         code: 'CATEGORY_NOT_FOUND',
       });
     }
@@ -167,7 +167,7 @@ export class CategoryService {
         this.logger.warn(`Category slug already exists: ${dto.slug}`);
         throw new RpcException({
           statusCode: 409,
-          message: 'Category slug already exists',
+          message: 'errors.catalog.slugExists',
           code: 'CATEGORY_SLUG_EXISTS',
         });
       }
@@ -197,7 +197,7 @@ export class CategoryService {
       this.logger.warn(`Category not found: ${id}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Category not found',
+        message: 'errors.catalog.categoryNotFound',
         code: 'CATEGORY_NOT_FOUND',
       });
     }
@@ -206,7 +206,7 @@ export class CategoryService {
       this.logger.warn(`Cannot delete category with products: ${id}`);
       throw new RpcException({
         statusCode: 409,
-        message: 'Cannot delete category with associated products',
+        message: 'errors.catalog.categoryHasProducts',
         code: 'CATEGORY_HAS_PRODUCTS',
       });
     }
@@ -228,7 +228,7 @@ export class CategoryService {
       this.logger.warn(`Some category IDs not found during reorder`);
       throw new RpcException({
         statusCode: 400,
-        message: 'Some category IDs are invalid',
+        message: 'errors.catalog.invalidCategoryIds',
         code: 'CATEGORY_INVALID_IDS',
       });
     }

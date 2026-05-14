@@ -2,7 +2,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import { ScheduleModule } from '@nestjs/schedule';
-import { CynaConfigModule, LoggerModule, SERVICE_NAMES, CynaCacheModule } from '@cyna-api/common';
+import {
+  CynaConfigModule,
+  HealthModule,
+  LoggerModule,
+  SERVICE_NAMES,
+  CynaCacheModule,
+  isDatabaseSyncEnabled,
+} from '@cyna-api/common';
 import { Cart, CartItem, Order, OrderItem } from './entities';
 import { CartService, OrderService } from './services';
 import { OrderController } from './controllers';
@@ -15,6 +22,7 @@ import { AddAbandonedNotifiedAtToCarts1777400000000 } from './migrations/1777400
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('order-service'),
     LoggerModule,
     ScheduleModule.forRoot(),
     CynaCacheModule.forRoot({ useMemoryFallback: true }),
@@ -32,7 +40,7 @@ import { AddAbandonedNotifiedAtToCarts1777400000000 } from './migrations/1777400
         AddAbandonedNotifiedAtToCarts1777400000000,
       ],
       migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
-      synchronize: process.env.DATABASE_SYNC === 'true',
+      synchronize: isDatabaseSyncEnabled(),
       logging: process.env.DATABASE_LOGGING === 'true',
     }),
     TypeOrmModule.forFeature([Cart, CartItem, Order, OrderItem]),

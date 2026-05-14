@@ -103,7 +103,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Category not found: ${dto.categoryId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Category not found',
+        message: 'errors.catalog.categoryNotFound',
         code: 'CATEGORY_NOT_FOUND',
       });
     }
@@ -116,7 +116,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product slug already exists: ${dto.slug}`);
       throw new RpcException({
         statusCode: 409,
-        message: 'Product slug already exists',
+        message: 'errors.catalog.productSlugExists',
         code: 'PRODUCT_SLUG_EXISTS',
       });
     }
@@ -129,7 +129,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product SKU already exists: ${dto.sku}`);
       throw new RpcException({
         statusCode: 409,
-        message: 'Product SKU already exists',
+        message: 'errors.catalog.productSkuExists',
         code: 'PRODUCT_SKU_EXISTS',
       });
     }
@@ -295,7 +295,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product not found: ${id}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -320,7 +320,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product not found: ${slug}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -348,7 +348,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product not found: ${id}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -371,7 +371,7 @@ export class ProductService implements OnApplicationBootstrap {
         this.logger.warn(`Product slug already exists: ${dto.slug}`);
         throw new RpcException({
           statusCode: 409,
-          message: 'Product slug already exists',
+          message: 'errors.catalog.productSlugExists',
           code: 'PRODUCT_SLUG_EXISTS',
         });
       }
@@ -386,7 +386,7 @@ export class ProductService implements OnApplicationBootstrap {
         this.logger.warn(`Product SKU already exists: ${dto.sku}`);
         throw new RpcException({
           statusCode: 409,
-          message: 'Product SKU already exists',
+          message: 'errors.catalog.productSkuExists',
           code: 'PRODUCT_SKU_EXISTS',
         });
       }
@@ -401,7 +401,7 @@ export class ProductService implements OnApplicationBootstrap {
         this.logger.warn(`Category not found: ${dto.categoryId}`);
         throw new RpcException({
           statusCode: 404,
-          message: 'Category not found',
+          message: 'errors.catalog.categoryNotFound',
           code: 'CATEGORY_NOT_FOUND',
         });
       }
@@ -469,7 +469,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product not found: ${id}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -654,7 +654,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product not found: ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -696,7 +696,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Image not found: ${imageId} for product ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Image not found',
+        message: 'errors.catalog.imageNotFound',
         code: 'IMAGE_NOT_FOUND',
       });
     }
@@ -729,7 +729,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Image not found: ${imageId} for product ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Image not found',
+        message: 'errors.catalog.imageNotFound',
         code: 'IMAGE_NOT_FOUND',
       });
     }
@@ -754,7 +754,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product not found: ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -766,7 +766,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Invalid image IDs for product ${productId}: ${invalidIds.join(', ')}`);
       throw new RpcException({
         statusCode: 400,
-        message: 'Some image IDs do not belong to this product',
+        message: 'errors.catalog.invalidImageIds',
         code: 'INVALID_IMAGE_IDS',
       });
     }
@@ -802,7 +802,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product not found: ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -811,7 +811,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Stock management not available for non-physical product: ${productId}`);
       throw new RpcException({
         statusCode: 400,
-        message: 'Stock management is only available for physical products',
+        message: 'errors.catalog.stockPhysicalOnly',
         code: 'STOCK_NOT_APPLICABLE',
       });
     }
@@ -839,7 +839,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product not found: ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -880,7 +880,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product not found: ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -889,7 +889,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Stock management not available for non-physical product: ${productId}`);
       throw new RpcException({
         statusCode: 400,
-        message: 'Stock management is only available for physical products',
+        message: 'errors.catalog.stockPhysicalOnly',
         code: 'STOCK_NOT_APPLICABLE',
       });
     }
@@ -901,7 +901,7 @@ export class ProductService implements OnApplicationBootstrap {
       );
       throw new RpcException({
         statusCode: 400,
-        message: 'Insufficient stock',
+        message: 'errors.catalog.insufficientStock',
         code: 'INSUFFICIENT_STOCK',
       });
     }
@@ -925,7 +925,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Product not found: ${productId}`);
       throw new RpcException({
         statusCode: 404,
-        message: 'Product not found',
+        message: 'errors.catalog.productNotFound',
         code: 'PRODUCT_NOT_FOUND',
       });
     }
@@ -934,7 +934,7 @@ export class ProductService implements OnApplicationBootstrap {
       this.logger.warn(`Stock management not available for non-physical product: ${productId}`);
       throw new RpcException({
         statusCode: 400,
-        message: 'Stock management is only available for physical products',
+        message: 'errors.catalog.stockPhysicalOnly',
         code: 'STOCK_NOT_APPLICABLE',
       });
     }
@@ -1150,7 +1150,7 @@ export class ProductService implements OnApplicationBootstrap {
               if (err instanceof TimeoutError) {
                 throw new RpcException({
                   statusCode: 503,
-                  message: 'Content service unavailable',
+                  message: 'errors.catalog.contentServiceUnavailable',
                   code: 'CONTENT_SERVICE_TIMEOUT',
                 });
               }

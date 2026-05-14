@@ -1,9 +1,9 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe, Logger, RequestMethod } from '@nestjs/common';
+import { Logger, RequestMethod } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SwaggerModule } from '@nestjs/swagger';
 import { createOpenApiDocument } from './swagger.factory';
-import { I18nService } from 'nestjs-i18n';
+import { I18nService, I18nValidationPipe, I18nValidationExceptionFilter } from 'nestjs-i18n';
 import helmet from 'helmet';
 import * as compression from 'compression';
 import * as cookieParser from 'cookie-parser';
@@ -31,7 +31,10 @@ async function bootstrap() {
   const port = configService.get<number>('APP_PORT', 3000);
   const apiPrefix = configService.get<string>('API_PREFIX', 'api');
   const apiVersion = configService.get<string>('API_VERSION', 'v1');
-  const swaggerEnabled = configService.get<boolean>('SWAGGER_ENABLED', false);
+  // Swagger is always disabled in production, regardless of SWAGGER_ENABLED,
+  // to avoid leaking the full API surface to opportunistic recon.
+  const isProduction = configService.get<string>('NODE_ENV') === 'production';
+  const swaggerEnabled = !isProduction && configService.get<boolean>('SWAGGER_ENABLED', false);
   const swaggerPath = configService.get<string>('SWAGGER_PATH', 'docs');
   const corsOrigins = configService.get<string>('CORS_ORIGINS', 'http://localhost:4200');
 
@@ -59,14 +62,23 @@ async function bootstrap() {
     ],
   });
 
-  // Global prefix (exclude webhook endpoint)
+  // Global prefix — exclude webhook endpoint (raw body needs the bare path)
+  // and health probes so Railway hits /health, /ready, /live directly.
   app.setGlobalPrefix(`${apiPrefix}/${apiVersion}`, {
-    exclude: [{ path: 'webhooks/stripe', method: RequestMethod.POST }],
+    exclude: [
+      { path: 'webhooks/stripe', method: RequestMethod.POST },
+      { path: 'health', method: RequestMethod.GET },
+      { path: 'ready', method: RequestMethod.GET },
+      { path: 'live', method: RequestMethod.GET },
+    ],
   });
 
-  // Global validation pipe
+  // Global validation pipe — I18nValidationPipe extends ValidationPipe and
+  // lets class-validator messages be i18n keys (e.g. 'validation.slug.required')
+  // which are resolved against the current request locale by the matching
+  // I18nValidationExceptionFilter below.
   app.useGlobalPipes(
-    new ValidationPipe({
+    new I18nValidationPipe({
       transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
@@ -80,11 +92,18 @@ async function bootstrap() {
   app.useGlobalInterceptors(
     new CorrelationIdInterceptor(),
     new LoggingInterceptor(),
-    new TransformInterceptor(),
+    new TransformInterceptor(i18nService),
   );
 
-  // Global exception filter
-  app.useGlobalFilters(new GlobalExceptionFilter(i18nService));
+  // Global exception filters. I18nValidationExceptionFilter is registered AFTER
+  // GlobalExceptionFilter so it catches I18nValidationException first (NestJS
+  // applies filters in reverse registration order, last one wins on type match).
+  // detailedErrors:false collapses the nested validation tree into a flat array
+  // of translated strings, matching the response shape expected by the filter.
+  app.useGlobalFilters(
+    new GlobalExceptionFilter(i18nService),
+    new I18nValidationExceptionFilter({ detailedErrors: false }),
+  );
 
   // Swagger documentation
   if (swaggerEnabled) {

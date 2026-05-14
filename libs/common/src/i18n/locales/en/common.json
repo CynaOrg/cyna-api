@@ -13,7 +13,15 @@
     "emailVerified": "Email verified successfully",
     "passwordReset": "Password reset successfully",
     "2faCodeSent": "2FA code sent by email",
-    "2faCodeResent": "2FA code resent"
+    "2faCodeResent": "2FA code resent",
+    "registrationSuccess": "Registration successful. Please check your email to verify your account.",
+    "verificationEmailSentSilent": "If the email exists, a verification email has been sent",
+    "passwordResetEmailSentSilent": "If the email exists, a password reset email has been sent",
+    "adminAccountDeleted": "Admin account deleted",
+    "profileUpdated": "Profile updated successfully",
+    "passwordUpdated": "Password updated successfully",
+    "languageUpdated": "Language preference updated successfully",
+    "accountDeleted": "Account deleted successfully"
   },
   "labels": {
     "email": "Email",

@@ -13,7 +13,15 @@
     "emailVerified": "Email vérifié avec succès",
     "passwordReset": "Mot de passe réinitialisé avec succès",
     "2faCodeSent": "Code 2FA envoyé par email",
-    "2faCodeResent": "Code 2FA renvoyé"
+    "2faCodeResent": "Code 2FA renvoyé",
+    "registrationSuccess": "Inscription réussie. Veuillez consulter votre email pour vérifier votre compte.",
+    "verificationEmailSentSilent": "Si l'email existe, un email de vérification a été envoyé",
+    "passwordResetEmailSentSilent": "Si l'email existe, un email de réinitialisation a été envoyé",
+    "adminAccountDeleted": "Compte administrateur supprimé",
+    "profileUpdated": "Profil mis à jour avec succès",
+    "passwordUpdated": "Mot de passe mis à jour avec succès",
+    "languageUpdated": "Préférence de langue mise à jour avec succès",
+    "accountDeleted": "Compte supprimé avec succès"
   },
   "labels": {
     "email": "Email",

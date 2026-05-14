@@ -3,7 +3,14 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { CynaConfigModule, LoggerModule, SERVICE_NAMES, CynaCacheModule } from '@cyna-api/common';
+import {
+  CynaConfigModule,
+  HealthModule,
+  LoggerModule,
+  SERVICE_NAMES,
+  CynaCacheModule,
+  isDatabaseSyncEnabled,
+} from '@cyna-api/common';
 import { S3Module } from '@cyna-api/s3';
 import {
   Category,
@@ -23,6 +30,7 @@ import { AddImageUploadColumns1739451600000 } from './migrations/1739451600000-A
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('catalog-service'),
     ConfigModule.forFeature(catalogConfig),
     LoggerModule,
     S3Module,
@@ -38,7 +46,7 @@ import { AddImageUploadColumns1739451600000 } from './migrations/1739451600000-A
       entities: [Category, Product, ProductImage, ProductCharacteristic, StockReservation],
       migrations: [AddImageUploadColumns1739451600000],
       migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
-      synchronize: process.env.DATABASE_SYNC === 'true',
+      synchronize: isDatabaseSyncEnabled(),
       logging: process.env.DATABASE_LOGGING === 'true',
     }),
     TypeOrmModule.forFeature([

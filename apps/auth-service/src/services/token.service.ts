@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
+import { JWT_ALGORITHM, JWT_AUDIENCE, JWT_ISSUER } from '@cyna-api/common';
 
 export interface AccessTokenPayload {
   sub: string;
@@ -33,21 +34,35 @@ export class TokenService {
   generateAccessToken(payload: AccessTokenPayload): string {
     return jwt.sign(payload, this.jwtSecret, {
       expiresIn: this.getAccessTokenExpirySeconds(),
+      algorithm: JWT_ALGORITHM,
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     });
   }
 
   generateTempToken(payload: TempTokenPayload): string {
     return jwt.sign(payload, this.jwtSecret, {
       expiresIn: 600, // 10 minutes in seconds
+      algorithm: JWT_ALGORITHM,
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
     });
   }
 
   verifyAccessToken(token: string): AccessTokenPayload {
-    return jwt.verify(token, this.jwtSecret) as AccessTokenPayload;
+    return jwt.verify(token, this.jwtSecret, {
+      algorithms: [JWT_ALGORITHM],
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    }) as AccessTokenPayload;
   }
 
   verifyTempToken(token: string): TempTokenPayload {
-    return jwt.verify(token, this.jwtSecret) as TempTokenPayload;
+    return jwt.verify(token, this.jwtSecret, {
+      algorithms: [JWT_ALGORITHM],
+      issuer: JWT_ISSUER,
+      audience: JWT_AUDIENCE,
+    }) as TempTokenPayload;
   }
 
   generateSecureToken(length: number = 32): string {

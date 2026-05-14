@@ -3,7 +3,14 @@ import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ClientsModule, Transport } from '@nestjs/microservices';
-import { CynaConfigModule, LoggerModule, SERVICE_NAMES, CynaCacheModule } from '@cyna-api/common';
+import {
+  CynaConfigModule,
+  HealthModule,
+  LoggerModule,
+  SERVICE_NAMES,
+  CynaCacheModule,
+  isDatabaseSyncEnabled,
+} from '@cyna-api/common';
 import { AnalyticsCache } from './entities';
 import { DashboardService, SalesService, ExportService } from './services';
 import { AnalyticsController } from './controllers';
@@ -12,6 +19,7 @@ import { analyticsConfig } from './config';
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('analytics-service'),
     ConfigModule.forFeature(analyticsConfig),
     LoggerModule,
     ScheduleModule.forRoot(),
@@ -24,7 +32,7 @@ import { analyticsConfig } from './config';
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
       entities: [AnalyticsCache],
-      synchronize: process.env.DATABASE_SYNC === 'true',
+      synchronize: isDatabaseSyncEnabled(),
       logging: process.env.DATABASE_LOGGING === 'true',
     }),
     TypeOrmModule.forFeature([AnalyticsCache]),

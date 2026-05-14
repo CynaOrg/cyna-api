@@ -1,6 +1,6 @@
 import { Injectable, Inject, HttpException, HttpStatus, Logger } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom, timeout, catchError, throwError } from 'rxjs';
+import { firstValueFrom, timeout, catchError, retry, throwError } from 'rxjs';
 import { SERVICE_NAMES, MESSAGE_PATTERNS, BillingPeriod } from '@cyna-api/common';
 import { AddCartItemDto, UpdateCartItemDto } from './dto';
 
@@ -15,13 +15,19 @@ export class CartService {
   ) {}
 
   async getCart(userId?: string, sessionId?: string) {
-    return this.sendMessage(MESSAGE_PATTERNS.ORDER.GET_CART, { userId, sessionId });
+    return this.sendMessage(
+      MESSAGE_PATTERNS.ORDER.GET_CART,
+      { userId, sessionId },
+      { retry: true },
+    );
   }
 
+  // No retry: mutation, must stay idempotent
   async addItem(userId?: string, sessionId?: string, dto?: AddCartItemDto) {
     return this.sendMessage(MESSAGE_PATTERNS.ORDER.ADD_CART_ITEM, { userId, sessionId, dto });
   }
 
+  // No retry: mutation, must stay idempotent
   async updateItem(
     userId?: string,
     sessionId?: string,
@@ -38,6 +44,7 @@ export class CartService {
     });
   }
 
+  // No retry: mutation, must stay idempotent
   async removeItem(
     userId?: string,
     sessionId?: string,
@@ -52,18 +59,25 @@ export class CartService {
     });
   }
 
+  // No retry: mutation, must stay idempotent
   async clearCart(userId?: string, sessionId?: string) {
     return this.sendMessage(MESSAGE_PATTERNS.ORDER.CLEAR_CART, { userId, sessionId });
   }
 
+  // No retry: mutation, must stay idempotent
   async mergeGuestCart(userId: string, sessionId: string) {
     return this.sendMessage(MESSAGE_PATTERNS.ORDER.MERGE_GUEST_CART, { userId, sessionId });
   }
 
-  private async sendMessage<T>(pattern: { cmd: string }, data: T) {
+  private async sendMessage<T>(
+    pattern: { cmd: string },
+    data: T,
+    options: { retry?: boolean } = {},
+  ) {
+    const obs = this.orderClient.send(pattern, data).pipe(timeout(this.TIMEOUT));
+    const withRetry = options.retry ? obs.pipe(retry({ count: 2, delay: 1000 })) : obs;
     return firstValueFrom(
-      this.orderClient.send(pattern, data).pipe(
-        timeout(this.TIMEOUT),
+      withRetry.pipe(
         catchError((err) => {
           this.logger.error(`Order service error [${pattern.cmd}]: ${JSON.stringify(err)}`);
 

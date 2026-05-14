@@ -1,3 +1,9 @@
+// This spec uses jest.mock('fs'), which prevents @nestjs/config from reading
+// the .env file at module-init time. JWT_SECRET is now validated as required
+// (min 32 chars) by libs/common's env validation schema, so we must seed it
+// on process.env before any import that transitively loads CynaConfigModule.
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'unit-test-secret-key-minimum-32-characters!!';
+
 import { Test, TestingModule } from '@nestjs/testing';
 import { EmailTemplateService } from './email-template.service';
 import { CynaLoggerService, Language } from '@cyna-api/common';

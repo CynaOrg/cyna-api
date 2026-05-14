@@ -17,17 +17,17 @@ Plateforme e-commerce B2B cybersécurité — backend NestJS 11 (microservices R
 
 9 services NestJS sur un seul monorepo Nest. Le gateway (port `3000`) parle aux 8 autres via RabbitMQ.
 
-| Service              | Port HTTP | Queue RMQ            |
-| -------------------- | --------- | -------------------- |
-| api-gateway          | 3000      | —                    |
-| auth-service         | 3001      | `auth.queue`         |
-| catalog-service      | 3002      | `catalog.queue`      |
-| order-service        | 3003      | `order.queue`        |
-| payment-service      | 3004      | `payment.queue`      |
-| user-service         | 3005      | `user.queue`         |
-| notification-service | 3006      | `notification.queue` |
-| content-service      | 3007      | `content.queue`      |
-| analytics-service    | 3008      | `analytics.queue`    |
+| Service              | Port HTTP | Queue RMQ             |
+| -------------------- | --------- | --------------------- |
+| api-gateway          | 3000      | —                     |
+| auth-service         | 3001      | `auth.queue`          |
+| catalog-service      | 3002      | `catalog.queue`       |
+| order-service        | 3003      | `order.queue`         |
+| payment-service      | 3004      | `payment.queue`       |
+| user-service         | 3005      | `user.queue`          |
+| notification-service | 3006      | `notification.emails` |
+| content-service      | 3007      | `content.queue`       |
+| analytics-service    | 3008      | `analytics.queue`     |
 
 Chaque service expose `/health` (HTTP) en plus de sa queue RMQ.
 

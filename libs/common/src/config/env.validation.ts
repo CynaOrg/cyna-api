@@ -33,6 +33,9 @@ export const envValidationSchema = Joi.object({
   // RabbitMQ
   RABBITMQ_URL: Joi.string().uri().default('amqp://guest:guest@localhost:5672'),
 
+  // Auth — JWT secret is required and must be strong enough to resist brute force.
+  JWT_SECRET: Joi.string().min(32).required(),
+
   // CORS
   CORS_ORIGINS: Joi.string().default('http://localhost:4200,http://localhost:8100'),
 

@@ -20,7 +20,7 @@ import {
 import { CatalogEventsPublisher } from '../../events';
 import { CynaLoggerService, CynaCacheService } from '@cyna-api/common';
 
-// Mock du logger
+// Logger mock
 const mockLogger = {
   log: jest.fn(),
   warn: jest.fn(),
@@ -28,14 +28,14 @@ const mockLogger = {
   debug: jest.fn(),
 };
 
-// Mock de l'event publisher
+// Event publisher mock
 const mockEventsPublisher = {
   emitProductCreated: jest.fn(),
   emitProductUpdated: jest.fn(),
   emitProductDeleted: jest.fn(),
 };
 
-// Mock du cache service
+// Cache service mock
 const mockCacheService = {
   get: jest.fn(),
   set: jest.fn(),
@@ -46,7 +46,7 @@ const mockCacheService = {
   reset: jest.fn(),
 };
 
-// Fixture: categorie pour les tests
+// Fixture: category for tests
 const createMockCategory = (overrides: Partial<Category> = {}): Category => ({
   id: 'cat-uuid-001',
   slug: 'services',
@@ -60,7 +60,7 @@ const createMockCategory = (overrides: Partial<Category> = {}): Category => ({
   ...overrides,
 });
 
-// Fixture: produit de base pour les tests
+// Fixture: base product for tests
 const createMockProduct = (overrides: Partial<Product> = {}): Product => ({
   id: 'prod-uuid-001',
   categoryId: 'cat-uuid-001',
@@ -86,7 +86,7 @@ const createMockProduct = (overrides: Partial<Product> = {}): Product => ({
   ...overrides,
 });
 
-// Fixture: image produit
+// Fixture: product image
 const createMockImage = (overrides: Partial<ProductImage> = {}): ProductImage => ({
   id: 'img-uuid-001',
   productId: 'prod-uuid-001',
@@ -100,7 +100,7 @@ const createMockImage = (overrides: Partial<ProductImage> = {}): ProductImage =>
   ...overrides,
 });
 
-// Tests du ProductService
+// ProductService tests
 describe('ProductService', () => {
   let service: ProductService;
   let productRepository: jest.Mocked<Repository<Product>>;
@@ -111,7 +111,7 @@ describe('ProductService', () => {
   let contentClient: { send: jest.Mock; emit: jest.Mock };
 
   beforeEach(async () => {
-    // Mock du QueryBuilder pour les requetes complexes
+    // QueryBuilder mock for complex queries
     queryBuilder = {
       leftJoinAndSelect: jest.fn().mockReturnThis(),
       leftJoin: jest.fn().mockReturnThis(),
@@ -206,9 +206,9 @@ describe('ProductService', () => {
 
   // ==================== Tests CRUD ====================
   describe('CRUD Operations', () => {
-    // Tests de creation de produit
+    // Product creation tests
     describe('create()', () => {
-      // Verifie la creation d'un produit SaaS avec priceMonthly et priceYearly
+      // Verifies the creation d'un produit SaaS avec priceMonthly et priceYearly
       it('should create a SaaS product with priceMonthly and priceYearly', async () => {
         const dto: CreateProductDto = {
           categoryId: 'cat-uuid-001',
@@ -249,7 +249,7 @@ describe('ProductService', () => {
         expect(mockEventsPublisher.emitProductCreated).toHaveBeenCalled();
       });
 
-      // Verifie la creation d'un produit physical avec priceUnit et stockQuantity
+      // Verifies the creation d'un produit physical avec priceUnit et stockQuantity
       it('should create a physical product with priceUnit and stockQuantity', async () => {
         const dto: CreateProductDto = {
           categoryId: 'cat-uuid-001',
@@ -288,7 +288,7 @@ describe('ProductService', () => {
         );
       });
 
-      // Verifie la creation d'un produit license avec priceUnit sans stock
+      // Verifies the creation d'un produit license avec priceUnit sans stock
       it('should create a license product with priceUnit without stock', async () => {
         const dto: CreateProductDto = {
           categoryId: 'cat-uuid-001',
@@ -324,7 +324,7 @@ describe('ProductService', () => {
         );
       });
 
-      // Verifie qu'une erreur est levee si la categorie n'existe pas
+      // Verifies an error is thrown when la categorie n'existe pas
       it('should throw RpcException if category does not exist', async () => {
         const dto: CreateProductDto = {
           categoryId: 'non-existent',
@@ -347,7 +347,7 @@ describe('ProductService', () => {
         });
       });
 
-      // Verifie qu'une erreur est levee si le slug existe deja
+      // Verifies an error is thrown when le slug existe deja
       it('should throw RpcException if slug already exists', async () => {
         const dto: CreateProductDto = {
           categoryId: 'cat-uuid-001',
@@ -371,7 +371,7 @@ describe('ProductService', () => {
         });
       });
 
-      // Verifie qu'une erreur est levee si le SKU existe deja
+      // Verifies an error is thrown when le SKU existe deja
       it('should throw RpcException if SKU already exists', async () => {
         const dto: CreateProductDto = {
           categoryId: 'cat-uuid-001',
@@ -398,9 +398,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de recherche de tous les produits
+    // Search tests across all products
     describe('findAll()', () => {
-      // Verifie la pagination correcte
+      // Verifies the pagination correcte
       it('should return correct pagination (page, limit, total, totalPages)', async () => {
         const query: ProductQueryDto = { page: 2, limit: 10 };
         const products = [createMockProduct()];
@@ -418,7 +418,7 @@ describe('ProductService', () => {
         expect(queryBuilder.take).toHaveBeenCalledWith(10);
       });
 
-      // Verifie le filtrage par categorySlug
+      // Verifies le filtrage par categorySlug
       it('should filter by categorySlug', async () => {
         const query: ProductQueryDto = { categorySlug: 'services' };
 
@@ -431,7 +431,7 @@ describe('ProductService', () => {
         });
       });
 
-      // Verifie le filtrage par productType
+      // Verifies le filtrage par productType
       it('should filter by productType', async () => {
         const query: ProductQueryDto = { productType: ProductType.SAAS };
 
@@ -444,7 +444,7 @@ describe('ProductService', () => {
         });
       });
 
-      // Verifie le filtrage par isAvailable
+      // Verifies le filtrage par isAvailable
       it('should filter by isAvailable', async () => {
         const query: ProductQueryDto = { isAvailable: true };
 
@@ -457,7 +457,7 @@ describe('ProductService', () => {
         });
       });
 
-      // Verifie le filtrage par isFeatured
+      // Verifies le filtrage par isFeatured
       it('should filter by isFeatured', async () => {
         const query: ProductQueryDto = { isFeatured: true };
 
@@ -470,7 +470,7 @@ describe('ProductService', () => {
         });
       });
 
-      // Verifie le filtrage par minPrice
+      // Verifies le filtrage par minPrice
       it('should filter by minPrice', async () => {
         const query: ProductQueryDto = { minPrice: 100 };
 
@@ -484,7 +484,7 @@ describe('ProductService', () => {
         );
       });
 
-      // Verifie le filtrage par maxPrice
+      // Verifies le filtrage par maxPrice
       it('should filter by maxPrice', async () => {
         const query: ProductQueryDto = { maxPrice: 500 };
 
@@ -498,7 +498,7 @@ describe('ProductService', () => {
         );
       });
 
-      // Verifie la recherche texte avec ILIKE sur nom et description
+      // Verifies the recherche texte avec ILIKE sur nom et description
       it('should search text on name and description with ILIKE', async () => {
         const query: ProductQueryDto = { search: 'security' };
 
@@ -513,9 +513,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de recherche par slug
+    // Search tests par slug
     describe('findBySlug()', () => {
-      // Verifie qu'un produit avec toutes ses relations est retourne
+      // Verifies un produit avec toutes ses relations est retourne
       it('should return product with all relations', async () => {
         const slug = 'soc-premium';
         const product = createMockProduct({ slug });
@@ -531,7 +531,7 @@ describe('ProductService', () => {
         expect(result).toEqual(product);
       });
 
-      // Verifie qu'une erreur 404 est levee si le produit n'existe pas
+      // Verifies a 404 error is thrown when le produit n'existe pas
       it('should throw RpcException with 404 if product not found', async () => {
         productRepository.findOne.mockResolvedValue(null);
 
@@ -544,9 +544,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de mise a jour
+    // Update tests
     describe('update()', () => {
-      // Verifie la mise a jour d'un produit
+      // Verifies the mise a jour d'un produit
       it('should update a product', async () => {
         const id = 'prod-uuid-001';
         const dto: UpdateProductDto = { nameFr: 'Updated Name' };
@@ -562,7 +562,7 @@ describe('ProductService', () => {
         expect(mockEventsPublisher.emitProductUpdated).toHaveBeenCalled();
       });
 
-      // Verifie qu'une erreur est levee si le nouveau slug existe deja
+      // Verifies an error is thrown when the new slug already exists
       it('should throw if new slug already exists', async () => {
         const id = 'prod-uuid-001';
         const dto: UpdateProductDto = { slug: 'existing-slug' };
@@ -630,9 +630,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de suppression (soft delete - PROD-10)
+    // Delete tests (soft delete - PROD-10)
     describe('delete()', () => {
-      // Verifie le soft delete d'un produit (deleted_at column)
+      // Verifies le soft delete d'un produit (deleted_at column)
       it('should soft delete a product', async () => {
         const id = 'prod-uuid-001';
         const product = createMockProduct({ id });
@@ -649,7 +649,7 @@ describe('ProductService', () => {
         expect(mockEventsPublisher.emitProductDeleted).toHaveBeenCalled();
       });
 
-      // Verifie qu'une erreur 404 est levee si le produit n'existe pas
+      // Verifies a 404 error is thrown when le produit n'existe pas
       it('should throw 404 if product not found', async () => {
         productRepository.findOne.mockResolvedValue(null);
 
@@ -661,7 +661,7 @@ describe('ProductService', () => {
         });
       });
 
-      // Verifie le bulk soft delete (deleted_at column)
+      // Verifies le bulk soft delete (deleted_at column)
       it('should soft delete products in bulk', async () => {
         const ids = ['prod-001', 'prod-002'];
         const product1 = createMockProduct({ id: 'prod-001' });
@@ -685,9 +685,9 @@ describe('ProductService', () => {
 
   // ==================== Tests IMAGE Management ====================
   describe('Image Management', () => {
-    // Tests d'ajout d'image
+    // Image add tests
     describe('addImage()', () => {
-      // Verifie que la premiere image devient automatiquement primary
+      // Verifies la premiere image devient automatiquement primary
       it('should make first image primary automatically', async () => {
         const productId = 'prod-uuid-001';
         const product = createMockProduct({ id: productId, images: [] });
@@ -707,7 +707,7 @@ describe('ProductService', () => {
         );
       });
 
-      // Verifie que si isPrimary=true, les autres images passent a false
+      // Verifies when isPrimary=true, les autres images passent a false
       it('should set other images to non-primary when isPrimary=true', async () => {
         const productId = 'prod-uuid-001';
         const existingImage = createMockImage({ productId, isPrimary: true });
@@ -730,7 +730,7 @@ describe('ProductService', () => {
         expect(imageRepository.update).toHaveBeenCalledWith({ productId }, { isPrimary: false });
       });
 
-      // Verifie qu'une erreur 404 est levee si le produit n'existe pas
+      // Verifies a 404 error is thrown when le produit n'existe pas
       it('should throw 404 if product not found', async () => {
         productRepository.findOne.mockResolvedValue(null);
 
@@ -745,9 +745,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de suppression d'image
+    // Image delete tests
     describe('deleteImage()', () => {
-      // Verifie la suppression d'une image et la reassignation du primary si necessaire
+      // Verifies the suppression d'une image et la reassignation du primary when necessaire
       it('should delete image and reassign primary if it was primary', async () => {
         const productId = 'prod-uuid-001';
         const imageId = 'img-uuid-001';
@@ -776,7 +776,7 @@ describe('ProductService', () => {
         );
       });
 
-      // Verifie qu'une erreur 404 est levee si l'image n'existe pas
+      // Verifies a 404 error is thrown when l'image n'existe pas
       it('should throw 404 if image not found', async () => {
         imageRepository.findOne.mockResolvedValue(null);
 
@@ -789,9 +789,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de setPrimaryImage
+    // setPrimaryImage tests
     describe('setPrimaryImage()', () => {
-      // Verifie le changement de l'image primary
+      // Verifies le changement de l'image primary
       it('should change primary image', async () => {
         const productId = 'prod-uuid-001';
         const imageId = 'img-uuid-002';
@@ -807,7 +807,7 @@ describe('ProductService', () => {
         expect(result.isPrimary).toBe(true);
       });
 
-      // Verifie qu'une erreur 404 est levee si l'image n'existe pas
+      // Verifies a 404 error is thrown when l'image n'existe pas
       it('should throw 404 if image not found', async () => {
         imageRepository.findOne.mockResolvedValue(null);
 
@@ -820,9 +820,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de reorderImages
+    // reorderImages tests
     describe('reorderImages()', () => {
-      // Verifie le reordonnancement des images selon l'ordre du tableau
+      // Verifies le reordonnancement des images selon l'ordre du tableau
       it('should reorder images according to array order', async () => {
         const productId = 'prod-uuid-001';
         const images = [
@@ -844,7 +844,7 @@ describe('ProductService', () => {
         expect(imageRepository.update).toHaveBeenCalledWith({ id: 'img-002' }, { displayOrder: 2 });
       });
 
-      // Verifie qu'une erreur est levee si des IDs d'images invalides sont fournis
+      // Verifies an error is thrown when des IDs d'images invalides sont fournis
       it('should throw error if invalid image IDs provided', async () => {
         const productId = 'prod-uuid-001';
         const images = [createMockImage({ id: 'img-001', productId })];
@@ -862,11 +862,11 @@ describe('ProductService', () => {
     });
   });
 
-  // ==================== Tests findFeatured et findByCategory ====================
+  // ==================== findFeatured and findByCategory tests ====================
   describe('Specialized Queries', () => {
-    // Tests de findFeatured
+    // findFeatured tests
     describe('findFeatured()', () => {
-      // Verifie le retour des produits featured
+      // Verifies returns des produits featured
       it('should return featured products limited by count', async () => {
         const featuredProducts = [
           createMockProduct({ isFeatured: true }),
@@ -886,7 +886,7 @@ describe('ProductService', () => {
         expect(result).toHaveLength(2);
       });
 
-      // Verifie la limite par defaut de 10
+      // Verifies the limite par defaut de 10
       it('should use default limit of 10', async () => {
         productRepository.find.mockResolvedValue([]);
 
@@ -896,9 +896,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de findByCategory
+    // findByCategory tests
     describe('findByCategory()', () => {
-      // Verifie le filtrage par categoryId
+      // Verifies le filtrage par categoryId
       it('should filter products by categoryId', async () => {
         const products = [createMockProduct()];
 
@@ -913,7 +913,7 @@ describe('ProductService', () => {
         expect(result.meta.total).toBe(1);
       });
 
-      // Verifie le filtrage additionnel par isAvailable
+      // Verifies le filtrage additionnel par isAvailable
       it('should apply isAvailable filter when specified', async () => {
         queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 
@@ -925,9 +925,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de search
+    // search tests
     describe('search()', () => {
-      // Verifie la recherche avec le terme
+      // Verifies the recherche avec le terme
       it('should search products with ILIKE on name and description', async () => {
         queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 
@@ -943,7 +943,7 @@ describe('ProductService', () => {
 
   // ==================== Tests Product with Characteristics ====================
   describe('Product with Characteristics', () => {
-    // Verifie la creation avec characteristics
+    // Verifies the creation avec characteristics
     it('should create product with characteristics', async () => {
       const dto: CreateProductDto = {
         categoryId: 'cat-uuid-001',
@@ -975,7 +975,7 @@ describe('ProductService', () => {
       expect(characteristicRepository.save).toHaveBeenCalled();
     });
 
-    // Verifie la mise a jour avec remplacement des characteristics
+    // Verifies the mise a jour avec remplacement des characteristics
     it('should update product and replace characteristics', async () => {
       const id = 'prod-uuid-001';
       const dto: UpdateProductDto = {
@@ -997,7 +997,7 @@ describe('ProductService', () => {
       expect(characteristicRepository.create).toHaveBeenCalled();
     });
 
-    // Verifie la suppression des characteristics sans remplacement
+    // Verifies the suppression des characteristics sans remplacement
     it('should clear characteristics when empty array provided', async () => {
       const id = 'prod-uuid-001';
       const dto: UpdateProductDto = { characteristics: [] };
@@ -1018,9 +1018,9 @@ describe('ProductService', () => {
 
   // ==================== Tests Stock dans ProductService ====================
   describe('Stock Management (ProductService)', () => {
-    // Tests de updateStock
+    // updateStock tests
     describe('updateStock()', () => {
-      // Verifie la mise a jour du stock d'un produit physical
+      // Verifies stock update for a physical product
       it('should update stock for physical product', async () => {
         const productId = 'prod-uuid-001';
         const product = createMockProduct({
@@ -1041,7 +1041,7 @@ describe('ProductService', () => {
         );
       });
 
-      // Verifie qu'une erreur est levee pour un produit non physical
+      // Verifies an error is thrown pour un produit non physical
       it('should throw error for non-physical product', async () => {
         const product = createMockProduct({ productType: ProductType.SAAS });
 
@@ -1056,9 +1056,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de getStockAlerts
+    // getStockAlerts tests
     describe('getStockAlerts()', () => {
-      // Verifie le retour des produits avec stock <= seuil
+      // Verifies returns des produits avec stock <= seuil
       it('should return products with stock <= threshold', async () => {
         const lowStockProducts = [
           createMockProduct({
@@ -1082,9 +1082,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de checkStock
+    // checkStock tests
     describe('checkStock()', () => {
-      // Verifie le retour true si stock suffisant
+      // Verifies true is returned when stock is sufficient
       it('should return available true if stock is sufficient', async () => {
         const product = createMockProduct({
           productType: ProductType.PHYSICAL,
@@ -1100,7 +1100,7 @@ describe('ProductService', () => {
         expect(result.requestedQuantity).toBe(50);
       });
 
-      // Verifie le retour false si stock insuffisant
+      // Verifies returns false when stock insuffisant
       it('should return available false if stock is insufficient', async () => {
         const product = createMockProduct({ productType: ProductType.PHYSICAL, stockQuantity: 10 });
 
@@ -1111,7 +1111,7 @@ describe('ProductService', () => {
         expect(result.available).toBe(false);
       });
 
-      // Verifie que les produits non-physical retournent toujours available true
+      // Verifies les produits non-physical retournent toujours available true
       it('should return available true for non-physical products', async () => {
         const product = createMockProduct({ productType: ProductType.SAAS });
 
@@ -1124,9 +1124,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de decrementStock
+    // decrementStock tests
     describe('decrementStock()', () => {
-      // Verifie la decrementation du stock
+      // Verifies the decrementation du stock
       it('should decrement stock for physical product', async () => {
         const product = createMockProduct({
           productType: ProductType.PHYSICAL,
@@ -1143,7 +1143,7 @@ describe('ProductService', () => {
         );
       });
 
-      // Verifie l'erreur si stock insuffisant
+      // Verifies l'erreur when stock insuffisant
       it('should throw INSUFFICIENT_STOCK if stock is insufficient', async () => {
         const product = createMockProduct({
           productType: ProductType.PHYSICAL,
@@ -1160,7 +1160,7 @@ describe('ProductService', () => {
         });
       });
 
-      // Verifie l'erreur pour produit non-physical
+      // Verifies l'erreur pour produit non-physical
       it('should throw error for non-physical product', async () => {
         const product = createMockProduct({ productType: ProductType.SAAS });
 
@@ -1175,9 +1175,9 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de incrementStock
+    // incrementStock tests
     describe('incrementStock()', () => {
-      // Verifie l'incrementation du stock
+      // Verifies l'incrementation du stock
       it('should increment stock for physical product', async () => {
         const product = createMockProduct({
           productType: ProductType.PHYSICAL,
@@ -1194,7 +1194,7 @@ describe('ProductService', () => {
         );
       });
 
-      // Verifie l'erreur pour produit non-physical
+      // Verifies l'erreur pour produit non-physical
       it('should throw error for non-physical product', async () => {
         const product = createMockProduct({ productType: ProductType.SAAS });
 
@@ -1208,7 +1208,7 @@ describe('ProductService', () => {
         });
       });
 
-      // Verifie l'erreur si produit non trouve
+      // Verifies l'erreur when produit non trouve
       it('should throw 404 if product not found', async () => {
         productRepository.findOne.mockResolvedValue(null);
 
@@ -1221,7 +1221,7 @@ describe('ProductService', () => {
       });
     });
 
-    // Tests de decrementStock - product not found
+    // decrementStock tests - product not found
     describe('decrementStock() - not found', () => {
       it('should throw 404 if product not found', async () => {
         productRepository.findOne.mockResolvedValue(null);
@@ -1238,7 +1238,7 @@ describe('ProductService', () => {
 
   // ==================== Tests Sorting ====================
   describe('Sorting', () => {
-    // Verifie le tri par prix mensuel
+    // Verifies le tri par prix mensuel
     it('should sort by price_monthly', async () => {
       queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 
@@ -1251,7 +1251,7 @@ describe('ProductService', () => {
       );
     });
 
-    // Verifie le tri par prix unitaire
+    // Verifies le tri par prix unitaire
     it('should sort by price_unit', async () => {
       queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 
@@ -1260,7 +1260,7 @@ describe('ProductService', () => {
       expect(queryBuilder.orderBy).toHaveBeenCalledWith('product.priceUnit', 'DESC', 'NULLS LAST');
     });
 
-    // Verifie le tri par date de creation
+    // Verifies le tri par date de creation
     it('should sort by created_at', async () => {
       queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 
@@ -1269,7 +1269,7 @@ describe('ProductService', () => {
       expect(queryBuilder.orderBy).toHaveBeenCalledWith('product.createdAt', 'DESC');
     });
 
-    // Verifie le tri par defaut (display_order)
+    // Verifies le tri par defaut (display_order)
     it('should sort by display_order by default', async () => {
       queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
 

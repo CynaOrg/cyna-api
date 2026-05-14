@@ -47,10 +47,6 @@ describe('PendingOrdersCleanupCron', () => {
     cron = module.get<PendingOrdersCleanupCron>(PendingOrdersCleanupCron);
   });
 
-  it('should be defined', () => {
-    expect(cron).toBeDefined();
-  });
-
   it('should issue a set-based UPDATE constrained to stale PENDING rows', async () => {
     await cron.handle();
 

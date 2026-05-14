@@ -143,6 +143,11 @@ export class CatalogController {
     return this.productService.findById(data.id);
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_IDS)
+  async findProductsByIds(@Payload() data: { ids: string[] }) {
+    return this.productService.findByIds(data.ids);
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.CATALOG.PRODUCT_FIND_BY_ID_ADMIN)
   async findProductByIdAdmin(@Payload() data: { id: string }): Promise<AdminProductResponseDto> {
     const product = await this.productService.findByIdAdmin(data.id);

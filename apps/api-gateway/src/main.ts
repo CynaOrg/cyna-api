@@ -41,8 +41,17 @@ async function bootstrap() {
   // Raw body for Stripe webhook (BEFORE other middlewares)
   app.use('/webhooks/stripe', express.raw({ type: 'application/json' }));
 
-  // Security middlewares
-  app.use(helmet());
+  // Security middlewares — explicit options:
+  // - contentSecurityPolicy disabled because we serve no HTML (API only); the
+  //   default CSP blocks Swagger UI assets when enabled in dev anyway.
+  // - crossOriginResourcePolicy set to cross-origin so the cyna-app (mobile)
+  //   and cyna-backoffice frontends can consume responses from another origin.
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
   app.use(compression());
   app.use(cookieParser());
 

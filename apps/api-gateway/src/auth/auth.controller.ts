@@ -30,13 +30,18 @@ import { CurrentUser } from './decorators';
 const isProduction =
   process.env.NODE_ENV === 'production' || !!process.env.RAILWAY_ENVIRONMENT_NAME;
 
+// Env-driven cookie domain — mirrors admin-auth.controller.ts. In production
+// set COOKIE_DOMAIN=.cyna.it so the refresh cookie is shared across subdomains.
+// Leave unset locally so the cookie binds to the current host (localhost/etc.).
+const cookieDomain = process.env.COOKIE_DOMAIN || undefined;
+
 const REFRESH_TOKEN_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: isProduction,
   sameSite: 'strict' as const,
   maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   path: '/',
-  ...(isProduction && { domain: '.cyna.it' }),
+  ...(cookieDomain ? { domain: cookieDomain } : {}),
 };
 
 @ApiTags('Auth')
@@ -194,7 +199,7 @@ export class AuthController {
       secure: isProduction,
       sameSite: 'strict' as const,
       path: '/',
-      ...(isProduction && { domain: '.cyna.it' }),
+      ...(cookieDomain ? { domain: cookieDomain } : {}),
     });
 
     return { message: 'common.messages.loggedOut' };

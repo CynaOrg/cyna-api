@@ -26,36 +26,44 @@ export class AuthService {
   // User Authentication
 
   async register(dto: RegisterDto) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.REGISTER_USER, dto);
   }
 
   async login(dto: LoginDto) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.VALIDATE_USER, dto);
   }
 
   async verifyEmail(dto: VerifyEmailDto) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.VERIFY_EMAIL, dto);
   }
 
   async resendVerification(dto: ResendVerificationDto) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.RESEND_VERIFICATION, {
       email: dto.email,
     });
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.FORGOT_PASSWORD, dto);
   }
 
   async resetPassword(dto: ResetPasswordDto) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.RESET_PASSWORD, dto);
   }
 
   async refreshToken(dto: { refreshToken: string }) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.REFRESH_TOKEN, dto);
   }
 
   async logout(userId: string, dto: { refreshToken?: string }) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.LOGOUT, {
       userId,
       refreshToken: dto.refreshToken,
@@ -65,22 +73,27 @@ export class AuthService {
   // Admin Authentication
 
   async adminLogin(dto: AdminLoginDto) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.ADMIN_LOGIN, dto);
   }
 
   async adminVerify2FA(dto: Verify2FADto) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.ADMIN_VERIFY_2FA, dto);
   }
 
   async adminResend2FA(dto: Resend2FADto) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.ADMIN_RESEND_2FA, dto);
   }
 
   async adminRefreshToken(dto: { refreshToken: string }) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.ADMIN_REFRESH_TOKEN, dto);
   }
 
   async adminLogout(adminId: string, dto: { refreshToken?: string }) {
+    // No retry: mutation, must stay idempotent
     return this.sendMessage(MESSAGE_PATTERNS.AUTH.ADMIN_LOGOUT, {
       adminId,
       refreshToken: dto.refreshToken,

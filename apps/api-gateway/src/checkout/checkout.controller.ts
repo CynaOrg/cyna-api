@@ -44,8 +44,10 @@ export class CheckoutController {
     // Prefer JWT email (authoritative for authenticated users), then body variants
     // for guests or when the cookie did not travel to the gateway.
     const email = req.user?.email ?? body.email ?? body.guestEmail;
+    // Never log raw email — even at debug level it ends up in production logs
+    // and constitutes PII leakage. Keep just the identity flag.
     this.logger.debug(
-      `createPaymentIntent userId=${userId ?? 'guest'} cartId=${body.cartId} email=${email ?? 'none'}`,
+      `createPaymentIntent userId=${userId ?? 'guest'} cartId=${body.cartId} hasEmail=${!!email}`,
     );
 
     if (!email) {

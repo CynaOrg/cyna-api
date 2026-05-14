@@ -31,7 +31,8 @@
     "adminAccountDisabled": "Le compte administrateur a été désactivé",
     "emailAlreadyTaken": "Cette adresse email est déjà utilisée",
     "cannotDeactivateSelf": "Vous ne pouvez pas désactiver votre propre compte",
-    "cannotDeleteSelf": "Vous ne pouvez pas supprimer votre propre compte"
+    "cannotDeleteSelf": "Vous ne pouvez pas supprimer votre propre compte",
+    "tooManyAttempts": "Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes."
   },
   "user": {
     "notFound": "Utilisateur non trouvé",
@@ -91,6 +92,10 @@
     "subscriptionUserIdRequired": "Identifiant utilisateur requis pour annuler un abonnement",
     "userServiceTimeout": "Le service utilisateur n'a pas répondu à temps",
     "catalogServiceTimeout": "Le service catalogue n'a pas répondu à temps"
+  },
+  "license": {
+    "notFound": "Licence non trouvée",
+    "invalidActivationLink": "Lien d'activation invalide ou expiré"
   },
   "content": {
     "slideNotFound": "Slide non trouvé",

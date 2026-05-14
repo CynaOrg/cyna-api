@@ -6,7 +6,7 @@ import { Product, ProductImage, ProductType } from '../../entities';
 import { S3Service } from '@cyna-api/s3';
 import { CynaLoggerService, CynaCacheService } from '@cyna-api/common';
 
-// Mock du logger
+// Logger mock
 const mockLogger = {
   log: jest.fn(),
   warn: jest.fn(),
@@ -14,14 +14,14 @@ const mockLogger = {
   debug: jest.fn(),
 };
 
-// Mock du S3Service
+// S3Service mock
 const mockS3Service = {
   generatePresignedPutUrl: jest.fn(),
   deleteObject: jest.fn(),
   getPublicUrl: jest.fn(),
 };
 
-// Fixture: produit de base
+// Fixture: base product
 const createMockProduct = (overrides: Partial<Product> = {}): Product =>
   ({
     id: 'prod-uuid-001',
@@ -44,7 +44,7 @@ const createMockProduct = (overrides: Partial<Product> = {}): Product =>
     ...overrides,
   }) as Product;
 
-// Fixture: image produit
+// Fixture: product image
 const createMockImage = (overrides: Partial<ProductImage> = {}): ProductImage =>
   ({
     id: 'img-uuid-001',

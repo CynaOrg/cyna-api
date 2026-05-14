@@ -4,7 +4,7 @@ import { CategoryService, ProductService, StockService, ImageService } from '../
 import { Category, Product, ProductType, ProductImage } from '../../entities';
 import { Language } from '@cyna-api/common';
 
-// Fixture: categorie pour les tests
+// Fixture: category for tests
 const createMockCategory = (overrides: Partial<Category> = {}): Category => ({
   id: 'cat-uuid-001',
   slug: 'services',
@@ -18,7 +18,7 @@ const createMockCategory = (overrides: Partial<Category> = {}): Category => ({
   ...overrides,
 });
 
-// Fixture: produit pour les tests
+// Fixture: product for tests
 const createMockProduct = (overrides: Partial<Product> = {}): Product => ({
   id: 'prod-uuid-001',
   categoryId: 'cat-uuid-001',
@@ -44,7 +44,7 @@ const createMockProduct = (overrides: Partial<Product> = {}): Product => ({
   ...overrides,
 });
 
-// Mock du CategoryService
+// CategoryService mock
 const mockCategoryService = {
   create: jest.fn(),
   findAll: jest.fn(),
@@ -55,7 +55,7 @@ const mockCategoryService = {
   reorder: jest.fn(),
 };
 
-// Mock du ProductService
+// ProductService mock
 const mockProductService = {
   create: jest.fn(),
   findAll: jest.fn(),
@@ -76,7 +76,7 @@ const mockProductService = {
   syncFeaturedFromTopProducts: jest.fn(),
 };
 
-// Mock du StockService
+// StockService mock
 const mockStockService = {
   updateStock: jest.fn(),
   getStockInfo: jest.fn(),
@@ -87,14 +87,14 @@ const mockStockService = {
   confirmReservation: jest.fn(),
 };
 
-// Mock du ImageService
+// ImageService mock
 const mockImageService = {
   requestUploadUrl: jest.fn(),
   confirmUpload: jest.fn(),
   deleteImage: jest.fn(),
 };
 
-// Tests d'integration du CatalogController
+// CatalogController integration tests
 describe('CatalogController', () => {
   let controller: CatalogController;
 
@@ -118,7 +118,7 @@ describe('CatalogController', () => {
 
   // ==================== Category Endpoints ====================
   describe('Category Endpoints', () => {
-    // Verifie que createCategory appelle le service
+    // Verifies createCategory calls the service
     describe('createCategory()', () => {
       it('should call categoryService.create and return the result', async () => {
         const dto = { slug: 'test', nameFr: 'Test', nameEn: 'Test' };
@@ -131,7 +131,7 @@ describe('CatalogController', () => {
         expect(mockCategoryService.create).toHaveBeenCalledWith(dto);
       });
 
-      // Verifie que l'erreur est propagee
+      // Verifies the error is propagated
       it('should propagate errors', async () => {
         mockCategoryService.create.mockRejectedValue(new Error('Test error'));
 
@@ -141,7 +141,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que updateCategory appelle le service avec les bons parametres
+    // Verifies updateCategory calls the service with the right arguments
     describe('updateCategory()', () => {
       it('should call categoryService.update with correct params', async () => {
         const category = createMockCategory();
@@ -153,7 +153,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que deleteCategory appelle le service
+    // Verifies deleteCategory calls the service
     describe('deleteCategory()', () => {
       it('should call categoryService.delete and return success', async () => {
         mockCategoryService.delete.mockResolvedValue(undefined);
@@ -165,7 +165,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que findAllCategories retourne les categories avec le bon language
+    // Verifies findAllCategories returns categories with the proper language
     describe('findAllCategories()', () => {
       it('should call categoryService.findAll and return results', async () => {
         const categories = [createMockCategory()];
@@ -177,7 +177,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que findCategoryBySlug appelle le service
+    // Verifies findCategoryBySlug calls the service
     describe('findCategoryBySlug()', () => {
       it('should call categoryService.findBySlug and return result', async () => {
         const category = createMockCategory();
@@ -189,7 +189,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que findCategoryById appelle le service
+    // Verifies findCategoryById calls the service
     describe('findCategoryById()', () => {
       it('should call categoryService.findById and return result', async () => {
         const category = createMockCategory();
@@ -227,7 +227,7 @@ describe('CatalogController', () => {
 
   // ==================== Product Endpoints ====================
   describe('Product Endpoints', () => {
-    // Verifie que createProduct appelle le service
+    // Verifies createProduct calls the service
     describe('createProduct()', () => {
       it('should call productService.create and return result', async () => {
         const dto = {
@@ -250,7 +250,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que updateProduct appelle le service
+    // Verifies updateProduct calls the service
     describe('updateProduct()', () => {
       it('should call productService.update with correct params', async () => {
         const product = createMockProduct();
@@ -262,7 +262,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que deleteProduct appelle le service
+    // Verifies deleteProduct calls the service
     describe('deleteProduct()', () => {
       it('should call productService.delete and return success', async () => {
         mockProductService.delete.mockResolvedValue(undefined);
@@ -274,7 +274,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que findAllProducts retourne les produits pagines
+    // Verifies findAllProducts returns paginated products
     describe('findAllProducts()', () => {
       it('should call productService.findAll and return paginated results', async () => {
         mockProductService.findAll.mockResolvedValue({
@@ -288,7 +288,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que findProductBySlug appelle le service
+    // Verifies findProductBySlug calls the service
     describe('findProductBySlug()', () => {
       it('should call productService.findBySlug and return result', async () => {
         const product = createMockProduct();
@@ -300,7 +300,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que searchProducts appelle le service avec les bons parametres
+    // Verifies searchProducts calls the service with the right arguments
     describe('searchProducts()', () => {
       it('should call productService.search with correct params', async () => {
         mockProductService.search.mockResolvedValue({
@@ -314,7 +314,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que findFeaturedProducts appelle le service
+    // Verifies findFeaturedProducts calls the service
     describe('findFeaturedProducts()', () => {
       it('should call productService.findFeatured and return results', async () => {
         mockProductService.findFeatured.mockResolvedValue([
@@ -408,7 +408,7 @@ describe('CatalogController', () => {
 
   // ==================== Product Images Endpoints ====================
   describe('Product Images Endpoints', () => {
-    // Verifie que addProductImage appelle le service
+    // Verifies addProductImage calls the service
     describe('addProductImage()', () => {
       it('should call productService.addImage with correct params', async () => {
         const image = { id: 'img-001', isPrimary: true } as ProductImage;
@@ -430,7 +430,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que deleteProductImage appelle le service
+    // Verifies deleteProductImage calls the service
     describe('deleteProductImage()', () => {
       it('should call imageService.deleteImage and return success', async () => {
         mockImageService.deleteImage.mockResolvedValue(undefined);
@@ -445,7 +445,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que setPrimaryProductImage appelle le service
+    // Verifies setPrimaryProductImage calls the service
     describe('setPrimaryProductImage()', () => {
       it('should call productService.setPrimaryImage with correct params', async () => {
         const image = { id: 'img-001', isPrimary: true } as ProductImage;
@@ -457,7 +457,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que reorderProductImages appelle le service
+    // Verifies reorderProductImages calls the service
     describe('reorderProductImages()', () => {
       it('should call productService.reorderImages with correct params', async () => {
         mockProductService.reorderImages.mockResolvedValue([]);
@@ -509,7 +509,7 @@ describe('CatalogController', () => {
 
   // ==================== Stock Endpoints ====================
   describe('Stock Endpoints', () => {
-    // Verifie que updateStock appelle le service
+    // Verifies updateStock calls the service
     describe('updateStock()', () => {
       it('should call stockService.updateStock with correct params', async () => {
         const product = createMockProduct({
@@ -524,7 +524,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que getStockInfo appelle le service
+    // Verifies getStockInfo calls the service
     describe('getStockInfo()', () => {
       it('should call stockService.getStockInfo and return result', async () => {
         mockStockService.getStockInfo.mockResolvedValue({
@@ -539,7 +539,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que getStockAlerts appelle le service
+    // Verifies getStockAlerts calls the service
     describe('getStockAlerts()', () => {
       it('should call stockService.getStockAlerts and return result', async () => {
         mockStockService.getStockAlerts.mockResolvedValue([]);
@@ -550,7 +550,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que checkStockAvailability appelle le service
+    // Verifies checkStockAvailability calls the service
     describe('checkStockAvailability()', () => {
       it('should call stockService.checkAvailability with correct params', async () => {
         mockStockService.checkAvailability.mockResolvedValue({ available: true });
@@ -561,7 +561,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que reserveStock appelle le service
+    // Verifies reserveStock calls the service
     describe('reserveStock()', () => {
       it('should call stockService.reserveStock with correct params', async () => {
         mockStockService.reserveStock.mockResolvedValue({ id: 'res-001' });
@@ -577,7 +577,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que releaseStock appelle le service
+    // Verifies releaseStock calls the service
     describe('releaseStock()', () => {
       it('should call stockService.releaseReservation and return success', async () => {
         mockStockService.releaseReservation.mockResolvedValue(undefined);
@@ -589,7 +589,7 @@ describe('CatalogController', () => {
       });
     });
 
-    // Verifie que confirmStock appelle le service
+    // Verifies confirmStock calls the service
     describe('confirmStock()', () => {
       it('should call stockService.confirmReservation and return success', async () => {
         mockStockService.confirmReservation.mockResolvedValue(undefined);

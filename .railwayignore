@@ -1,7 +1,2 @@
-# Hide the Dockerfile from Railway's builder auto-detection so each service
-# keeps its per-service Railpack config (startCommand `node dist/apps/<svc>/main`).
-# The Dockerfile is parameterised by `ARG SERVICE` and is meant for local
-# Docker builds, not for Railway (Railway has no UI to inject the build-arg
-# per service).
-Dockerfile
-.dockerignore
+# Reserved for future use. Dockerfile has been moved to docs/docker/ so
+# Railway falls back to Railpack auto-detection.

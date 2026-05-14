@@ -150,6 +150,13 @@ describe('OrderController', () => {
         undefined,
       );
     });
+
+    it('wraps service errors', async () => {
+      cartService.updateItem.mockRejectedValueOnce(new Error('fail'));
+      await expect(
+        controller.updateCartItem({ userId: 'u1', productId: 'p1', dto: { quantity: 1 } }),
+      ).rejects.toThrow(RpcException);
+    });
   });
 
   describe('removeCartItem', () => {
@@ -255,6 +262,11 @@ describe('OrderController', () => {
       expect(orderService.getOrdersByUserId).toHaveBeenCalledWith('u1');
       expect(result).toEqual([]);
     });
+
+    it('wraps service errors', async () => {
+      orderService.getOrdersByUserId.mockRejectedValueOnce(new Error('boom'));
+      await expect(controller.getOrders({ userId: 'u1' })).rejects.toThrow(RpcException);
+    });
   });
 
   describe('getOrder', () => {
@@ -273,6 +285,11 @@ describe('OrderController', () => {
 
       expect(orderService.getOrderById).toHaveBeenCalledWith('o1', undefined);
     });
+
+    it('wraps service errors', async () => {
+      orderService.getOrderById.mockRejectedValueOnce(new Error('fail'));
+      await expect(controller.getOrder({ orderId: 'o1' })).rejects.toThrow(RpcException);
+    });
   });
 
   describe('getOrderByPaymentIntent', () => {
@@ -283,6 +300,13 @@ describe('OrderController', () => {
 
       expect(orderService.getOrderByPaymentIntentId).toHaveBeenCalledWith('pi_1');
       expect(result).toBeNull();
+    });
+
+    it('wraps service errors', async () => {
+      orderService.getOrderByPaymentIntentId.mockRejectedValueOnce(new Error('boom'));
+      await expect(controller.getOrderByPaymentIntent({ paymentIntentId: 'pi_1' })).rejects.toThrow(
+        RpcException,
+      );
     });
   });
 
@@ -413,6 +437,13 @@ describe('OrderController', () => {
         'TRK1',
         'https://track/TRK1',
       );
+    });
+
+    it('wraps service errors', async () => {
+      orderService.adminUpdateOrderStatus.mockRejectedValueOnce(new Error('fail'));
+      await expect(
+        controller.adminUpdateStatus({ orderId: 'o1', status: 'shipped' }),
+      ).rejects.toThrow(RpcException);
     });
   });
 

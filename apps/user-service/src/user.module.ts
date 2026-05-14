@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import {
   CynaConfigModule,
+  HealthModule,
   LoggerModule,
   SERVICE_NAMES,
   isDatabaseSyncEnabled,
@@ -27,6 +28,7 @@ if (isProduction && !process.env.DATABASE_PASSWORD) {
 @Module({
   imports: [
     CynaConfigModule,
+    HealthModule.forService('user-service'),
     LoggerModule,
     TypeOrmModule.forRoot({
       type: 'postgres',

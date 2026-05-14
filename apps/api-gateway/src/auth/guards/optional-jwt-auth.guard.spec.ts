@@ -119,4 +119,22 @@ describe('OptionalJwtAuthGuard', () => {
     expect(guard.canActivate(ctx)).toBe(true);
     expect(request.user).toBeUndefined();
   });
+
+  it('should log and pass through (guest) on unexpected error from jwt.verify', () => {
+    // Simulate an unexpected non-JWT error during verification path.
+    const verifySpy = jest.spyOn(jwt, 'verify').mockImplementationOnce(() => {
+      const e = new Error('unexpected internal failure');
+      e.name = 'WeirdError';
+      throw e;
+    });
+    const token = signTestToken({ sub: 'u-1', email: 'g@cyna.io', type: 'user' });
+    const request: Record<string, unknown> = {
+      headers: { authorization: `Bearer ${token}` },
+    };
+    const ctx = buildContext(request);
+
+    expect(guard.canActivate(ctx)).toBe(true);
+    expect(request.user).toBeUndefined();
+    verifySpy.mockRestore();
+  });
 });

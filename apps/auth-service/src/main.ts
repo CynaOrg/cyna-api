@@ -6,10 +6,19 @@ import { AuthModule } from './auth.module';
 
 const logger = new Logger('AuthService');
 
+/**
+ * Hybrid bootstrap: HTTP listener (for /health probes from Railway) +
+ * RabbitMQ microservice listener (for business message patterns). The
+ * HTTP port is taken from PORT (Railway-provided) or HEALTH_PORT, with
+ * 3001 as the local-dev default.
+ */
 async function bootstrap() {
   const rabbitmqUrl = process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672';
+  const healthPort = parseInt(process.env.PORT || process.env.HEALTH_PORT || '3001', 10);
 
-  const app = await NestFactory.createMicroservice<MicroserviceOptions>(AuthModule, {
+  const app = await NestFactory.create(AuthModule);
+
+  app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
     options: {
       urls: [rabbitmqUrl],
@@ -33,8 +42,10 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen();
-  logger.log('Auth Service is listening on auth.queue');
+  await app.startAllMicroservices();
+  await app.listen(healthPort);
+
+  logger.log(`Auth Service is listening on auth.queue (RMQ) and :${healthPort} (health)`);
 }
 
 bootstrap();

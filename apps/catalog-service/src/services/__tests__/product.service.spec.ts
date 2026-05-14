@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder, UpdateResult } from 'typeorm';
+import { of } from 'rxjs';
 import { ProductService } from '../product.service';
 import {
   Product,
@@ -107,6 +108,7 @@ describe('ProductService', () => {
   let characteristicRepository: jest.Mocked<Repository<ProductCharacteristic>>;
   let imageRepository: jest.Mocked<Repository<ProductImage>>;
   let queryBuilder: jest.Mocked<SelectQueryBuilder<Product>>;
+  let contentClient: { send: jest.Mock; emit: jest.Mock };
 
   beforeEach(async () => {
     // Mock du QueryBuilder pour les requetes complexes
@@ -177,7 +179,7 @@ describe('ProductService', () => {
         },
         {
           provide: 'CONTENT_SERVICE',
-          useValue: { send: jest.fn(), emit: jest.fn() },
+          useValue: (contentClient = { send: jest.fn(), emit: jest.fn() }),
         },
       ],
     }).compile();
@@ -576,6 +578,55 @@ describe('ProductService', () => {
             code: 'PRODUCT_SLUG_EXISTS',
           }),
         });
+      });
+
+      it('should throw 409 PRODUCT_SKU_EXISTS when new sku is already taken', async () => {
+        const id = 'prod-uuid-001';
+        const existingProduct = createMockProduct({ id, sku: 'OLD-SKU' });
+        productRepository.findOne
+          .mockResolvedValueOnce(existingProduct) // findById
+          .mockResolvedValueOnce(createMockProduct({ sku: 'NEW-SKU' })); // sku check
+
+        await expect(service.update(id, { sku: 'NEW-SKU' })).rejects.toMatchObject({
+          error: expect.objectContaining({
+            statusCode: 409,
+            code: 'PRODUCT_SKU_EXISTS',
+          }),
+        });
+      });
+
+      it('should throw 404 CATEGORY_NOT_FOUND when target category does not exist', async () => {
+        const id = 'prod-uuid-001';
+        const existingProduct = createMockProduct({ id, categoryId: 'cat-1' });
+        productRepository.findOne.mockResolvedValueOnce(existingProduct);
+        categoryRepository.findOne.mockResolvedValueOnce(null);
+
+        await expect(service.update(id, { categoryId: 'cat-2' })).rejects.toMatchObject({
+          error: expect.objectContaining({
+            statusCode: 404,
+            code: 'CATEGORY_NOT_FOUND',
+          }),
+        });
+      });
+
+      it('should set isFeatured=false when toggling on a non-toggleable productType', async () => {
+        const id = 'prod-uuid-001';
+        // Create a product whose type does not map to a FeaturedProductType.
+        const existingProduct = createMockProduct({
+          id,
+          productType: 'BUNDLE' as unknown as ProductType,
+          isFeatured: true,
+        });
+        productRepository.findOne
+          .mockResolvedValueOnce(existingProduct) // findById
+          .mockResolvedValueOnce(existingProduct); // findById after save
+        productRepository.save.mockImplementation((p) => Promise.resolve(p as Product));
+
+        await service.update(id, { isFeatured: true });
+
+        expect(productRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({ isFeatured: false }),
+        );
       });
     });
 
@@ -1225,6 +1276,338 @@ describe('ProductService', () => {
       await service.findAll({});
 
       expect(queryBuilder.orderBy).toHaveBeenCalledWith('product.displayOrder', 'ASC');
+    });
+  });
+
+  // ==================== Admin variants ====================
+  describe('findByIdAdmin()', () => {
+    it('should return product without using cache', async () => {
+      const product = createMockProduct({ id: 'p-1' });
+      productRepository.findOne.mockResolvedValue(product);
+
+      const result = await service.findByIdAdmin('p-1');
+
+      expect(productRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'p-1' },
+        relations: ['category', 'images', 'characteristics'],
+      });
+      expect(result).toEqual(product);
+    });
+
+    it('should throw RpcException 404 when product not found', async () => {
+      productRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.findByIdAdmin('missing')).rejects.toMatchObject({
+        error: expect.objectContaining({
+          statusCode: 404,
+          code: 'PRODUCT_NOT_FOUND',
+        }),
+      });
+    });
+  });
+
+  describe('findAllAdmin()', () => {
+    it('should return all products paginated without using the cache', async () => {
+      const products = [createMockProduct()];
+      queryBuilder.getManyAndCount.mockResolvedValue([products, 1]);
+
+      const result = await service.findAllAdmin({ page: 1, limit: 20 });
+
+      expect(result.data).toEqual(products);
+      expect(result.meta.total).toBe(1);
+      expect(result.meta.totalPages).toBe(1);
+      // cache must NOT be consulted on admin path
+      expect(mockCacheService.get).not.toHaveBeenCalled();
+    });
+
+    it('should default page/limit when not provided', async () => {
+      queryBuilder.getManyAndCount.mockResolvedValue([[], 0]);
+
+      const result = await service.findAllAdmin({});
+
+      expect(result.meta.page).toBe(1);
+      expect(result.meta.limit).toBe(20);
+    });
+  });
+
+  describe('findAll() — cached', () => {
+    it('should return cached result without querying the repository', async () => {
+      const cachedResult = {
+        data: [createMockProduct({ id: 'cached-1' })],
+        meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      };
+      mockCacheService.get.mockResolvedValueOnce(cachedResult);
+
+      const result = await service.findAll({});
+
+      expect(result).toEqual(cachedResult);
+      expect(queryBuilder.getManyAndCount).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('bulkDelete()', () => {
+    it('should soft-delete every valid product and report counts', async () => {
+      const p1 = createMockProduct({ id: 'p1' });
+      const p2 = createMockProduct({ id: 'p2' });
+      productRepository.findOne.mockResolvedValueOnce(p1).mockResolvedValueOnce(p2);
+      productRepository.softDelete.mockResolvedValue({ affected: 1 } as never);
+
+      const result = await service.bulkDelete(['p1', 'p2']);
+
+      expect(productRepository.softDelete).toHaveBeenCalledTimes(2);
+      expect(result.deletedCount).toBe(2);
+      expect(result.failedIds).toEqual([]);
+      expect(mockEventsPublisher.emitProductDeleted).toHaveBeenCalledTimes(2);
+    });
+
+    it('should record missing ids as failed and continue', async () => {
+      productRepository.findOne
+        .mockResolvedValueOnce(createMockProduct({ id: 'p1' }))
+        .mockResolvedValueOnce(null); // p2 not found
+      productRepository.softDelete.mockResolvedValue({ affected: 1 } as never);
+
+      const result = await service.bulkDelete(['p1', 'p2']);
+
+      expect(result.deletedCount).toBe(1);
+      expect(result.failedIds).toEqual(['p2']);
+    });
+
+    it('should catch per-product errors and mark them as failed', async () => {
+      productRepository.findOne.mockResolvedValueOnce(createMockProduct({ id: 'p1' }));
+      productRepository.softDelete.mockRejectedValueOnce(new Error('db boom'));
+
+      const result = await service.bulkDelete(['p1']);
+
+      expect(result.deletedCount).toBe(0);
+      expect(result.failedIds).toEqual(['p1']);
+    });
+
+    it('should not invalidate cache when nothing was deleted', async () => {
+      productRepository.findOne.mockResolvedValueOnce(null);
+
+      await service.bulkDelete(['unknown']);
+
+      expect(mockCacheService.delByPattern).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('syncFeaturedFromTopProducts()', () => {
+    it('should be a no-op when added and removed are both empty', async () => {
+      const updateQb = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({} as UpdateResult),
+      };
+      (productRepository.createQueryBuilder as jest.Mock).mockReturnValue(updateQb);
+
+      await service.syncFeaturedFromTopProducts('saas', [], []);
+
+      expect(updateQb.execute).not.toHaveBeenCalled();
+    });
+
+    it('should update added ids to isFeatured=true', async () => {
+      const updateQb = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({} as UpdateResult),
+      };
+      (productRepository.createQueryBuilder as jest.Mock).mockReturnValue(updateQb);
+
+      await service.syncFeaturedFromTopProducts('saas', ['a', 'b'], []);
+
+      expect(updateQb.set).toHaveBeenCalledWith({ isFeatured: true });
+      expect(updateQb.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('should update removed ids to isFeatured=false', async () => {
+      const updateQb = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({} as UpdateResult),
+      };
+      (productRepository.createQueryBuilder as jest.Mock).mockReturnValue(updateQb);
+
+      await service.syncFeaturedFromTopProducts('saas', [], ['x']);
+
+      expect(updateQb.set).toHaveBeenCalledWith({ isFeatured: false });
+      expect(updateQb.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('should update both added and removed and invalidate cache', async () => {
+      const updateQb = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({} as UpdateResult),
+      };
+      (productRepository.createQueryBuilder as jest.Mock).mockReturnValue(updateQb);
+
+      await service.syncFeaturedFromTopProducts('saas', ['a'], ['b']);
+
+      expect(updateQb.execute).toHaveBeenCalledTimes(2);
+      expect(mockCacheService.delByPattern).toHaveBeenCalled();
+    });
+  });
+
+  describe('findBySlug() — cached', () => {
+    it('should return cached product without hitting the repository', async () => {
+      const cached = createMockProduct({ slug: 'cached-product' });
+      mockCacheService.get.mockResolvedValueOnce(cached);
+
+      const result = await service.findBySlug('cached-product');
+
+      expect(result).toEqual(cached);
+      expect(productRepository.findOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('findById() — cached + not found', () => {
+    it('should return cached product when cache hit', async () => {
+      const cached = createMockProduct({ id: 'cached-id' });
+      mockCacheService.get.mockResolvedValueOnce(cached);
+
+      const result = await service.findById('cached-id');
+
+      expect(result).toEqual(cached);
+      expect(productRepository.findOne).not.toHaveBeenCalled();
+    });
+
+    it('should throw RpcException 404 when not found and cache miss', async () => {
+      mockCacheService.get.mockResolvedValueOnce(undefined);
+      productRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.findById('missing')).rejects.toMatchObject({
+        error: expect.objectContaining({
+          statusCode: 404,
+          code: 'PRODUCT_NOT_FOUND',
+        }),
+      });
+    });
+  });
+
+  describe('findByCategory() — cached', () => {
+    it('should return cached result without querying', async () => {
+      const cachedResult = {
+        data: [createMockProduct()],
+        meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
+      };
+      mockCacheService.get.mockResolvedValueOnce(cachedResult);
+
+      const result = await service.findByCategory('cat-1', {});
+
+      expect(result).toEqual(cachedResult);
+      expect(queryBuilder.getManyAndCount).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reorderImages() — not found', () => {
+    it('should throw 404 when product does not exist', async () => {
+      productRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.reorderImages('missing', ['i1'])).rejects.toMatchObject({
+        error: expect.objectContaining({
+          statusCode: 404,
+          code: 'PRODUCT_NOT_FOUND',
+        }),
+      });
+    });
+  });
+
+  describe('updateStock() — not found', () => {
+    it('should throw 404 when product does not exist', async () => {
+      productRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.updateStock('missing', 10)).rejects.toMatchObject({
+        error: expect.objectContaining({
+          statusCode: 404,
+          code: 'PRODUCT_NOT_FOUND',
+        }),
+      });
+    });
+  });
+
+  describe('checkStock() — not found', () => {
+    it('should throw 404 when product does not exist', async () => {
+      productRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.checkStock('missing', 1)).rejects.toMatchObject({
+        error: expect.objectContaining({
+          statusCode: 404,
+          code: 'PRODUCT_NOT_FOUND',
+        }),
+      });
+    });
+  });
+
+  describe('onApplicationBootstrap()', () => {
+    it('should reconcile featured products from content service snapshot', async () => {
+      const reconcileSpy = jest
+        .spyOn(service, 'reconcileFeaturedFromFullSync')
+        .mockResolvedValue(undefined);
+      contentClient.send.mockReturnValueOnce(
+        of({ saasIds: ['s1'], physicalIds: ['p1'], licenseIds: [] }),
+      );
+
+      await service.onApplicationBootstrap();
+      // wait microtasks for the fire-and-forget call to settle
+      await new Promise((r) => setImmediate(r));
+
+      expect(contentClient.send).toHaveBeenCalled();
+      expect(reconcileSpy).toHaveBeenCalledWith(['s1'], ['p1'], []);
+    });
+
+    it('should default snapshot fields to empty arrays when missing', async () => {
+      const reconcileSpy = jest
+        .spyOn(service, 'reconcileFeaturedFromFullSync')
+        .mockResolvedValue(undefined);
+      contentClient.send.mockReturnValueOnce(of({}));
+
+      await service.onApplicationBootstrap();
+      await new Promise((r) => setImmediate(r));
+
+      expect(reconcileSpy).toHaveBeenCalledWith([], [], []);
+    });
+  });
+
+  describe('reconcileFeaturedFromFullSync()', () => {
+    it('should turn on featured for given ids and turn off others', async () => {
+      const updateQb = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({} as UpdateResult),
+      };
+      (productRepository.createQueryBuilder as jest.Mock).mockReturnValue(updateQb);
+
+      await service.reconcileFeaturedFromFullSync(['s1'], ['p1'], ['l1']);
+
+      // 1 call to turn on, 1 call to turn off the rest
+      expect(updateQb.execute).toHaveBeenCalledTimes(2);
+      expect(mockCacheService.delByPattern).toHaveBeenCalled();
+    });
+
+    it('should still issue the turn-off query when featuredIds is empty', async () => {
+      const updateQb = {
+        update: jest.fn().mockReturnThis(),
+        set: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        execute: jest.fn().mockResolvedValue({} as UpdateResult),
+      };
+      (productRepository.createQueryBuilder as jest.Mock).mockReturnValue(updateQb);
+
+      await service.reconcileFeaturedFromFullSync([], [], []);
+
+      // only the turn-off query runs
+      expect(updateQb.execute).toHaveBeenCalledTimes(1);
     });
   });
 });

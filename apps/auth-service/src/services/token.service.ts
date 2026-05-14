@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as jwt from 'jsonwebtoken';
 import * as crypto from 'crypto';
+import { randomUUID } from 'crypto';
 import { JWT_ALGORITHM, JWT_AUDIENCE, JWT_ISSUER } from '@cyna-api/common';
 
 export interface AccessTokenPayload {
@@ -32,11 +33,15 @@ export class TokenService {
   }
 
   generateAccessToken(payload: AccessTokenPayload): string {
+    // jwtid stamps a unique JTI claim on every token so we can target a single
+    // session for revocation. TODO(security): wire JTI blocklist (Redis SET
+    // with TTL = remaining token lifetime) at logout — ENABLE JTI BLOCKLIST AT v2.
     return jwt.sign(payload, this.jwtSecret, {
       expiresIn: this.getAccessTokenExpirySeconds(),
       algorithm: JWT_ALGORITHM,
       issuer: JWT_ISSUER,
       audience: JWT_AUDIENCE,
+      jwtid: randomUUID(),
     });
   }
 
@@ -46,6 +51,7 @@ export class TokenService {
       algorithm: JWT_ALGORITHM,
       issuer: JWT_ISSUER,
       audience: JWT_AUDIENCE,
+      jwtid: randomUUID(),
     });
   }
 

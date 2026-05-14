@@ -7,7 +7,7 @@ import { Category } from '../../entities';
 import { CreateCategoryDto, UpdateCategoryDto, CategoryQueryDto } from '../../dto';
 import { CynaLoggerService, CynaCacheService } from '@cyna-api/common';
 
-// Mock du logger
+// Logger mock
 const mockLogger = {
   log: jest.fn(),
   warn: jest.fn(),
@@ -15,7 +15,7 @@ const mockLogger = {
   debug: jest.fn(),
 };
 
-// Mock du cache service
+// Cache service mock
 const mockCacheService = {
   get: jest.fn(),
   set: jest.fn(),
@@ -26,7 +26,7 @@ const mockCacheService = {
   reset: jest.fn(),
 };
 
-// Fixture: categorie de base pour les tests
+// Fixture: base category for tests
 const createMockCategory = (overrides: Partial<Category> = {}): Category => ({
   id: 'cat-uuid-001',
   slug: 'services',
@@ -43,14 +43,14 @@ const createMockCategory = (overrides: Partial<Category> = {}): Category => ({
   ...overrides,
 });
 
-// Tests du CategoryService
+// CategoryService tests
 describe('CategoryService', () => {
   let service: CategoryService;
   let repository: jest.Mocked<Repository<Category>>;
   let queryBuilder: jest.Mocked<SelectQueryBuilder<Category>>;
 
   beforeEach(async () => {
-    // Mock du QueryBuilder pour les requetes complexes
+    // QueryBuilder mock for complex queries
     queryBuilder = {
       leftJoin: jest.fn().mockReturnThis(),
       addSelect: jest.fn().mockReturnThis(),
@@ -105,9 +105,9 @@ describe('CategoryService', () => {
     mockCacheService.get.mockResolvedValue(undefined);
   });
 
-  // Tests de creation d'une categorie
+  // Category creation tests
   describe('create()', () => {
-    // Verifie qu'une categorie est creee avec un slug unique
+    // Verifies a category is created with a unique slug
     it('should create a category with unique slug', async () => {
       const dto: CreateCategoryDto = {
         slug: 'new-category',
@@ -138,7 +138,7 @@ describe('CategoryService', () => {
       expect(result.slug).toBe(dto.slug);
     });
 
-    // Verifie qu'une erreur 409 est levee si le slug existe deja
+    // Verifies a 409 error is thrown when the slug already exists
     it('should throw RpcException with 409 CATEGORY_SLUG_EXISTS if slug already exists', async () => {
       const dto: CreateCategoryDto = {
         slug: 'existing-slug',
@@ -157,7 +157,7 @@ describe('CategoryService', () => {
       });
     });
 
-    // Verifie que displayOrder et isActive ont des valeurs par defaut
+    // Verifies displayOrder and isActive have default values
     it('should use default values for displayOrder and isActive', async () => {
       const dto: CreateCategoryDto = {
         slug: 'test-category',
@@ -180,9 +180,9 @@ describe('CategoryService', () => {
     });
   });
 
-  // Tests de recuperation de toutes les categories
+  // Tests: fetching all categories
   describe('findAll()', () => {
-    // Verifie le filtrage par isActive
+    // Verifies filtering by isActive
     it('should return categories filtered by isActive', async () => {
       const query: CategoryQueryDto = { isActive: true };
       const categories = [createMockCategory()];
@@ -197,7 +197,7 @@ describe('CategoryService', () => {
       expect(result).toEqual(categories);
     });
 
-    // Verifie que les categories sont ordonnees par displayOrder
+    // Verifies categories are ordered by displayOrder
     it('should return categories ordered by displayOrder ASC', async () => {
       const query: CategoryQueryDto = {};
       const categories = [
@@ -212,7 +212,7 @@ describe('CategoryService', () => {
       expect(queryBuilder.orderBy).toHaveBeenCalledWith('category.displayOrder', 'ASC');
     });
 
-    // Verifie que le filtre isActive n'est pas applique si non specifie
+    // Verifies the isActive filter is not applied when unspecified
     it('should not filter by isActive if not specified', async () => {
       const query: CategoryQueryDto = {};
 
@@ -224,9 +224,9 @@ describe('CategoryService', () => {
     });
   });
 
-  // Tests de recuperation d'une categorie par slug
+  // Tests: fetching a category by slug
   describe('findBySlug()', () => {
-    // Verifie qu'une categorie avec ses produits est retournee
+    // Verifies a category with its products is returned
     it('should return category with its products', async () => {
       const slug = 'services';
       const category = createMockCategory({ slug });
@@ -245,7 +245,7 @@ describe('CategoryService', () => {
       expect(result).toEqual(category);
     });
 
-    // Verifie qu'une erreur 404 est levee si la categorie n'existe pas
+    // Verifies a 404 error is thrown when the category does not exist
     it('should throw RpcException with 404 CATEGORY_NOT_FOUND if category does not exist', async () => {
       const slug = 'non-existent';
 
@@ -260,9 +260,9 @@ describe('CategoryService', () => {
     });
   });
 
-  // Tests de mise a jour d'une categorie
+  // Category update tests
   describe('update()', () => {
-    // Verifie qu'une categorie est mise a jour correctement
+    // Verifies a category is updated correctly
     it('should update a category', async () => {
       const id = 'cat-uuid-001';
       const dto: UpdateCategoryDto = { nameFr: 'Updated Name' };
@@ -278,7 +278,7 @@ describe('CategoryService', () => {
       expect(result.nameFr).toBe(dto.nameFr);
     });
 
-    // Verifie qu'une erreur est levee si le nouveau slug existe deja
+    // Verifies an error is thrown when the new slug already exists
     it('should throw RpcException if new slug already exists', async () => {
       const id = 'cat-uuid-001';
       const dto: UpdateCategoryDto = { slug: 'existing-slug' };
@@ -297,7 +297,7 @@ describe('CategoryService', () => {
       });
     });
 
-    // Verifie que la mise a jour fonctionne si le slug reste identique
+    // Verifies the update works when the slug remains identical
     it('should allow update when slug is the same', async () => {
       const id = 'cat-uuid-001';
       const dto: UpdateCategoryDto = { slug: 'services', nameFr: 'Updated' };
@@ -313,9 +313,9 @@ describe('CategoryService', () => {
     });
   });
 
-  // Tests de suppression d'une categorie
+  // Category delete tests
   describe('delete()', () => {
-    // Verifie qu'une categorie sans produits est supprimee
+    // Verifies a category without products is deleted
     it('should delete a category without products', async () => {
       const id = 'cat-uuid-001';
       const category = createMockCategory({ id, products: [] });
@@ -332,7 +332,7 @@ describe('CategoryService', () => {
       expect(repository.remove).toHaveBeenCalledWith(category);
     });
 
-    // Verifie qu'une erreur 409 est levee si la categorie a des produits
+    // Verifies a 409 error is thrown when the category has products
     it('should throw RpcException with 409 CATEGORY_HAS_PRODUCTS if category has products', async () => {
       const id = 'cat-uuid-001';
       const category = createMockCategory({
@@ -351,7 +351,7 @@ describe('CategoryService', () => {
       });
     });
 
-    // Verifie qu'une erreur 404 est levee si la categorie n'existe pas
+    // Verifies a 404 error is thrown when the category does not exist
     it('should throw RpcException with 404 if category does not exist', async () => {
       const id = 'non-existent';
 
@@ -367,9 +367,9 @@ describe('CategoryService', () => {
     });
   });
 
-  // Tests de findById
+  // findById tests
   describe('findById()', () => {
-    // Verifie qu'une categorie est retournee par son ID
+    // Verifies a category is returned by its ID
     it('should return category by id', async () => {
       const id = 'cat-uuid-001';
       const category = createMockCategory({ id });
@@ -382,7 +382,7 @@ describe('CategoryService', () => {
       expect(result).toEqual(category);
     });
 
-    // Verifie qu'une erreur 404 est levee si l'ID n'existe pas
+    // Verifies a 404 error is thrown when the ID does not exist
     it('should throw RpcException with 404 if category not found', async () => {
       const id = 'non-existent';
 
@@ -441,7 +441,7 @@ describe('CategoryService', () => {
 
       await service.update('cat-1', { slug: 'new-slug', nameFr: 'X' });
 
-      // Verifie que del a ete appele avec une cle contenant le nouveau slug
+      // Verifies del was called with a key containing the new slug
       const delCalls = (mockCacheService.del as jest.Mock).mock.calls.flat();
       expect(delCalls.some((k: string) => typeof k === 'string' && k.includes('new-slug'))).toBe(
         true,

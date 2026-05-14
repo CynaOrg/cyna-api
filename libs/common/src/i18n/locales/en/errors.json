@@ -31,7 +31,8 @@
     "adminAccountDisabled": "The administrator account has been disabled",
     "emailAlreadyTaken": "This email address is already in use",
     "cannotDeactivateSelf": "You cannot deactivate your own account",
-    "cannotDeleteSelf": "You cannot delete your own account"
+    "cannotDeleteSelf": "You cannot delete your own account",
+    "tooManyAttempts": "Too many login attempts. Please try again in a few minutes."
   },
   "user": {
     "notFound": "User not found",
@@ -91,6 +92,10 @@
     "subscriptionUserIdRequired": "User ID is required for user-initiated cancellations",
     "userServiceTimeout": "User service did not respond in time",
     "catalogServiceTimeout": "Catalog service did not respond in time"
+  },
+  "license": {
+    "notFound": "License not found",
+    "invalidActivationLink": "Invalid or expired activation link"
   },
   "content": {
     "slideNotFound": "Slide not found",

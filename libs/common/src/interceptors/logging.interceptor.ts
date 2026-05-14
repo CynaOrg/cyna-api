@@ -22,7 +22,15 @@ export class LoggingInterceptor implements NestInterceptor {
     const correlationId = getCorrelationId();
     const startTime = Date.now();
 
-    this.logger.debug(`Incoming ${method} ${url}`, {
+    // Redact query strings that may contain PII/secrets. If any query key
+    // matches a sensitive pattern, log only the path (drops `?…`) — otherwise
+    // log the full URL so debugging stays useful.
+    const SENSITIVE_QUERY_KEY = /email|password|token|code|secret|key/i;
+    const queryKeys = request.query ? Object.keys(request.query) : [];
+    const hasSensitiveQuery = queryKeys.some((k) => SENSITIVE_QUERY_KEY.test(k));
+    const safeUrl = hasSensitiveQuery ? request.path : url;
+
+    this.logger.debug(`Incoming ${method} ${safeUrl}`, {
       correlationId,
       ip,
       userAgent: userAgent.substring(0, 100),
@@ -34,10 +42,10 @@ export class LoggingInterceptor implements NestInterceptor {
           const responseTime = Date.now() - startTime;
           const statusCode = response.statusCode;
 
-          this.logger.log(`${method} ${url} ${statusCode} ${responseTime}ms`, {
+          this.logger.log(`${method} ${safeUrl} ${statusCode} ${responseTime}ms`, {
             correlationId,
             method,
-            url,
+            url: safeUrl,
             statusCode,
             responseTime,
             ip,
@@ -47,15 +55,18 @@ export class LoggingInterceptor implements NestInterceptor {
           const responseTime = Date.now() - startTime;
           const statusCode = error.status || 500;
 
-          this.logger.warn(`${method} ${url} ${statusCode} ${responseTime}ms - ${error.message}`, {
-            correlationId,
-            method,
-            url,
-            statusCode,
-            responseTime,
-            ip,
-            error: error.message,
-          });
+          this.logger.warn(
+            `${method} ${safeUrl} ${statusCode} ${responseTime}ms - ${error.message}`,
+            {
+              correlationId,
+              method,
+              url: safeUrl,
+              statusCode,
+              responseTime,
+              ip,
+              error: error.message,
+            },
+          );
         },
       }),
     );

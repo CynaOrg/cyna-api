@@ -1,4 +1,5 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import { RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { randomBytes, createHash } from 'crypto';
@@ -92,14 +93,22 @@ export class LicenseService {
       // Token unknown, consumed, or never existed. Return a uniform 404 so
       // callers cannot distinguish "already activated" from "invalid token"
       // via timing — mild defense against token enumeration.
-      throw new NotFoundException('Invalid or expired activation link');
+      throw new RpcException({
+        statusCode: 404,
+        message: 'errors.license.invalidActivationLink',
+        code: 'LICENSE_ACTIVATION_INVALID',
+      });
     }
 
     if (
       license.activationTokenExpiresAt &&
       license.activationTokenExpiresAt.getTime() < Date.now()
     ) {
-      throw new NotFoundException('Invalid or expired activation link');
+      throw new RpcException({
+        statusCode: 404,
+        message: 'errors.license.invalidActivationLink',
+        code: 'LICENSE_ACTIVATION_INVALID',
+      });
     }
 
     license.activatedAt = new Date();
@@ -133,7 +142,11 @@ export class LicenseService {
       where: { id: licenseId, userId },
     });
     if (!license) {
-      throw new NotFoundException('License not found');
+      throw new RpcException({
+        statusCode: 404,
+        message: 'errors.license.notFound',
+        code: 'LICENSE_NOT_FOUND',
+      });
     }
     return license;
   }

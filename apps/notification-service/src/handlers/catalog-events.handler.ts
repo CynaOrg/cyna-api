@@ -24,71 +24,71 @@ export class CatalogEventsHandler {
       `Processing catalog.stock.low event for product: ${data.productId} (${data.sku}) - current: ${data.currentStock}, threshold: ${data.alertThreshold}`,
       'CatalogEventsHandler',
     );
-
     try {
-      // Dedupe: skip if we already sent an alert recently for this product
-      const dedupeKey = `stock-low-alerted:${data.productId}`;
-      if (this.cacheService) {
-        const alreadyAlerted = await this.cacheService.get<boolean>(dedupeKey);
-        if (alreadyAlerted) {
-          this.logger.log(
-            `Skipping stock-low email for product ${data.productId} (already alerted within TTL window)`,
-            'CatalogEventsHandler',
-          );
-          return;
-        }
-      }
-
-      const to = this.configService.get<string>('STOCK_LOW_ALERT_EMAIL', 'admin@cyna.fr');
-      const backofficeUrl = this.configService.get<string>(
-        'BACKOFFICE_URL',
-        'http://localhost:4200',
-      );
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:4200');
-
-      const detectedAtDate =
-        data.detectedAt instanceof Date ? data.detectedAt : new Date(data.detectedAt);
-      const detectedAtFormatted = this.formatDate(detectedAtDate);
-
-      const subject = `⚠ Stock bas — ${data.productName} (${data.sku})`;
-
-      const html = this.emailTemplateService.render('stock-low-alert', Language.FR, {
-        frontendUrl,
-        year: new Date().getFullYear(),
-        productName: data.productName,
-        sku: data.sku,
-        currentStock: data.currentStock,
-        alertThreshold: data.alertThreshold,
-        detectedAt: detectedAtFormatted,
-        backofficeUrl,
-        productId: data.productId,
-      });
-
-      const sent = await this.emailService.sendEmail({
-        to,
-        subject,
-        html,
-      });
-
-      if (sent) {
-        this.logger.log(
-          `Stock-low alert email sent to ${to} for product ${data.productId} (${data.sku})`,
-          'CatalogEventsHandler',
-        );
-
-        if (this.cacheService) {
-          await this.cacheService.set(dedupeKey, true, STOCK_LOW_DEDUPE_TTL_SECONDS);
-        }
-      } else {
-        this.logger.warn(
-          `Stock-low alert email NOT sent for product ${data.productId} (emailService returned false)`,
-          'CatalogEventsHandler',
-        );
-      }
+      await this.processStockLow(data);
     } catch (error) {
       this.logger.error(
         `Failed to process catalog.stock.low event: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error instanceof Error ? error.stack : undefined,
+        'CatalogEventsHandler',
+      );
+    }
+  }
+
+  private async processStockLow(data: StockLowEvent): Promise<void> {
+    // Dedupe: skip if we already sent an alert recently for this product
+    const dedupeKey = `stock-low-alerted:${data.productId}`;
+    if (this.cacheService) {
+      const alreadyAlerted = await this.cacheService.get<boolean>(dedupeKey);
+      if (alreadyAlerted) {
+        this.logger.log(
+          `Skipping stock-low email for product ${data.productId} (already alerted within TTL window)`,
+          'CatalogEventsHandler',
+        );
+        return;
+      }
+    }
+
+    const to = this.configService.get<string>('STOCK_LOW_ALERT_EMAIL', 'admin@cyna.fr');
+    const backofficeUrl = this.configService.get<string>('BACKOFFICE_URL', 'http://localhost:4200');
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL', 'http://localhost:4200');
+
+    const detectedAtDate =
+      data.detectedAt instanceof Date ? data.detectedAt : new Date(data.detectedAt);
+    const detectedAtFormatted = this.formatDate(detectedAtDate);
+
+    const subject = `⚠ Stock bas — ${data.productName} (${data.sku})`;
+
+    const html = this.emailTemplateService.render('stock-low-alert', Language.FR, {
+      frontendUrl,
+      year: new Date().getFullYear(),
+      productName: data.productName,
+      sku: data.sku,
+      currentStock: data.currentStock,
+      alertThreshold: data.alertThreshold,
+      detectedAt: detectedAtFormatted,
+      backofficeUrl,
+      productId: data.productId,
+    });
+
+    const sent = await this.emailService.sendEmail({
+      to,
+      subject,
+      html,
+    });
+
+    if (sent) {
+      this.logger.log(
+        `Stock-low alert email sent to ${to} for product ${data.productId} (${data.sku})`,
+        'CatalogEventsHandler',
+      );
+
+      if (this.cacheService) {
+        await this.cacheService.set(dedupeKey, true, STOCK_LOW_DEDUPE_TTL_SECONDS);
+      }
+    } else {
+      this.logger.warn(
+        `Stock-low alert email NOT sent for product ${data.productId} (emailService returned false)`,
         'CatalogEventsHandler',
       );
     }

@@ -8,7 +8,7 @@ import { StockStatus } from '../../dto';
 import { CatalogEventsPublisher, StockReleaseReason } from '../../events';
 import { CynaCacheService, CynaLoggerService } from '@cyna-api/common';
 
-// Mock du logger
+// Logger mock
 const mockLogger = {
   log: jest.fn(),
   warn: jest.fn(),
@@ -16,7 +16,7 @@ const mockLogger = {
   debug: jest.fn(),
 };
 
-// Mock du cache (StockService dépend de CynaCacheService pour invalider/lire les compteurs)
+// Cache mock (StockService relies on CynaCacheService to invalidate/read counters)
 const mockCacheService = {
   get: jest.fn(),
   set: jest.fn(),
@@ -27,7 +27,7 @@ const mockCacheService = {
   reset: jest.fn(),
 };
 
-// Mock de l'event publisher
+// Event publisher mock
 const mockEventsPublisher = {
   emitStockReserved: jest.fn(),
   emitStockReleased: jest.fn(),
@@ -35,7 +35,7 @@ const mockEventsPublisher = {
   emitStockLow: jest.fn(),
 };
 
-// Mock du config service
+// Config service mock
 const mockConfigService = {
   get: jest.fn((key: string, defaultValue: number) => {
     if (key === 'catalog.stock.reservationExpiryMinutes') return 15;
@@ -44,7 +44,7 @@ const mockConfigService = {
   }),
 };
 
-// Fixture: produit de base pour les tests
+// Fixture: base product used across tests
 const createMockProduct = (overrides: Partial<Product> = {}): Product => ({
   id: 'prod-uuid-001',
   categoryId: 'cat-uuid-001',
@@ -69,7 +69,7 @@ const createMockProduct = (overrides: Partial<Product> = {}): Product => ({
   ...overrides,
 });
 
-// Fixture: reservation de stock pour les tests
+// Fixture: stock reservation for tests
 const createMockReservation = (overrides: Partial<StockReservation> = {}): StockReservation => ({
   id: 'res-uuid-001',
   productId: 'prod-uuid-001',
@@ -82,7 +82,7 @@ const createMockReservation = (overrides: Partial<StockReservation> = {}): Stock
   ...overrides,
 });
 
-// Tests du StockService (CRITIQUES)
+// StockService tests (CRITICAL)
 describe('StockService', () => {
   let service: StockService;
   let productRepository: jest.Mocked<Repository<Product>>;
@@ -91,7 +91,7 @@ describe('StockService', () => {
   let reservationQueryBuilder: jest.Mocked<SelectQueryBuilder<StockReservation>>;
 
   beforeEach(async () => {
-    // Mock du QueryBuilder pour les produits
+    // QueryBuilder mock for products
     productQueryBuilder = {
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
@@ -99,7 +99,7 @@ describe('StockService', () => {
       getMany: jest.fn(),
     } as unknown as jest.Mocked<SelectQueryBuilder<Product>>;
 
-    // Mock du QueryBuilder pour les reservations
+    // QueryBuilder mock for reservations
     reservationQueryBuilder = {
       select: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
@@ -157,11 +157,11 @@ describe('StockService', () => {
     jest.clearAllMocks();
   });
 
-  // ==================== GESTION STOCK ====================
+  // ==================== STOCK MANAGEMENT ====================
   describe('Stock Management', () => {
-    // Tests de updateStock
+    // updateStock tests
     describe('updateStock()', () => {
-      // Verifie la mise a jour du stock d'un produit physical
+      // Verifies stock update for a physical product
       it('should update stock for physical product', async () => {
         const product = createMockProduct({ stockQuantity: 50 });
 
@@ -176,7 +176,7 @@ describe('StockService', () => {
         expect(result.stockQuantity).toBe(100);
       });
 
-      // Verifie la mise a jour du threshold avec le stock
+      // Verifies the threshold is updated together with stock
       it('should update stockAlertThreshold if provided', async () => {
         const product = createMockProduct();
 
@@ -197,7 +197,7 @@ describe('StockService', () => {
         );
       });
 
-      // Verifie qu'une erreur est levee si le produit n'est pas physical
+      // Verifies an error is thrown when the product is not physical
       it('should throw error if product is not physical', async () => {
         const product = createMockProduct({ productType: ProductType.SAAS });
 
@@ -211,7 +211,7 @@ describe('StockService', () => {
         });
       });
 
-      // Verifie qu'un evenement stock_low est emis si le stock est bas
+      // Verifies a stock_low event is emitted when stock is low
       it('should emit stock_low event if stock is below threshold', async () => {
         const product = createMockProduct({ stockQuantity: 100, stockAlertThreshold: 10 });
 
@@ -230,9 +230,9 @@ describe('StockService', () => {
       });
     });
 
-    // Tests de getStockInfo
+    // getStockInfo tests
     describe('getStockInfo()', () => {
-      // Verifie le retour correct des informations de stock
+      // Verifies stock info is returned correctly
       it('should return stockQuantity, reservedQuantity, availableQuantity', async () => {
         const product = createMockProduct({ stockQuantity: 100 });
 
@@ -246,7 +246,7 @@ describe('StockService', () => {
         expect(result.availableQuantity).toBe(80);
       });
 
-      // Verifie le calcul correct de availableQuantity avec reservations actives
+      // Verifies availableQuantity is computed correctly when active reservations exist
       it('should calculate availableQuantity correctly with active reservations', async () => {
         const product = createMockProduct({ stockQuantity: 50 });
 
@@ -258,7 +258,7 @@ describe('StockService', () => {
         expect(result.availableQuantity).toBe(20);
       });
 
-      // Verifie le retour du bon stockStatus: in_stock
+      // Verifies the proper stockStatus: in_stock
       it('should return stockStatus in_stock when stock is sufficient', async () => {
         const product = createMockProduct({ stockQuantity: 100, stockAlertThreshold: 10 });
 
@@ -270,7 +270,7 @@ describe('StockService', () => {
         expect(result.stockStatus).toBe(StockStatus.IN_STOCK);
       });
 
-      // Verifie le retour du bon stockStatus: low_stock
+      // Verifies the proper stockStatus: low_stock
       it('should return stockStatus low_stock when stock is at or below threshold', async () => {
         const product = createMockProduct({ stockQuantity: 10, stockAlertThreshold: 10 });
 
@@ -282,7 +282,7 @@ describe('StockService', () => {
         expect(result.stockStatus).toBe(StockStatus.LOW_STOCK);
       });
 
-      // Verifie le retour du bon stockStatus: out_of_stock
+      // Verifies the proper stockStatus: out_of_stock
       it('should return stockStatus out_of_stock when available is 0', async () => {
         const product = createMockProduct({ stockQuantity: 20 });
 
@@ -294,7 +294,7 @@ describe('StockService', () => {
         expect(result.stockStatus).toBe(StockStatus.OUT_OF_STOCK);
       });
 
-      // Verifie le retour not_applicable pour les produits non-physical
+      // Verifies not_applicable is returned for non-physical products
       it('should return NOT_APPLICABLE for non-physical products', async () => {
         const product = createMockProduct({ productType: ProductType.SAAS });
 
@@ -307,9 +307,9 @@ describe('StockService', () => {
       });
     });
 
-    // Tests de getStockAlerts
+    // getStockAlerts tests
     describe('getStockAlerts()', () => {
-      // Verifie le retour des produits ou stock <= seuil
+      // Verifies products with stock <= threshold are returned
       it('should return products where stock <= threshold', async () => {
         const lowStockProducts = [
           createMockProduct({ stockQuantity: 5, stockAlertThreshold: 10 }),
@@ -330,9 +330,9 @@ describe('StockService', () => {
       });
     });
 
-    // Tests de checkAvailability
+    // checkAvailability tests
     describe('checkAvailability()', () => {
-      // Verifie le retour true si stock suffisant
+      // Verifies true is returned when stock is sufficient
       it('should return available true if stock is sufficient', async () => {
         const product = createMockProduct({ stockQuantity: 100 });
 
@@ -346,7 +346,7 @@ describe('StockService', () => {
         expect(result.availableQuantity).toBe(80);
       });
 
-      // Verifie le retour false si stock insuffisant (avec reservations incluses)
+      // Verifies false is returned when stock is insufficient (including reservations)
       it('should return available false if stock insufficient (including reservations)', async () => {
         const product = createMockProduct({ stockQuantity: 50 });
 
@@ -361,11 +361,11 @@ describe('StockService', () => {
     });
   });
 
-  // ==================== RESERVATIONS (CRITIQUES) ====================
+  // ==================== RESERVATIONS (CRITICAL) ====================
   describe('Stock Reservations', () => {
-    // Tests de reserveStock
+    // reserveStock tests
     describe('reserveStock()', () => {
-      // Verifie la creation d'une reservation avec expiration 15 min
+      // Verifies a reservation is created with 15 min expiry
       it('should create a reservation with 15 minute expiration', async () => {
         const product = createMockProduct({ stockQuantity: 100 });
         const newReservation = createMockReservation();
@@ -389,7 +389,7 @@ describe('StockService', () => {
         expect(mockEventsPublisher.emitStockReserved).toHaveBeenCalled();
       });
 
-      // Verifie qu'une erreur est levee si le stock est insuffisant
+      // Verifies an error is thrown when stock is insufficient
       it('should throw INSUFFICIENT_STOCK if stock is insufficient', async () => {
         const product = createMockProduct({ stockQuantity: 10 });
 
@@ -407,7 +407,7 @@ describe('StockService', () => {
         });
       });
 
-      // Verifie qu'une erreur est levee si le produit n'est pas physical
+      // Verifies an error is thrown when the product is not physical
       it('should throw error if product is not physical', async () => {
         const product = createMockProduct({ productType: ProductType.LICENSE });
 
@@ -423,7 +423,7 @@ describe('StockService', () => {
         });
       });
 
-      // Verifie la mise a jour d'une reservation existante pour le meme panier
+      // Verifies update of an existing reservation for the same cart
       it('should update existing reservation for same cart', async () => {
         const product = createMockProduct({ stockQuantity: 100 });
         const existingReservation = createMockReservation({ quantity: 3 });
@@ -442,9 +442,9 @@ describe('StockService', () => {
       });
     });
 
-    // Tests de releaseReservation
+    // releaseReservation tests
     describe('releaseReservation()', () => {
-      // Verifie la liberation de toutes les reservations d'un panier
+      // Verifies all reservations of a cart are released
       it('should release all reservations for a cart', async () => {
         const reservations = [
           createMockReservation({ id: 'res-001' }),
@@ -460,14 +460,14 @@ describe('StockService', () => {
         expect(mockEventsPublisher.emitStockReleased).toHaveBeenCalledTimes(2);
       });
 
-      // Verifie qu'aucune erreur n'est levee si aucune reservation n'existe
+      // Verifies no error is thrown when no reservation exists
       it('should not throw if no reservations found', async () => {
         reservationRepository.find.mockResolvedValue([]);
 
         await expect(service.releaseReservation('cart-uuid-001')).resolves.not.toThrow();
       });
 
-      // Verifie que la raison de liberation est correcte
+      // Verifies the release reason is correct
       it('should emit with correct release reason', async () => {
         const reservations = [createMockReservation()];
 
@@ -484,9 +484,9 @@ describe('StockService', () => {
       });
     });
 
-    // Tests de confirmReservation
+    // confirmReservation tests
     describe('confirmReservation()', () => {
-      // Verifie la confirmation et la decrementation du stock reel
+      // Verifies confirmation and decrement of actual stock
       it('should confirm and decrement actual stock', async () => {
         const product = createMockProduct({ stockQuantity: 100 });
         const reservation = createMockReservation({ quantity: 10, product });
@@ -505,7 +505,7 @@ describe('StockService', () => {
         expect(mockEventsPublisher.emitStockConfirmed).toHaveBeenCalled();
       });
 
-      // Verifie la suppression des reservations apres confirmation
+      // Verifies reservations are removed after confirmation
       it('should delete reservations after confirmation', async () => {
         const product = createMockProduct({ stockQuantity: 100 });
         const reservations = [createMockReservation({ quantity: 5, product })];
@@ -519,7 +519,7 @@ describe('StockService', () => {
         expect(reservationRepository.remove).toHaveBeenCalledWith(reservations);
       });
 
-      // Verifie qu'une erreur est levee si aucune reservation n'existe
+      // Verifies an error is thrown when no reservation exists
       it('should throw error if no reservations found', async () => {
         reservationRepository.find.mockResolvedValue([]);
 
@@ -531,7 +531,7 @@ describe('StockService', () => {
         });
       });
 
-      // Verifie l'emission d'un evenement stock_low si le stock tombe sous le seuil
+      // Verifies a stock_low event is emitted when stock drops below threshold
       it('should emit stock_low if stock falls below threshold', async () => {
         const product = createMockProduct({ stockQuantity: 15, stockAlertThreshold: 10 });
         const reservation = createMockReservation({ quantity: 10, product });
@@ -552,9 +552,9 @@ describe('StockService', () => {
       });
     });
 
-    // Tests de cleanupExpiredReservations
+    // cleanupExpiredReservations tests
     describe('cleanupExpiredReservations()', () => {
-      // Verifie la suppression des reservations expirees non confirmees
+      // Verifies expired non-confirmed reservations are removed
       it('should delete expired reservations that are not confirmed', async () => {
         const expiredReservations = [
           createMockReservation({
@@ -581,7 +581,7 @@ describe('StockService', () => {
         );
       });
 
-      // Verifie qu'aucune reservation confirmee n'est supprimee
+      // Verifies confirmed reservations are not removed
       it('should NOT delete confirmed reservations', async () => {
         reservationRepository.find.mockResolvedValue([]);
 
@@ -591,7 +591,7 @@ describe('StockService', () => {
         expect(reservationRepository.remove).not.toHaveBeenCalled();
       });
 
-      // Verifie le retour 0 si aucune reservation expiree
+      // Verifies 0 is returned when no expired reservation exists
       it('should return 0 if no expired reservations', async () => {
         reservationRepository.find.mockResolvedValue([]);
 
@@ -601,9 +601,9 @@ describe('StockService', () => {
       });
     });
 
-    // Tests de getReservationsByCart
+    // getReservationsByCart tests
     describe('getReservationsByCart()', () => {
-      // Verifie le retour des reservations actives d'un panier
+      // Verifies active reservations for a cart are returned
       it('should return active reservations for a cart', async () => {
         const reservations = [createMockReservation()];
 
@@ -623,9 +623,9 @@ describe('StockService', () => {
       });
     });
 
-    // Tests de getReservationsByProduct
+    // getReservationsByProduct tests
     describe('getReservationsByProduct()', () => {
-      // Verifie le retour des reservations actives pour un produit
+      // Verifies active reservations for a product are returned
       it('should return active reservations for a product', async () => {
         const reservations = [
           createMockReservation({ cartId: 'cart-001' }),
@@ -651,7 +651,7 @@ describe('StockService', () => {
 
   // ==================== PRODUCT NOT FOUND ====================
   describe('Product Not Found', () => {
-    // Verifie qu'une erreur 404 est levee pour updateStock
+    // Verifies a 404 error is thrown for updateStock
     it('should throw 404 for updateStock if product not found', async () => {
       productRepository.findOne.mockResolvedValue(null);
 
@@ -663,7 +663,7 @@ describe('StockService', () => {
       });
     });
 
-    // Verifie qu'une erreur 404 est levee pour getStockInfo
+    // Verifies a 404 error is thrown for getStockInfo
     it('should throw 404 for getStockInfo if product not found', async () => {
       productRepository.findOne.mockResolvedValue(null);
 
@@ -675,7 +675,7 @@ describe('StockService', () => {
       });
     });
 
-    // Verifie qu'une erreur 404 est levee pour checkAvailability
+    // Verifies a 404 error is thrown for checkAvailability
     it('should throw 404 for checkAvailability if product not found', async () => {
       productRepository.findOne.mockResolvedValue(null);
 
@@ -687,7 +687,7 @@ describe('StockService', () => {
       });
     });
 
-    // Verifie qu'une erreur 404 est levee pour reserveStock
+    // Verifies a 404 error is thrown for reserveStock
     it('should throw 404 for reserveStock if product not found', async () => {
       productRepository.findOne.mockResolvedValue(null);
 

@@ -316,30 +316,6 @@ export class OrderService {
 
     this.logger.log(`Order created: ${savedOrder.orderNumber} (${savedOrder.id})`);
 
-    // Dev convenience: when running locally without a `stripe listen` tunnel,
-    // Stripe never POSTs a webhook back to localhost so the order would stay
-    // PENDING forever and stay hidden from the customer dashboard. With
-    // LOCAL_AUTO_CONFIRM_PAYMENTS=true the service flips the order to PAID
-    // 3 seconds after creation as if the webhook had arrived. NEVER enable
-    // this in production.
-    if (
-      process.env.LOCAL_AUTO_CONFIRM_PAYMENTS === 'true' &&
-      process.env.NODE_ENV !== 'production'
-    ) {
-      const intentId = data.stripePaymentIntentId;
-      const orderNumber = savedOrder.orderNumber;
-      setTimeout(() => {
-        this.handlePaymentConfirmed(intentId).catch((err) =>
-          this.logger.error(
-            `Dev auto-confirm failed for order ${orderNumber}: ${(err as Error).message}`,
-          ),
-        );
-      }, 3000);
-      this.logger.warn(
-        `LOCAL_AUTO_CONFIRM_PAYMENTS=true — order ${savedOrder.orderNumber} will auto-mark PAID in 3s`,
-      );
-    }
-
     // Reload with items
     const reloaded = await this.orderRepository.findOne({
       where: { id: savedOrder.id },
@@ -657,5 +633,26 @@ export class OrderService {
   async updateStripePaymentIntentId(orderId: string, stripePaymentIntentId: string): Promise<void> {
     await this.orderRepository.update(orderId, { stripePaymentIntentId });
     this.logger.log(`Order ${orderId} updated with payment intent ${stripePaymentIntentId}`);
+
+    // Dev convenience: see comment in createOrderFromCart. The Stripe intent
+    // ID is only known here (the gateway creates the order with an empty
+    // intent ID then patches it after the payment service responds), so this
+    // is where we schedule the local auto-confirm.
+    if (
+      process.env.LOCAL_AUTO_CONFIRM_PAYMENTS === 'true' &&
+      process.env.NODE_ENV !== 'production' &&
+      stripePaymentIntentId
+    ) {
+      setTimeout(() => {
+        this.handlePaymentConfirmed(stripePaymentIntentId).catch((err) =>
+          this.logger.error(
+            `Dev auto-confirm failed for order ${orderId}: ${(err as Error).message}`,
+          ),
+        );
+      }, 3000);
+      this.logger.warn(
+        `LOCAL_AUTO_CONFIRM_PAYMENTS=true — order ${orderId} will auto-mark PAID in 3s`,
+      );
+    }
   }
 }

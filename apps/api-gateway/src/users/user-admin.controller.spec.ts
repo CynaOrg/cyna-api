@@ -8,15 +8,18 @@ describe('Gateway UserAdminController', () => {
   let controller: UserAdminController;
   let userClient: { send: jest.Mock };
   let orderClient: { send: jest.Mock };
+  let paymentClient: { send: jest.Mock };
 
   beforeEach(async () => {
     userClient = { send: jest.fn().mockReturnValue(of([])) };
     orderClient = { send: jest.fn().mockReturnValue(of([])) };
+    paymentClient = { send: jest.fn().mockReturnValue(of([])) };
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserAdminController],
       providers: [
         { provide: SERVICE_NAMES.USER, useValue: userClient },
         { provide: SERVICE_NAMES.ORDER, useValue: orderClient },
+        { provide: SERVICE_NAMES.PAYMENT, useValue: paymentClient },
       ],
     })
       .overrideGuard(SuperAdminGuard)
@@ -110,6 +113,31 @@ describe('Gateway UserAdminController', () => {
     it('rethrows other order client errors', async () => {
       orderClient.send.mockReturnValue(throwError(() => new Error('x')));
       await expect(controller.getUserOrders('u1', {} as never)).rejects.toThrow('x');
+    });
+  });
+
+  describe('getUserSubscriptions', () => {
+    it('forwards userId and pagination to payment service', async () => {
+      paymentClient.send.mockReturnValue(of([{ id: 's1' }]));
+      const r = await controller.getUserSubscriptions('u1', { page: 1, limit: 10 } as never);
+      expect(paymentClient.send).toHaveBeenCalledWith(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS, {
+        userId: 'u1',
+        page: 1,
+        limit: 10,
+      });
+      expect(r).toEqual([{ id: 's1' }]);
+    });
+
+    it('maps payment client timeout to 503', async () => {
+      paymentClient.send.mockReturnValue(throwError(() => new TimeoutError()));
+      await expect(controller.getUserSubscriptions('u1', {} as never)).rejects.toMatchObject({
+        status: 503,
+      });
+    });
+
+    it('rethrows other payment client errors', async () => {
+      paymentClient.send.mockReturnValue(throwError(() => new Error('y')));
+      await expect(controller.getUserSubscriptions('u1', {} as never)).rejects.toThrow('y');
     });
   });
 });

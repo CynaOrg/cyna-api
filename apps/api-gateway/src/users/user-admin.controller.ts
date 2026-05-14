@@ -70,6 +70,7 @@ export class UserAdminController {
   constructor(
     @Inject(SERVICE_NAMES.USER) private readonly userClient: ClientProxy,
     @Inject(SERVICE_NAMES.ORDER) private readonly orderClient: ClientProxy,
+    @Inject(SERVICE_NAMES.PAYMENT) private readonly paymentClient: ClientProxy,
   ) {}
 
   private async sendMessage<T>(pattern: { cmd: string }, data: T) {
@@ -154,6 +155,35 @@ export class UserAdminController {
             if (err instanceof TimeoutError) {
               return throwError(
                 () => new HttpException('Order service timeout', HttpStatus.SERVICE_UNAVAILABLE),
+              );
+            }
+            return throwError(() => err);
+          }),
+        ),
+    );
+  }
+
+  @Get(':userId/subscriptions')
+  @ApiOperation({ summary: 'List subscriptions of a given user (super_admin only)' })
+  @ApiParam({ name: 'userId', description: 'User ID' })
+  @ApiResponse({ status: 200, description: 'List of subscriptions' })
+  async getUserSubscriptions(
+    @Param('userId', ParseUUIDPipe) userId: string,
+    @Query() query: AdminUserQueryDto,
+  ): Promise<unknown> {
+    return firstValueFrom(
+      this.paymentClient
+        .send(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTIONS, {
+          userId,
+          page: query.page,
+          limit: query.limit,
+        })
+        .pipe(
+          timeout(10000),
+          catchError((err) => {
+            if (err instanceof TimeoutError) {
+              return throwError(
+                () => new HttpException('Payment service timeout', HttpStatus.SERVICE_UNAVAILABLE),
               );
             }
             return throwError(() => err);

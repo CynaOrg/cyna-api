@@ -51,11 +51,11 @@ interface SeedProduct {
 
 const SEED_CATEGORIES: SeedCategory[] = [
   {
-    slug: 'services',
-    nameFr: 'Services',
-    nameEn: 'Services',
-    descriptionFr: 'Solutions SaaS de cybersécurité pour protéger votre entreprise',
-    descriptionEn: 'Cybersecurity SaaS solutions to protect your business',
+    slug: 'abonnements',
+    nameFr: 'Abonnements',
+    nameEn: 'Subscriptions',
+    descriptionFr: 'Abonnements SaaS de cybersécurité pour protéger votre entreprise',
+    descriptionEn: 'Cybersecurity SaaS subscriptions to protect your business',
     displayOrder: 1,
   },
   {
@@ -101,7 +101,7 @@ const SEED_PRODUCTS: SeedProduct[] = [
     isFeatured: true,
     isAvailable: true,
     displayOrder: 1,
-    categorySlug: 'services',
+    categorySlug: 'abonnements',
     characteristics: [
       {
         keyFr: 'Surveillance',
@@ -222,7 +222,7 @@ const SEED_PRODUCTS: SeedProduct[] = [
     isFeatured: true,
     isAvailable: true,
     displayOrder: 2,
-    categorySlug: 'services',
+    categorySlug: 'abonnements',
     characteristics: [
       {
         keyFr: 'Endpoints',
@@ -322,7 +322,7 @@ const SEED_PRODUCTS: SeedProduct[] = [
     isFeatured: true,
     isAvailable: false,
     displayOrder: 3,
-    categorySlug: 'services',
+    categorySlug: 'abonnements',
     characteristics: [
       {
         keyFr: 'Couverture',
@@ -408,7 +408,7 @@ const SEED_PRODUCTS: SeedProduct[] = [
     isFeatured: false,
     isAvailable: true,
     displayOrder: 4,
-    categorySlug: 'services',
+    categorySlug: 'abonnements',
     characteristics: [
       {
         keyFr: 'Flux IoC',

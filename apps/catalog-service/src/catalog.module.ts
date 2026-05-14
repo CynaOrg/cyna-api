@@ -26,6 +26,7 @@ import { CatalogEventsPublisher } from './events';
 import { catalogConfig } from './config';
 import { InitialDataSeeder } from './seeds';
 import { AddImageUploadColumns1739451600000 } from './migrations/1739451600000-AddImageUploadColumns';
+import { RenameServicesCategoryToAbonnements1779000000000 } from './migrations/1779000000000-RenameServicesCategoryToAbonnements';
 
 @Module({
   imports: [
@@ -44,7 +45,10 @@ import { AddImageUploadColumns1739451600000 } from './migrations/1739451600000-A
       password: process.env.DATABASE_PASSWORD || 'cyna_dev',
       database: process.env.DATABASE_NAME || 'cyna_db',
       entities: [Category, Product, ProductImage, ProductCharacteristic, StockReservation],
-      migrations: [AddImageUploadColumns1739451600000],
+      migrations: [
+        AddImageUploadColumns1739451600000,
+        RenameServicesCategoryToAbonnements1779000000000,
+      ],
       migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
       synchronize: isDatabaseSyncEnabled(),
       logging: process.env.DATABASE_LOGGING === 'true',

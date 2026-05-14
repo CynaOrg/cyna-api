@@ -33,8 +33,11 @@ export const envValidationSchema = Joi.object({
   // RabbitMQ
   RABBITMQ_URL: Joi.string().uri().default('amqp://guest:guest@localhost:5672'),
 
-  // Auth — JWT secret is required and must be strong enough to resist brute force.
-  JWT_SECRET: Joi.string().min(32).required(),
+  // Auth — JWT secret length is enforced, but presence is checked at runtime
+  // by the services that actually load it (api-gateway JwtAuthGuard,
+  // auth-service TokenService). Background services that never verify nor
+  // sign tokens don't need it in their env, so Joi treats it as optional here.
+  JWT_SECRET: Joi.string().min(32).optional(),
 
   // CORS
   CORS_ORIGINS: Joi.string().default('http://localhost:4200,http://localhost:8100'),

@@ -721,16 +721,16 @@ describe('AdminAuthService', () => {
       }
     });
 
-    it('deleteAdmin should soft-remove target admin', async () => {
+    it('deleteAdmin should hard-remove target admin', async () => {
       const target = { ...mockAdmin, id: 'admin-456' };
       (adminRepository.findOne as jest.Mock).mockResolvedValueOnce(target);
-      (adminRepository as Partial<Repository<Admin>>).softRemove = jest
+      (adminRepository as Partial<Repository<Admin>>).remove = jest
         .fn()
         .mockResolvedValueOnce(target);
 
       const result = await service.deleteAdmin('admin-456', 'admin-123');
 
-      expect(adminRepository.softRemove).toHaveBeenCalledWith(target);
+      expect(adminRepository.remove).toHaveBeenCalledWith(target);
       expect(result.success).toBe(true);
     });
   });

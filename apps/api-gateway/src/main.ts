@@ -31,10 +31,9 @@ async function bootstrap() {
   const port = configService.get<number>('APP_PORT', 3000);
   const apiPrefix = configService.get<string>('API_PREFIX', 'api');
   const apiVersion = configService.get<string>('API_VERSION', 'v1');
-  // Swagger is always disabled in production, regardless of SWAGGER_ENABLED,
-  // to avoid leaking the full API surface to opportunistic recon.
-  const isProduction = configService.get<string>('NODE_ENV') === 'production';
-  const swaggerEnabled = !isProduction && configService.get<boolean>('SWAGGER_ENABLED', false);
+  // Swagger UI exposure is controlled by SWAGGER_ENABLED. Defaults to false so
+  // it stays opt-in per environment.
+  const swaggerEnabled = configService.get<boolean>('SWAGGER_ENABLED', false);
   const swaggerPath = configService.get<string>('SWAGGER_PATH', 'docs');
   const corsOrigins = configService.get<string>('CORS_ORIGINS', 'http://localhost:4200');
 

@@ -265,8 +265,9 @@ describe('SalesService', () => {
       const r = await service.getAverageCartByProductType('month');
       const saas = r.data.find((d) => d.productType === 'saas');
       const physical = r.data.find((d) => d.productType === 'physical');
-      expect(saas?.averageCartValue).toBe(100);
-      expect(physical?.averageCartValue).toBe(20);
+      // TTC: HT × 1.2 (HT 100 → 120, HT 20 → 24)
+      expect(saas?.averageCartValue).toBe(120);
+      expect(physical?.averageCartValue).toBe(24);
     });
 
     it('skips unknown product types', async () => {
@@ -318,8 +319,9 @@ describe('SalesService', () => {
         }),
       );
       const r = await service.getAverageCartByProductType('month');
-      expect(r.data.find((d) => d.productType === 'saas')?.averageCartValue).toBe(10);
-      expect(r.data.find((d) => d.productType === 'license')?.averageCartValue).toBe(90);
+      // TTC: HT × 1.2 (HT 10 → 12, HT (20+30+40)=90 → 108)
+      expect(r.data.find((d) => d.productType === 'saas')?.averageCartValue).toBe(12);
+      expect(r.data.find((d) => d.productType === 'license')?.averageCartValue).toBe(108);
     });
   });
 
@@ -345,7 +347,8 @@ describe('SalesService', () => {
         ]),
       );
       const r = await service.getMrr();
-      expect(r.currentMrr).toBe(30);
+      // MRR TTC: (20 + 120/12) × 1.2 = 36
+      expect(r.currentMrr).toBe(36);
       expect(r.history.length).toBe(4);
     });
 

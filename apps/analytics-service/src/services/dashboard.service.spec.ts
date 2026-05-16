@@ -111,7 +111,8 @@ describe('DashboardService', () => {
       expect(r.orders.pending).toBe(1);
       expect(r.orders.cancelled).toBe(1);
       expect(r.subscriptions.active).toBe(2);
-      expect(r.subscriptions.mrr).toBe(30);
+      // MRR is TTC: (20 + 120/12) * 1.2 = 36
+      expect(r.subscriptions.mrr).toBe(36);
     });
 
     it('handles paginated envelopes and rejected promises', async () => {

@@ -124,6 +124,120 @@ export class StripeService {
     return this.stripe.subscriptions.retrieve(subscriptionId);
   }
 
+  /**
+   * Create a Stripe Product plus its recurring Prices (monthly and/or yearly)
+   * from a SaaS catalog entry. Used by `catalog-service` when an admin saves a
+   * new SaaS so the front can subscribe to it without manual Stripe Dashboard
+   * setup. Amounts must be HT in major units (e.g. 99.00 EUR), converted to
+   * minor units (cents) for Stripe.
+   */
+  async createProductWithPrices(input: {
+    name: string;
+    description?: string;
+    currency: string;
+    priceMonthly?: number | null;
+    priceYearly?: number | null;
+    metadata?: Record<string, string>;
+  }): Promise<{
+    stripeProductId: string;
+    stripePriceIdMonthly: string | null;
+    stripePriceIdYearly: string | null;
+  }> {
+    const product = await this.stripe.products.create({
+      name: input.name,
+      description: input.description?.slice(0, 350) || undefined,
+      metadata: input.metadata,
+    });
+
+    const currency = input.currency.toLowerCase();
+
+    const stripePriceIdMonthly = input.priceMonthly
+      ? (
+          await this.stripe.prices.create({
+            product: product.id,
+            unit_amount: Math.round(input.priceMonthly * 100),
+            currency,
+            recurring: { interval: 'month' },
+            metadata: input.metadata,
+          })
+        ).id
+      : null;
+
+    const stripePriceIdYearly = input.priceYearly
+      ? (
+          await this.stripe.prices.create({
+            product: product.id,
+            unit_amount: Math.round(input.priceYearly * 100),
+            currency,
+            recurring: { interval: 'year' },
+            metadata: input.metadata,
+          })
+        ).id
+      : null;
+
+    return { stripeProductId: product.id, stripePriceIdMonthly, stripePriceIdYearly };
+  }
+
+  /**
+   * Stripe Prices are immutable, so editing a SaaS price means archiving the
+   * old Price (`active: false`) and creating a new one on the same Product.
+   * Existing Subscriptions stay attached to the old Price (their billing does
+   * not change — by design), new subscriptions use the new id.
+   */
+  async replacePrice(input: {
+    stripeProductId: string;
+    oldPriceId?: string | null;
+    amount: number;
+    currency: string;
+    interval: 'month' | 'year';
+    metadata?: Record<string, string>;
+  }): Promise<string> {
+    if (input.oldPriceId) {
+      try {
+        await this.stripe.prices.update(input.oldPriceId, { active: false });
+      } catch (err) {
+        this.logger.warn(
+          `Failed to archive old Stripe price ${input.oldPriceId}: ${(err as Error).message}`,
+        );
+      }
+    }
+    const newPrice = await this.stripe.prices.create({
+      product: input.stripeProductId,
+      unit_amount: Math.round(input.amount * 100),
+      currency: input.currency.toLowerCase(),
+      recurring: { interval: input.interval },
+      metadata: input.metadata,
+    });
+    return newPrice.id;
+  }
+
+  /**
+   * Update mutable fields on an existing Stripe Product (name + description).
+   * Prices are never modified here — see `replacePrice` for that.
+   */
+  async updateProductMetadata(
+    stripeProductId: string,
+    input: { name?: string; description?: string },
+  ): Promise<void> {
+    const params: Stripe.ProductUpdateParams = {};
+    if (input.name) params.name = input.name;
+    if (input.description !== undefined) {
+      params.description = input.description?.slice(0, 350) || null;
+    }
+    if (Object.keys(params).length === 0) return;
+    await this.stripe.products.update(stripeProductId, params);
+  }
+
+  /**
+   * Archive a Stripe Product (Stripe does not allow hard deletes for products
+   * that have ever been charged). Existing subscriptions keep running on their
+   * Prices — Stripe documents this is safe. Used when the catalog admin deletes
+   * a SaaS entry.
+   */
+  async archiveProduct(stripeProductId: string): Promise<void> {
+    await this.stripe.products.update(stripeProductId, { active: false });
+  }
+
   async getInvoice(invoiceId: string): Promise<Stripe.Invoice> {
     return this.stripe.invoices.retrieve(invoiceId);
   }

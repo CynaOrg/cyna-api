@@ -109,6 +109,7 @@ describe('ProductService', () => {
   let imageRepository: jest.Mocked<Repository<ProductImage>>;
   let queryBuilder: jest.Mocked<SelectQueryBuilder<Product>>;
   let contentClient: { send: jest.Mock; emit: jest.Mock };
+  let paymentClient: { send: jest.Mock; emit: jest.Mock };
 
   beforeEach(async () => {
     // QueryBuilder mock for complex queries
@@ -181,8 +182,17 @@ describe('ProductService', () => {
           provide: 'CONTENT_SERVICE',
           useValue: (contentClient = { send: jest.fn(), emit: jest.fn() }),
         },
+        {
+          provide: 'PAYMENT_SERVICE',
+          useValue: (paymentClient = { send: jest.fn(), emit: jest.fn() }),
+        },
       ],
     }).compile();
+
+    // Default Stripe sync returns EMPTY observable so SaaS create/update paths
+    // don't block in specs that don't care about Stripe wiring; opt-in specs
+    // override .send with a richer mock.
+    paymentClient.send.mockReturnValue(of(null));
 
     service = module.get<ProductService>(ProductService);
     productRepository = module.get(getRepositoryToken(Product));

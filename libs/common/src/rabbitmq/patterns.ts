@@ -167,6 +167,12 @@ export const MESSAGE_PATTERNS = {
     GET_USER_LICENSES: { cmd: 'payment.get_user_licenses' },
     GET_LICENSE_BY_ID: { cmd: 'payment.get_license_by_id' },
     ACTIVATE_LICENSE: { cmd: 'payment.activate_license' },
+    // Stripe catalog sync — called by catalog-service when a SaaS product is
+    // created/updated/deleted so its Stripe Product + recurring Prices stay
+    // in sync without admin having to touch the Stripe Dashboard.
+    SYNC_STRIPE_PRODUCT: { cmd: 'payment.sync_stripe_product' },
+    REPLACE_STRIPE_PRICE: { cmd: 'payment.replace_stripe_price' },
+    ARCHIVE_STRIPE_PRODUCT: { cmd: 'payment.archive_stripe_product' },
   },
 
   // Content Service

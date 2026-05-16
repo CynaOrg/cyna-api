@@ -54,7 +54,25 @@ export class ProductService implements OnApplicationBootstrap {
     private readonly cacheService: CynaCacheService,
     @Inject(SERVICE_NAMES.CONTENT)
     private readonly contentClient: ClientProxy,
+    @Inject(SERVICE_NAMES.PAYMENT)
+    private readonly paymentClient: ClientProxy,
   ) {}
+
+  /**
+   * Best-effort Stripe sync — never let a Stripe API failure or RPC timeout
+   * block the catalog mutation. The catalog row stays the source of truth;
+   * a missing Stripe Product/Price simply means the SaaS isn't subscribable
+   * yet, which is the same starting state as a fresh manual import.
+   */
+  private async tryStripeSync<T>(action: () => Promise<T>, context: string): Promise<T | null> {
+    try {
+      return await action();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.warn(`Stripe sync skipped (${context}): ${message}`);
+      return null;
+    }
+  }
 
   async onApplicationBootstrap(): Promise<void> {
     void this.reconcileFeaturedFromContent();
@@ -160,6 +178,43 @@ export class ProductService implements OnApplicationBootstrap {
     });
 
     await this.productRepository.save(product);
+
+    // Auto-create Stripe Product + recurring Prices for SaaS so the front can
+    // subscribe to it without the admin opening the Stripe Dashboard. We skip
+    // the call entirely when the admin imported existing Stripe IDs manually
+    // (back-office field for cases like cloning from another environment).
+    if (
+      product.productType === ProductType.SAAS &&
+      !product.stripeProductId &&
+      (Number(product.priceMonthly) > 0 || Number(product.priceYearly) > 0)
+    ) {
+      const stripeIds = await this.tryStripeSync(
+        () =>
+          firstValueFrom(
+            this.paymentClient
+              .send<{
+                stripeProductId: string;
+                stripePriceIdMonthly: string | null;
+                stripePriceIdYearly: string | null;
+              }>(MESSAGE_PATTERNS.PAYMENT.SYNC_STRIPE_PRODUCT, {
+                productId: product.id,
+                name: product.nameEn || product.nameFr,
+                description: product.descriptionEn || product.descriptionFr || undefined,
+                currency: 'EUR',
+                priceMonthly: product.priceMonthly ? Number(product.priceMonthly) : null,
+                priceYearly: product.priceYearly ? Number(product.priceYearly) : null,
+              })
+              .pipe(timeout(15000)),
+          ),
+        `create SaaS product ${product.id}`,
+      );
+      if (stripeIds) {
+        product.stripeProductId = stripeIds.stripeProductId;
+        product.stripePriceIdMonthly = stripeIds.stripePriceIdMonthly ?? undefined;
+        product.stripePriceIdYearly = stripeIds.stripePriceIdYearly ?? undefined;
+        await this.productRepository.save(product);
+      }
+    }
 
     if (dto.isFeatured) {
       const featuredType = this.toFeaturedProductType(product.productType);
@@ -429,6 +484,15 @@ export class ProductService implements OnApplicationBootstrap {
       }
     }
 
+    // Snapshot pre-mutation values to detect what changed for Stripe sync.
+    const prevPriceMonthly = product.priceMonthly ? Number(product.priceMonthly) : 0;
+    const prevPriceYearly = product.priceYearly ? Number(product.priceYearly) : 0;
+    const prevName = product.nameEn || product.nameFr;
+    const prevDescription = product.descriptionEn || product.descriptionFr || '';
+    const prevStripeProductId = product.stripeProductId;
+    const prevStripePriceIdMonthly = product.stripePriceIdMonthly;
+    const prevStripePriceIdYearly = product.stripePriceIdYearly;
+
     const { characteristics, isFeatured: nextFeatured, ...productData } = dto;
     Object.assign(product, productData);
 
@@ -443,6 +507,116 @@ export class ProductService implements OnApplicationBootstrap {
     }
 
     await this.productRepository.save(product);
+
+    // Stripe sync for SaaS: replace prices that changed (Stripe Prices are
+    // immutable), refresh product metadata if name/description changed, and
+    // bootstrap missing Stripe entities if the product never had them.
+    if (product.productType === ProductType.SAAS) {
+      const newPriceMonthly = product.priceMonthly ? Number(product.priceMonthly) : 0;
+      const newPriceYearly = product.priceYearly ? Number(product.priceYearly) : 0;
+      const newName = product.nameEn || product.nameFr;
+      const newDescription = product.descriptionEn || product.descriptionFr || '';
+
+      const nameOrDescriptionChanged = newName !== prevName || newDescription !== prevDescription;
+      const monthlyChanged = newPriceMonthly !== prevPriceMonthly;
+      const yearlyChanged = newPriceYearly !== prevPriceYearly;
+
+      if (!prevStripeProductId && (newPriceMonthly > 0 || newPriceYearly > 0)) {
+        // First sync ever (e.g. product was created before this feature shipped).
+        const stripeIds = await this.tryStripeSync(
+          () =>
+            firstValueFrom(
+              this.paymentClient
+                .send<{
+                  stripeProductId: string;
+                  stripePriceIdMonthly: string | null;
+                  stripePriceIdYearly: string | null;
+                }>(MESSAGE_PATTERNS.PAYMENT.SYNC_STRIPE_PRODUCT, {
+                  productId: product.id,
+                  name: newName,
+                  description: newDescription || undefined,
+                  currency: 'EUR',
+                  priceMonthly: newPriceMonthly || null,
+                  priceYearly: newPriceYearly || null,
+                })
+                .pipe(timeout(15000)),
+            ),
+          `bootstrap SaaS Stripe product ${product.id}`,
+        );
+        if (stripeIds) {
+          product.stripeProductId = stripeIds.stripeProductId;
+          product.stripePriceIdMonthly = stripeIds.stripePriceIdMonthly ?? undefined;
+          product.stripePriceIdYearly = stripeIds.stripePriceIdYearly ?? undefined;
+          await this.productRepository.save(product);
+        }
+      } else if (prevStripeProductId) {
+        if (nameOrDescriptionChanged) {
+          await this.tryStripeSync(
+            () =>
+              firstValueFrom(
+                this.paymentClient
+                  .send(MESSAGE_PATTERNS.PAYMENT.SYNC_STRIPE_PRODUCT, {
+                    productId: product.id,
+                    name: newName,
+                    description: newDescription || undefined,
+                    currency: 'EUR',
+                    priceMonthly: newPriceMonthly || null,
+                    priceYearly: newPriceYearly || null,
+                    stripeProductId: prevStripeProductId,
+                    stripePriceIdMonthly: product.stripePriceIdMonthly,
+                    stripePriceIdYearly: product.stripePriceIdYearly,
+                  })
+                  .pipe(timeout(15000)),
+              ),
+            `refresh SaaS Stripe metadata ${product.id}`,
+          );
+        }
+        if (monthlyChanged && newPriceMonthly > 0) {
+          const replaced = await this.tryStripeSync(
+            () =>
+              firstValueFrom(
+                this.paymentClient
+                  .send<{ stripePriceId: string }>(MESSAGE_PATTERNS.PAYMENT.REPLACE_STRIPE_PRICE, {
+                    productId: product.id,
+                    stripeProductId: prevStripeProductId,
+                    oldPriceId: prevStripePriceIdMonthly,
+                    amount: newPriceMonthly,
+                    currency: 'EUR',
+                    interval: 'month',
+                  })
+                  .pipe(timeout(15000)),
+              ),
+            `replace SaaS monthly price ${product.id}`,
+          );
+          if (replaced) {
+            product.stripePriceIdMonthly = replaced.stripePriceId;
+            await this.productRepository.save(product);
+          }
+        }
+        if (yearlyChanged && newPriceYearly > 0) {
+          const replaced = await this.tryStripeSync(
+            () =>
+              firstValueFrom(
+                this.paymentClient
+                  .send<{ stripePriceId: string }>(MESSAGE_PATTERNS.PAYMENT.REPLACE_STRIPE_PRICE, {
+                    productId: product.id,
+                    stripeProductId: prevStripeProductId,
+                    oldPriceId: prevStripePriceIdYearly,
+                    amount: newPriceYearly,
+                    currency: 'EUR',
+                    interval: 'year',
+                  })
+                  .pipe(timeout(15000)),
+              ),
+            `replace SaaS yearly price ${product.id}`,
+          );
+          if (replaced) {
+            product.stripePriceIdYearly = replaced.stripePriceId;
+            await this.productRepository.save(product);
+          }
+        }
+      }
+    }
 
     if (characteristics !== undefined) {
       await this.characteristicRepository.delete({ productId: id });
@@ -511,6 +685,23 @@ export class ProductService implements OnApplicationBootstrap {
     // and a restore action when product recovery is needed.
     await this.productRepository.softDelete(id);
     this.logger.log(`Product soft-deleted: ${id}`);
+
+    // Archive the matching Stripe Product so it no longer appears in Dashboard
+    // searches. Existing Subscriptions on its Prices keep running per Stripe's
+    // semantics — archiving only affects new uses, not in-flight billing.
+    if (product.productType === ProductType.SAAS && product.stripeProductId) {
+      await this.tryStripeSync(
+        () =>
+          firstValueFrom(
+            this.paymentClient
+              .send(MESSAGE_PATTERNS.PAYMENT.ARCHIVE_STRIPE_PRODUCT, {
+                stripeProductId: product.stripeProductId,
+              })
+              .pipe(timeout(15000)),
+          ),
+        `archive SaaS Stripe product ${product.id}`,
+      );
+    }
 
     // Invalidate caches
     await this.invalidateProductCache(id, slug);

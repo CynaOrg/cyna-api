@@ -513,4 +513,116 @@ export class PaymentService {
       subscriptionId: subscription.id,
     };
   }
+
+  /**
+   * Bootstrap a Stripe Product + recurring Prices for a SaaS catalog entry.
+   * Called by `catalog-service` after persisting a new SaaS product so the
+   * front can subscribe to it without manual Stripe Dashboard setup.
+   *
+   * If `stripeProductId` is provided we only top-up the missing recurring
+   * Prices (e.g. an admin filled the monthly price after the product was
+   * first created with only the yearly one); otherwise we create everything
+   * from scratch.
+   */
+  async syncStripeProduct(input: {
+    productId: string;
+    name: string;
+    description?: string;
+    currency?: string;
+    priceMonthly?: number | null;
+    priceYearly?: number | null;
+    stripeProductId?: string | null;
+    stripePriceIdMonthly?: string | null;
+    stripePriceIdYearly?: string | null;
+  }): Promise<{
+    stripeProductId: string;
+    stripePriceIdMonthly: string | null;
+    stripePriceIdYearly: string | null;
+  }> {
+    const currency = (input.currency || 'EUR').toLowerCase();
+    const metadata = { catalog_product_id: input.productId };
+
+    if (!input.stripeProductId) {
+      return this.stripeService.createProductWithPrices({
+        name: input.name,
+        description: input.description,
+        currency,
+        priceMonthly: input.priceMonthly,
+        priceYearly: input.priceYearly,
+        metadata,
+      });
+    }
+
+    // Product already exists in Stripe — refresh mutable fields and only
+    // create the missing recurring Prices, leaving existing ones untouched.
+    await this.stripeService.updateProductMetadata(input.stripeProductId, {
+      name: input.name,
+      description: input.description,
+    });
+
+    let stripePriceIdMonthly = input.stripePriceIdMonthly ?? null;
+    if (!stripePriceIdMonthly && input.priceMonthly) {
+      stripePriceIdMonthly = await this.stripeService.replacePrice({
+        stripeProductId: input.stripeProductId,
+        oldPriceId: null,
+        amount: input.priceMonthly,
+        currency,
+        interval: 'month',
+        metadata,
+      });
+    }
+
+    let stripePriceIdYearly = input.stripePriceIdYearly ?? null;
+    if (!stripePriceIdYearly && input.priceYearly) {
+      stripePriceIdYearly = await this.stripeService.replacePrice({
+        stripeProductId: input.stripeProductId,
+        oldPriceId: null,
+        amount: input.priceYearly,
+        currency,
+        interval: 'year',
+        metadata,
+      });
+    }
+
+    return {
+      stripeProductId: input.stripeProductId,
+      stripePriceIdMonthly,
+      stripePriceIdYearly,
+    };
+  }
+
+  /**
+   * Replace a Stripe recurring Price after a SaaS catalog price was edited.
+   * Stripe Prices are immutable, so we archive the old one and create a new
+   * one on the same Stripe Product. Existing Subscriptions stay attached to
+   * the old Price by design — only new subscriptions use the new id.
+   */
+  async replaceStripePrice(input: {
+    productId: string;
+    stripeProductId: string;
+    oldPriceId?: string | null;
+    amount: number;
+    currency?: string;
+    interval: 'month' | 'year';
+  }): Promise<{ stripePriceId: string }> {
+    const stripePriceId = await this.stripeService.replacePrice({
+      stripeProductId: input.stripeProductId,
+      oldPriceId: input.oldPriceId,
+      amount: input.amount,
+      currency: input.currency || 'EUR',
+      interval: input.interval,
+      metadata: { catalog_product_id: input.productId },
+    });
+    return { stripePriceId };
+  }
+
+  /**
+   * Archive a Stripe Product when the matching SaaS catalog entry is deleted.
+   * Existing Subscriptions keep running on the archived Prices; only the
+   * catalogue surface stops offering it.
+   */
+  async archiveStripeProduct(stripeProductId: string): Promise<{ archived: true }> {
+    await this.stripeService.archiveProduct(stripeProductId);
+    return { archived: true };
+  }
 }

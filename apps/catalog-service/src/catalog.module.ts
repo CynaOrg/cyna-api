@@ -94,6 +94,17 @@ import { RenameServicesCategoryToAbonnements1779000000000 } from './migrations/1
           },
         },
       },
+      {
+        name: SERVICE_NAMES.PAYMENT,
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
+          queue: 'payment.queue',
+          queueOptions: {
+            durable: true,
+          },
+        },
+      },
     ]),
   ],
   controllers: [CatalogController],

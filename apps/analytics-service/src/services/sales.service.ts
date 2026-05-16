@@ -3,7 +3,12 @@ import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { firstValueFrom, timeout, retry, catchError, TimeoutError } from 'rxjs';
-import { CynaLoggerService, SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
+import {
+  CynaLoggerService,
+  SERVICE_NAMES,
+  MESSAGE_PATTERNS,
+  VAT_MULTIPLIER,
+} from '@cyna-api/common';
 import { ConfigService } from '@nestjs/config';
 import { AnalyticsCache } from '../entities';
 import { SalesPeriod, SalesGroupBy } from '../dto';
@@ -276,7 +281,9 @@ export class SalesService {
         const productInfo = productCategoryMap.get(item.productId);
         const categoryId = productInfo?.categoryId || 'unknown';
         const categoryName = productInfo?.categoryName || 'Unknown';
-        const itemRevenue = (parseFloat(String(item.unitPrice)) || 0) * (item.quantity || 1);
+        // unitPrice is HT — convert to TTC to align with order.total-based aggregations.
+        const itemRevenue =
+          (parseFloat(String(item.unitPrice)) || 0) * (item.quantity || 1) * VAT_MULTIPLIER;
 
         const existing = categoryRevenue.get(categoryId);
         if (existing) {
@@ -361,7 +368,9 @@ export class SalesService {
       const items = order.items || [];
       for (const item of items) {
         const productType = productTypeMap.get(item.productId) || 'unknown';
-        const itemRevenue = (parseFloat(String(item.unitPrice)) || 0) * (item.quantity || 1);
+        // unitPrice is HT — convert to TTC to align with order.total-based aggregations.
+        const itemRevenue =
+          (parseFloat(String(item.unitPrice)) || 0) * (item.quantity || 1) * VAT_MULTIPLIER;
 
         const existing = typeRevenue.get(productType);
         if (existing) {
@@ -506,7 +515,10 @@ export class SalesService {
         const normalized = this.normalizeProductType(rawType);
         if (!normalized) continue;
 
-        const itemTotal = (parseFloat(String(item.unitPrice)) || 0) * (item.quantity || 1);
+        // unitPrice is HT — convert to TTC so the average cart by product type
+        // is comparable to the global average cart computed from order.total (TTC).
+        const itemTotal =
+          (parseFloat(String(item.unitPrice)) || 0) * (item.quantity || 1) * VAT_MULTIPLIER;
         perTypeSubtotal.set(normalized, (perTypeSubtotal.get(normalized) || 0) + itemTotal);
       }
 
@@ -560,9 +572,10 @@ export class SalesService {
       (s: SubscriptionRecord) => s.status === 'active',
     );
 
-    // Calculate current MRR
+    // Calculate current MRR — Subscription.price is stored HT, convert to TTC
+    // for consistency with revenue/AOV which aggregate Order.total (TTC).
     const currentMrr = activeSubscriptions.reduce((sum: number, s: SubscriptionRecord) => {
-      const amount = parseFloat(String(s.price)) || 0;
+      const amount = (parseFloat(String(s.price)) || 0) * VAT_MULTIPLIER;
       if (s.billingPeriod === 'yearly' || s.billingPeriod === 'annual') {
         return sum + amount / 12;
       }
@@ -600,7 +613,7 @@ export class SalesService {
             return false;
           })
           .reduce((sum: number, s: SubscriptionRecord) => {
-            const amount = parseFloat(String(s.price)) || 0;
+            const amount = (parseFloat(String(s.price)) || 0) * VAT_MULTIPLIER;
             if (s.billingPeriod === 'yearly' || s.billingPeriod === 'annual') {
               return sum + amount / 12;
             }

@@ -3,7 +3,12 @@ import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThan } from 'typeorm';
 import { firstValueFrom, timeout, retry, catchError, TimeoutError } from 'rxjs';
-import { CynaLoggerService, SERVICE_NAMES, MESSAGE_PATTERNS } from '@cyna-api/common';
+import {
+  CynaLoggerService,
+  SERVICE_NAMES,
+  MESSAGE_PATTERNS,
+  VAT_MULTIPLIER,
+} from '@cyna-api/common';
 import { ConfigService } from '@nestjs/config';
 import { AnalyticsCache } from '../entities';
 import { DashboardPeriod } from '../dto';
@@ -182,9 +187,10 @@ export class DashboardService {
       return cancelDate >= dateRange.start && cancelDate <= dateRange.end;
     });
 
-    // MRR calculation
+    // MRR calculation — Subscription.price is stored HT, convert to TTC for
+    // consistency with the rest of the dashboard which aggregates Order.total (TTC).
     const mrr = activeSubscriptions.reduce((sum: number, s: SubscriptionRecord) => {
-      const amount = parseFloat(String(s.price)) || 0;
+      const amount = (parseFloat(String(s.price)) || 0) * VAT_MULTIPLIER;
       if (s.billingPeriod === 'yearly' || s.billingPeriod === 'annual') {
         return sum + amount / 12;
       }

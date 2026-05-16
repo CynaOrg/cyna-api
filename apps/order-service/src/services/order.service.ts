@@ -11,6 +11,7 @@ import {
   OrderStatus,
   OrderType,
   ProductType,
+  VAT_RATE,
 } from '@cyna-api/common';
 import { Order } from '../entities/order.entity';
 import { OrderItem } from '../entities/order-item.entity';
@@ -248,8 +249,8 @@ export class OrderService {
             : OrderType.SAAS;
     }
 
-    // 4. Calculate tax (simplified: 20% VAT for EU)
-    const taxAmount = Math.round(subtotal * 0.2 * 100) / 100;
+    // 4. Calculate tax — rate centralized in @cyna-api/common (VAT_RATE)
+    const taxAmount = Math.round(subtotal * VAT_RATE * 100) / 100;
     const total = subtotal + taxAmount;
 
     // 5. Generate order number and save, retrying on concurrent collisions.

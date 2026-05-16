@@ -5,6 +5,8 @@ export interface ProductSnapshot {
   nameFr: string;
   nameEn: string;
   slug: string;
+  image?: string | null;
+  productType?: string;
 }
 
 @Entity('license_keys')

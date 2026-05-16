@@ -90,6 +90,17 @@ import { AddImageUploadColumns1739451600000 } from './migrations/1739451600000-A
           },
         },
       },
+      {
+        name: SERVICE_NAMES.PAYMENT,
+        transport: Transport.RMQ,
+        options: {
+          urls: [process.env.RABBITMQ_URL || 'amqp://localhost:5672'],
+          queue: 'payment.queue',
+          queueOptions: {
+            durable: true,
+          },
+        },
+      },
     ]),
   ],
   controllers: [CatalogController],

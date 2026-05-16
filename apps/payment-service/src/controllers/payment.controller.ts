@@ -147,6 +147,56 @@ export class PaymentController {
     }
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.PAYMENT.SYNC_STRIPE_PRODUCT)
+  async syncStripeProduct(
+    @Payload()
+    data: {
+      productId: string;
+      name: string;
+      description?: string;
+      currency?: string;
+      priceMonthly?: number | null;
+      priceYearly?: number | null;
+      stripeProductId?: string | null;
+      stripePriceIdMonthly?: string | null;
+      stripePriceIdYearly?: string | null;
+    },
+  ) {
+    try {
+      return await this.paymentService.syncStripeProduct(data);
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.PAYMENT.REPLACE_STRIPE_PRICE)
+  async replaceStripePrice(
+    @Payload()
+    data: {
+      productId: string;
+      stripeProductId: string;
+      oldPriceId?: string | null;
+      amount: number;
+      currency?: string;
+      interval: 'month' | 'year';
+    },
+  ) {
+    try {
+      return await this.paymentService.replaceStripePrice(data);
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
+  @MessagePattern(MESSAGE_PATTERNS.PAYMENT.ARCHIVE_STRIPE_PRODUCT)
+  async archiveStripeProduct(@Payload() data: { stripeProductId: string }) {
+    try {
+      return await this.paymentService.archiveStripeProduct(data.stripeProductId);
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.PAYMENT.ADMIN_UPDATE_SUBSCRIPTION_TERMS)
   async adminUpdateSubscriptionTerms(
     @Payload()

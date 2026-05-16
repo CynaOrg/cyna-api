@@ -10,6 +10,12 @@ export class ProductSnapshotDto {
 
   @ApiProperty()
   slug: string;
+
+  @ApiProperty({ required: false, nullable: true, type: String })
+  image?: string | null;
+
+  @ApiProperty({ required: false, type: String })
+  productType?: string;
 }
 
 export class LicenseResponseDto {

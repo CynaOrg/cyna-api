@@ -39,7 +39,13 @@ interface AuthenticatedRequest extends Request {
 interface RawLicense {
   id: string;
   licenseKey: string;
-  productSnapshot: { nameFr: string; nameEn: string; slug: string };
+  productSnapshot: {
+    nameFr: string;
+    nameEn: string;
+    slug: string;
+    image?: string | null;
+    productType?: string;
+  };
   orderId: string;
   productId: string;
   status: string;

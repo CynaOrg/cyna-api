@@ -304,6 +304,8 @@ describe('WebhookService', () => {
               nameFr: 'Antivirus',
               nameEn: 'Antivirus EN',
               slug: 'antivirus',
+              image: null,
+              productType: 'license',
             },
           },
         ]);

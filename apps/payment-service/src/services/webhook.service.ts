@@ -399,6 +399,8 @@ export class WebhookService {
           nameFr?: string;
           nameEn?: string;
           slug?: string;
+          image?: string | null;
+          productType?: string;
         };
         return {
           productId: item.productId,
@@ -410,6 +412,8 @@ export class WebhookService {
             nameFr: snapshot.nameFr ?? 'Licence',
             nameEn: snapshot.nameEn ?? 'License',
             slug: snapshot.slug ?? 'unknown',
+            image: snapshot.image ?? null,
+            productType: snapshot.productType ?? 'license',
           },
         };
       });

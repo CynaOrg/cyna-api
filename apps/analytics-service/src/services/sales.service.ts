@@ -582,11 +582,11 @@ export class SalesService {
       return sum + amount;
     }, 0);
 
-    // Build MRR history for last 4 months
+    // Build MRR history for last 12 months
     const history: MrrHistory[] = [];
     const now = new Date();
 
-    for (let i = 3; i >= 0; i--) {
+    for (let i = 11; i >= 0; i--) {
       const monthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
       const monthEnd = new Date(
         Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i + 1, 0, 23, 59, 59),
@@ -643,7 +643,7 @@ export class SalesService {
           ? 100
           : 0;
 
-    const yearAgoMrr = history.length >= 4 ? history[0].mrr : 0;
+    const yearAgoMrr = history.length >= 12 ? history[0].mrr : 0;
     const yearOverYear =
       yearAgoMrr > 0
         ? Math.round(((currentMrr - yearAgoMrr) / yearAgoMrr) * 10000) / 100

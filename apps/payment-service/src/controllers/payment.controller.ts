@@ -109,6 +109,17 @@ export class PaymentController {
     }
   }
 
+  @MessagePattern(MESSAGE_PATTERNS.PAYMENT.REACTIVATE_SUBSCRIPTION)
+  async reactivateSubscription(
+    @Payload() dto: { subscriptionId: string; actor: 'user' | 'admin'; userId?: string },
+  ) {
+    try {
+      return await this.subscriptionService.reactivate(dto.subscriptionId, dto.actor, dto.userId);
+    } catch (error) {
+      throw this.wrapError(error);
+    }
+  }
+
   @MessagePattern(MESSAGE_PATTERNS.PAYMENT.GET_SUBSCRIPTION)
   async getSubscription(@Payload() data: { subscriptionId: string }) {
     try {

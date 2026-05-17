@@ -56,15 +56,13 @@ describe('SubscriptionAdminController', () => {
       });
     });
 
-    it('REACTIVATE returns 501 (not implemented)', async () => {
-      try {
-        await controller.updateStatus('s1', { action: SubscriptionActionEnum.REACTIVATE });
-        fail('should throw');
-      } catch (err) {
-        expect(err).toBeInstanceOf(HttpException);
-        expect((err as HttpException).getStatus()).toBe(501);
-      }
-      expect(client.send).not.toHaveBeenCalled();
+    it('REACTIVATE routes to REACTIVATE_SUBSCRIPTION', async () => {
+      client.send.mockReturnValue(of({ ok: true }));
+      await controller.updateStatus('s1', { action: SubscriptionActionEnum.REACTIVATE });
+      expect(client.send).toHaveBeenCalledWith(MESSAGE_PATTERNS.PAYMENT.REACTIVATE_SUBSCRIPTION, {
+        subscriptionId: 's1',
+        actor: 'admin',
+      });
     });
 
     it('PAUSE returns 501 (not implemented)', async () => {

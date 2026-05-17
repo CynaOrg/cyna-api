@@ -256,49 +256,14 @@ export class PaymentService {
     const enriched: Record<string, unknown>[] = [];
 
     for (const sub of subscriptions) {
-      // Sync with Stripe to get real status and dates
-      try {
-        const stripeSub = await this.stripeService.getSubscription(sub.stripeSubscriptionId);
-        const raw = stripeSub as unknown as Record<string, unknown>;
-        const stripeStatus = this.mapStripeStatus(stripeSub.status);
-        const cancelAtPeriodEnd = !!raw.cancel_at_period_end;
-
-        // Stripe API 2026-01-28: uses start_date and cancel_at instead of current_period_start/end
-        const startTs = raw.current_period_start ?? raw.start_date;
-        const endTs = raw.current_period_end ?? raw.cancel_at;
-        const periodStart =
-          typeof startTs === 'number' ? new Date(startTs * 1000) : sub.currentPeriodStart;
-        let periodEnd = typeof endTs === 'number' ? new Date(endTs * 1000) : sub.currentPeriodEnd;
-
-        // If no end date from Stripe, compute from start + billing period
-        if (!endTs && typeof startTs === 'number') {
-          const start = new Date(startTs * 1000);
-          periodEnd =
-            sub.billingPeriod === 'yearly'
-              ? new Date(start.setFullYear(start.getFullYear() + 1))
-              : new Date(start.setMonth(start.getMonth() + 1));
-        }
-
-        // Update DB if changed
-        if (
-          sub.status !== stripeStatus ||
-          sub.cancelAtPeriodEnd !== cancelAtPeriodEnd ||
-          sub.currentPeriodEnd?.getTime() !== periodEnd?.getTime()
-        ) {
-          this.subscriptionService.update(sub.id, {
-            status: stripeStatus,
-            cancelAtPeriodEnd,
-            currentPeriodStart: periodStart,
-            currentPeriodEnd: periodEnd,
-          });
-          sub.status = stripeStatus;
-          sub.cancelAtPeriodEnd = cancelAtPeriodEnd;
-          sub.currentPeriodStart = periodStart;
-          sub.currentPeriodEnd = periodEnd;
-        }
-      } catch {
-        this.logger.warn(`Failed to sync subscription ${sub.id} with Stripe`);
-      }
+      // The DB row is the source of truth for the listing. Stripe webhooks
+      // (`customer.subscription.updated`, `customer.subscription.deleted`,
+      // `invoice.paid`) keep `status`, `cancelAtPeriodEnd`, `currentPeriodEnd`
+      // and `stripeLatestInvoiceUrl` in sync as they happen — re-fetching
+      // every row from Stripe at list time was a 100-200 ms RTT × N round
+      // trip, blowing the admin page latency to 3-6 s with no observable
+      // benefit. If a single row needs a forced re-sync, the detail endpoint
+      // is the right place to do that.
 
       // Enrich with product data
       const product = products.get(sub.productId);
@@ -328,28 +293,6 @@ export class PaymentService {
     }
 
     return enriched;
-  }
-
-  private mapStripeStatus(stripeStatus: string): SubscriptionStatus {
-    switch (stripeStatus) {
-      case 'active':
-      case 'trialing':
-        return SubscriptionStatus.ACTIVE;
-      case 'past_due':
-        return SubscriptionStatus.PAST_DUE;
-      case 'canceled':
-      case 'cancelled':
-        return SubscriptionStatus.CANCELLED;
-      case 'unpaid':
-        return SubscriptionStatus.UNPAID;
-      case 'paused':
-        return SubscriptionStatus.PAUSED;
-      case 'incomplete':
-      case 'incomplete_expired':
-        return SubscriptionStatus.CANCELLED;
-      default:
-        return SubscriptionStatus.ACTIVE;
-    }
   }
 
   async createSubscription(dto: CreateSubscriptionDto): Promise<{

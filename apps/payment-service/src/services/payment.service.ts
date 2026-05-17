@@ -449,11 +449,18 @@ export class PaymentService {
     );
 
     // 6. Save in database
+    // The row is persisted in INCOMPLETE state — mirroring Stripe's own
+    // staging state for `default_incomplete` subscriptions. We need a local
+    // row at this point because the Stripe webhook (`customer.subscription.
+    // updated`) keys on `stripeSubscriptionId` to find and promote it to
+    // ACTIVE once payment confirms. INCOMPLETE rows are filtered from every
+    // user/admin read and hard-deleted by the cron after 24h, so an abandoned
+    // payment leaves no trace in the dashboard.
     const subscription = await this.subscriptionService.create({
       userId: dto.userId,
       productId: dto.productId,
       productName: product.nameFr || product.nameEn || null,
-      status: SubscriptionStatus.ACTIVE,
+      status: SubscriptionStatus.INCOMPLETE,
       billingPeriod: dto.billingPeriod,
       price:
         Number(dto.billingPeriod === 'monthly' ? product.priceMonthly : product.priceYearly) || 0,

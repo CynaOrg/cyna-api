@@ -483,8 +483,18 @@ export class OrderService {
       qb.andWhere('order.userId = :userId', { userId });
     }
 
+    // PENDING is a staging state the backend creates the moment a customer
+    // clicks "continue to payment" — see createOrderFromCart. If the customer
+    // abandons the flow before submitting a card it sits in PENDING forever,
+    // which is not a real order: nothing was paid, nothing was reserved end-to-
+    // end. The admin has no useful action on these rows, so we hide them from
+    // the default admin listing. They are hard-deleted by the cron after 24h.
+    // We still honor an explicit `?status=pending` filter so the data remains
+    // reachable for ad-hoc debugging without polluting the default view.
     if (status) {
       qb.andWhere('order.status = :status', { status });
+    } else {
+      qb.andWhere('order.status != :pending', { pending: OrderStatus.PENDING });
     }
 
     if (search) {

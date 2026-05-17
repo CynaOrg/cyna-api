@@ -49,6 +49,7 @@ describe('WebhookService', () => {
       findByStripeId: jest.fn().mockResolvedValue(null),
       updateStatus: jest.fn().mockResolvedValue({}),
       create: jest.fn().mockResolvedValue({}),
+      delete: jest.fn().mockResolvedValue(undefined),
       syncFromStripe: jest.fn().mockResolvedValue({}),
     };
 
@@ -903,6 +904,42 @@ describe('WebhookService', () => {
 
         expect(notificationClient.emit).not.toHaveBeenCalled();
       });
+
+      it('defers welcome email when the local row is still INCOMPLETE', async () => {
+        // The webhook arrives at subscription creation time (status still
+        // `incomplete` on Stripe). Sending "you're subscribed!" before the
+        // first invoice clears would be a lie — we defer until the
+        // INCOMPLETE → ACTIVE transition is observed on `subscription.updated`.
+        const mockSub = {
+          id: 'local-sub-pending-payment',
+          userId: 'user-y',
+          productName: 'SOC Pro',
+          status: SubscriptionStatus.INCOMPLETE,
+          notificationEmail: 'user@example.com',
+          notificationLanguage: Language.FR,
+        };
+        (subscriptionService.findByStripeId as jest.Mock).mockResolvedValueOnce(mockSub);
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_7c',
+          eventType: 'customer.subscription.created',
+          data: {
+            id: 'sub_stripe_pending',
+            customer: 'cus_123',
+            items: {
+              data: [
+                { price: { unit_amount: 4900, currency: 'eur', recurring: { interval: 'month' } } },
+              ],
+            },
+          },
+          created: Date.now(),
+        });
+
+        expect(notificationClient.emit).not.toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.SUBSCRIPTION_CREATED,
+          expect.anything(),
+        );
+      });
     });
 
     describe('customer.subscription.updated', () => {
@@ -934,9 +971,85 @@ describe('WebhookService', () => {
           }),
         ).resolves.toBeUndefined();
       });
+
+      it('emits the deferred welcome email on INCOMPLETE → ACTIVE transition', async () => {
+        // First call (pre-sync snapshot) returns the local row in INCOMPLETE;
+        // syncFromStripe then resolves with the row already promoted to
+        // ACTIVE — the transition that signals "first invoice paid". This is
+        // where we fire the welcome notification that `subscription.created`
+        // skipped.
+        const preSync = {
+          id: 'local-sub-promoted',
+          userId: 'user-z',
+          status: SubscriptionStatus.INCOMPLETE,
+          notificationEmail: 'user@example.com',
+          notificationLanguage: Language.FR,
+          productName: 'SOC Pro',
+        };
+        const postSync = { ...preSync, status: SubscriptionStatus.ACTIVE };
+        (subscriptionService.findByStripeId as jest.Mock).mockResolvedValueOnce(preSync);
+        (subscriptionService.syncFromStripe as jest.Mock).mockResolvedValueOnce(postSync);
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_8b',
+          eventType: 'customer.subscription.updated',
+          data: {
+            id: 'sub_stripe_promoted',
+            status: 'active',
+            items: {
+              data: [
+                { price: { unit_amount: 4900, currency: 'eur', recurring: { interval: 'month' } } },
+              ],
+            },
+          },
+          created: Date.now(),
+        });
+
+        expect(notificationClient.emit).toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.SUBSCRIPTION_CREATED,
+          expect.objectContaining({
+            subscriptionId: 'local-sub-promoted',
+            email: 'user@example.com',
+            language: Language.FR,
+            billingPeriod: 'monthly',
+            price: 49,
+            currency: 'EUR',
+          }),
+        );
+      });
     });
 
     describe('customer.subscription.deleted', () => {
+      it('hard-deletes the row and skips notification when status was INCOMPLETE', async () => {
+        // Stripe expires `incomplete` subscriptions ~23h after creation and
+        // fires `customer.subscription.deleted`. The local row in INCOMPLETE
+        // never represented a real subscription for the customer (they never
+        // paid), so we delete it and do NOT send a cancellation email.
+        const mockSub = {
+          id: 'local-sub-abandoned',
+          userId: 'user-x',
+          productName: 'SOC Pro',
+          status: SubscriptionStatus.INCOMPLETE,
+          notificationEmail: 'user@example.com',
+          notificationLanguage: Language.FR,
+        };
+        (subscriptionService.findByStripeId as jest.Mock).mockResolvedValueOnce(mockSub);
+
+        await service.handleWebhookEvent({
+          eventId: 'evt_10a',
+          eventType: 'customer.subscription.deleted',
+          data: { id: 'sub_stripe_abandoned' },
+          created: Date.now(),
+        });
+
+        expect(subscriptionService.delete).toHaveBeenCalledWith('local-sub-abandoned');
+        expect(subscriptionService.create).not.toHaveBeenCalled();
+        expect(notificationClient.emit).not.toHaveBeenCalledWith(
+          EVENT_PATTERNS.PAYMENT.SUBSCRIPTION_CANCELLED,
+          expect.anything(),
+        );
+      });
+
       it('sets to CANCELLED and emits enriched SubscriptionCancelledEvent', async () => {
         const mockSub = {
           id: 'local-sub-3',

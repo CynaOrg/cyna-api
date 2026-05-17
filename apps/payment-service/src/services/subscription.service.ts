@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { RpcException } from '@nestjs/microservices';
 import { SubscriptionStatus } from '@cyna-api/common';
 import { Subscription } from '../entities/subscription.entity';
@@ -26,9 +26,24 @@ export class SubscriptionService {
     await this.subscriptionRepository.update(id, data);
   }
 
+  /**
+   * Hard-delete a subscription row. Used by the webhook handler when Stripe
+   * emits `customer.subscription.deleted` for a subscription whose initial
+   * payment was never confirmed (status was INCOMPLETE) — that row represents
+   * an abandoned payment attempt, not a cancelled subscription, and must not
+   * leave any trace in the dashboard or analytics.
+   */
+  async delete(id: string): Promise<void> {
+    await this.subscriptionRepository.delete(id);
+  }
+
   async findByUserId(userId: string): Promise<Subscription[]> {
+    // INCOMPLETE rows are subscriptions whose initial payment never confirmed.
+    // From the customer's perspective they do not exist — Stripe is the source
+    // of truth and we hard-delete the row after 24h via the cleanup cron. The
+    // user dashboard must never surface these as "cancelled" subscriptions.
     return this.subscriptionRepository.find({
-      where: { userId },
+      where: { userId, status: Not(SubscriptionStatus.INCOMPLETE) },
       order: { createdAt: 'DESC' },
     });
   }
@@ -55,7 +70,16 @@ export class SubscriptionService {
     // BaseEntity carries a @DeleteDateColumn — repository.findAndCount honors it
     // automatically (soft-deleted rows are excluded). Switching from QueryBuilder
     // to findAndCount avoids leaking soft-deleted subscriptions in the admin list.
-    const where = query.status !== undefined ? { status: query.status } : {};
+    //
+    // INCOMPLETE rows (subscriptions whose initial payment never confirmed)
+    // are filtered from the default admin listing for the same reason we hide
+    // them from the customer: they are not real subscriptions, just transient
+    // staging rows. An admin can still ask for them explicitly via
+    // `?status=incomplete` for debugging purposes.
+    const where =
+      query.status !== undefined
+        ? { status: query.status }
+        : { status: Not(SubscriptionStatus.INCOMPLETE) };
     const [items, total] = await this.subscriptionRepository.findAndCount({
       where,
       order: { createdAt: 'DESC' },

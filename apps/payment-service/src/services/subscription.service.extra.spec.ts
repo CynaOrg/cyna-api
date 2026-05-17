@@ -9,7 +9,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { RpcException } from '@nestjs/microservices';
-import { Repository } from 'typeorm';
+import { FindOperator, Repository } from 'typeorm';
 import Stripe from 'stripe';
 
 import { SubscriptionService } from './subscription.service';
@@ -84,16 +84,22 @@ describe('SubscriptionService (extra coverage)', () => {
   });
 
   describe('findAllAdmin', () => {
-    it('uses page=1/limit=20 defaults when query is empty', async () => {
+    it('uses page=1/limit=20 defaults when query is empty and excludes INCOMPLETE by default', async () => {
+      // INCOMPLETE rows are abandoned payment attempts — they must not pollute
+      // the admin listing. The filter is bypassed only when the caller asks
+      // for `status=incomplete` explicitly (see the dedicated test below).
       (repo.findAndCount as jest.Mock).mockResolvedValueOnce([[baseSub], 1]);
       const result = await service.findAllAdmin({});
       expect(result).toEqual({ items: [baseSub], total: 1, page: 1, limit: 20 });
-      expect(repo.findAndCount).toHaveBeenCalledWith({
-        where: {},
-        order: { createdAt: 'DESC' },
-        skip: 0,
-        take: 20,
-      });
+      const call = (repo.findAndCount as jest.Mock).mock.calls[0][0];
+      expect(call.where.status).toBeInstanceOf(FindOperator);
+      expect((call.where.status as FindOperator<unknown>).type).toBe('not');
+      expect((call.where.status as FindOperator<unknown>).value).toBe(
+        SubscriptionStatus.INCOMPLETE,
+      );
+      expect(call.order).toEqual({ createdAt: 'DESC' });
+      expect(call.skip).toBe(0);
+      expect(call.take).toBe(20);
     });
 
     it('clamps page to >= 1 even when the caller sends 0/-1', async () => {

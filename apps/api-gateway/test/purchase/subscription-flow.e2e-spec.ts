@@ -123,7 +123,7 @@ describe('Subscription Flow (e2e)', () => {
     });
 
     // Create a subscription first
-    await request(app.getHttpServer())
+    const createRes = await request(app.getHttpServer())
       .post('/api/v1/subscriptions')
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
@@ -131,6 +131,16 @@ describe('Subscription Flow (e2e)', () => {
         billingPeriod: BillingPeriod.MONTHLY,
         billingAddress,
       });
+    const subscriptionId = (createRes.body as SubscriptionCreateResponse).data.subscriptionId;
+
+    // The row is persisted in INCOMPLETE and is filtered out of every
+    // user/admin read until the `customer.subscription.updated` webhook flips
+    // it to ACTIVE. The webhook is asynchronous in real life; in this e2e
+    // suite we don't have Stripe firing real events, so we promote the row
+    // directly to ACTIVE to simulate that observable end state.
+    await paymentDataSource.query(`UPDATE subscriptions SET status = 'active' WHERE id = $1`, [
+      subscriptionId,
+    ]);
 
     // List subscriptions
     const res = await request(app.getHttpServer())
@@ -143,6 +153,33 @@ describe('Subscription Flow (e2e)', () => {
     expect(Array.isArray(body.data)).toBe(true);
     expect(body.data.length).toBeGreaterThanOrEqual(1);
     expect(body.data[0].productId).toBe(product.id);
+  });
+
+  it('should hide INCOMPLETE subscriptions from the user listing', async () => {
+    // Abandoned payment flow: the customer clicked "subscribe" (row created in
+    // INCOMPLETE) and walked away without paying. The cleanup cron will
+    // eventually hard-delete the row; in the meantime it must NEVER surface
+    // in the customer dashboard.
+    const { accessToken } = await loginUser(app, dataSource, eventsSpy, {
+      email: 'sub-abandoned@example.com',
+    });
+
+    await request(app.getHttpServer())
+      .post('/api/v1/subscriptions')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        productId: product.id,
+        billingPeriod: BillingPeriod.MONTHLY,
+        billingAddress,
+      });
+
+    const res = await request(app.getHttpServer())
+      .get('/api/v1/subscriptions')
+      .set('Authorization', `Bearer ${accessToken}`);
+
+    expect(res.status).toBe(200);
+    const body = res.body as SubscriptionsListResponse;
+    expect(body.data).toEqual([]);
   });
 
   it('should cancel a subscription and update its status', async () => {

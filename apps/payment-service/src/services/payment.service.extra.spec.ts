@@ -229,17 +229,18 @@ describe('PaymentService (extra coverage)', () => {
     });
   });
 
-  describe('getSubscriptionsForUser — non-admin path with Stripe sync', () => {
-    // IMPORTANT: enrichSubscriptions mutates the sub it receives (status,
-    // currentPeriodStart/End, productName). Each test must get a *fresh*
-    // instance to avoid cross-test pollution.
+  describe('getSubscriptionsForUser — non-admin path', () => {
+    // The DB row is the source of truth for the listing — Stripe webhooks
+    // keep status / period / cancelAtPeriodEnd in sync as they happen. The
+    // listing must NOT call Stripe per row (the old behavior added a
+    // 100-200 ms RTT × N to the admin page).
     const makeSub = () => ({
       id: 'sub-1',
       userId: 'user-1',
       productId: 'prod-1',
       productName: null,
       stripeSubscriptionId: 'sub_stripe_1',
-      status: SubscriptionStatus.PAST_DUE,
+      status: SubscriptionStatus.ACTIVE,
       billingPeriod: 'monthly',
       cancelAtPeriodEnd: false,
       currentPeriodStart: new Date('2026-01-01'),
@@ -250,77 +251,28 @@ describe('PaymentService (extra coverage)', () => {
       (subscriptionService.findByUserId as jest.Mock).mockResolvedValue([makeSub()]);
     });
 
-    it('writes back updates when Stripe status differs from local', async () => {
-      const now = Math.floor(Date.now() / 1000);
-      (stripeService.getSubscription as jest.Mock).mockResolvedValueOnce({
-        id: 'sub_stripe_1',
-        status: 'active',
-        cancel_at_period_end: false,
-        current_period_start: now,
-        current_period_end: now + 30 * 24 * 3600,
-      });
+    it('does not call Stripe per row when listing — DB is the source of truth', async () => {
       catalogClient.send.mockReturnValueOnce(of({ id: 'prod-1', nameFr: 'SOC Pro' }));
 
       const result = (await service.getSubscriptionsForUser('user-1')) as Record<string, unknown>[];
 
-      expect(subscriptionService.update).toHaveBeenCalledWith(
-        'sub-1',
-        expect.objectContaining({ status: SubscriptionStatus.ACTIVE }),
-      );
-      // productName auto-fill triggers a second update
+      expect(stripeService.getSubscription).not.toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+      expect(result[0].status).toBe(SubscriptionStatus.ACTIVE);
+    });
+
+    it('persists a missing productName back to the row after catalog lookup', async () => {
+      catalogClient.send.mockReturnValueOnce(of({ id: 'prod-1', nameFr: 'SOC Pro' }));
+
+      await service.getSubscriptionsForUser('user-1');
+
       expect(subscriptionService.update).toHaveBeenCalledWith(
         'sub-1',
         expect.objectContaining({ productName: 'SOC Pro' }),
       );
-      expect(result).toHaveLength(1);
-    });
-
-    it('falls back to start_date / cancel_at when current_period_* are missing (Stripe 2026 schema)', async () => {
-      const now = Math.floor(Date.now() / 1000);
-      (stripeService.getSubscription as jest.Mock).mockResolvedValueOnce({
-        id: 'sub_stripe_1',
-        status: 'active',
-        cancel_at_period_end: false,
-        start_date: now,
-        cancel_at: now + 30 * 24 * 3600,
-      });
-      catalogClient.send.mockReturnValueOnce(of(null));
-
-      await service.getSubscriptionsForUser('user-1');
-
-      expect(subscriptionService.update).toHaveBeenCalled();
-    });
-
-    it('computes a period end from start + billing period when Stripe gives only start_date', async () => {
-      const now = Math.floor(Date.now() / 1000);
-      (stripeService.getSubscription as jest.Mock).mockResolvedValueOnce({
-        id: 'sub_stripe_1',
-        status: 'active',
-        cancel_at_period_end: false,
-        start_date: now,
-      });
-      catalogClient.send.mockReturnValueOnce(of(null));
-
-      const result = (await service.getSubscriptionsForUser('user-1')) as Record<string, unknown>[];
-
-      expect(result[0]).toBeDefined();
-    });
-
-    it('survives Stripe sync failures (logs warn, returns row)', async () => {
-      (stripeService.getSubscription as jest.Mock).mockRejectedValueOnce(new Error('Stripe 500'));
-      catalogClient.send.mockReturnValueOnce(of(null));
-
-      const result = (await service.getSubscriptionsForUser('user-1')) as Record<string, unknown>[];
-
-      expect(result).toHaveLength(1);
-      expect(subscriptionService.update).not.toHaveBeenCalledWith(
-        'sub-1',
-        expect.objectContaining({ status: expect.any(String) }),
-      );
     });
 
     it('picks the primary image from product.images when primaryImageUrl is absent', async () => {
-      (stripeService.getSubscription as jest.Mock).mockRejectedValueOnce(new Error('skip'));
       catalogClient.send.mockReturnValueOnce(
         of({
           id: 'prod-1',
@@ -338,7 +290,6 @@ describe('PaymentService (extra coverage)', () => {
     });
 
     it('picks the first image when none is flagged primary', async () => {
-      (stripeService.getSubscription as jest.Mock).mockRejectedValueOnce(new Error('skip'));
       catalogClient.send.mockReturnValueOnce(
         of({
           id: 'prod-1',
@@ -361,69 +312,6 @@ describe('PaymentService (extra coverage)', () => {
       });
       const result = await service.getSubscriptionsForUser(undefined, true);
       expect(result).toEqual(expect.objectContaining({ data: [], total: 0, page: 1, limit: 20 }));
-    });
-
-    it('uses yearly billing to compute period end when needed', async () => {
-      const yearlySub = { ...makeSub(), billingPeriod: 'yearly' as const };
-      (subscriptionService.findByUserId as jest.Mock).mockResolvedValueOnce([yearlySub]);
-      const now = Math.floor(Date.now() / 1000);
-      (stripeService.getSubscription as jest.Mock).mockResolvedValueOnce({
-        id: 'sub_stripe_1',
-        status: 'active',
-        cancel_at_period_end: false,
-        start_date: now,
-      });
-      catalogClient.send.mockReturnValueOnce(of(null));
-
-      const result = (await service.getSubscriptionsForUser('user-1')) as Record<string, unknown>[];
-      expect(result).toHaveLength(1);
-    });
-  });
-
-  describe('mapStripeStatus (via getSubscriptionsForUser)', () => {
-    const baseSub = {
-      id: 'sub-1',
-      userId: 'user-1',
-      productId: 'prod-1',
-      productName: 'P',
-      stripeSubscriptionId: 'sub_s_1',
-      status: SubscriptionStatus.ACTIVE,
-      billingPeriod: 'monthly' as const,
-      cancelAtPeriodEnd: false,
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 3600 * 1000),
-    };
-
-    beforeEach(() => {
-      (subscriptionService.findByUserId as jest.Mock).mockResolvedValue([baseSub]);
-      catalogClient.send.mockReturnValue(of(null));
-    });
-
-    const cases: Array<[string, SubscriptionStatus]> = [
-      ['active', SubscriptionStatus.ACTIVE],
-      ['trialing', SubscriptionStatus.ACTIVE],
-      ['past_due', SubscriptionStatus.PAST_DUE],
-      ['canceled', SubscriptionStatus.CANCELLED],
-      ['cancelled', SubscriptionStatus.CANCELLED],
-      ['unpaid', SubscriptionStatus.UNPAID],
-      ['paused', SubscriptionStatus.PAUSED],
-      ['incomplete', SubscriptionStatus.CANCELLED],
-      ['incomplete_expired', SubscriptionStatus.CANCELLED],
-      ['martian', SubscriptionStatus.ACTIVE], // default branch
-    ];
-
-    it.each(cases)('maps Stripe status %s to local %s', async (stripeStatus, _expectedLocal) => {
-      (stripeService.getSubscription as jest.Mock).mockResolvedValueOnce({
-        id: 'sub_s_1',
-        status: stripeStatus,
-        cancel_at_period_end: false,
-        current_period_start: Math.floor(Date.now() / 1000),
-        current_period_end: Math.floor(Date.now() / 1000) + 86400,
-      });
-
-      await service.getSubscriptionsForUser('user-1');
-      // No throw == mapping branch executed. The actual writeback assertion
-      // is tangential and harder to pin per-status.
     });
   });
 

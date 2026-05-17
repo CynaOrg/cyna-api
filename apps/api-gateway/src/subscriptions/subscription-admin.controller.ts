@@ -198,31 +198,38 @@ export class SubscriptionAdminController {
   @ApiResponse({ status: 200, description: 'Subscription status updated' })
   @ApiResponse({ status: 400, description: 'Invalid action value' })
   @ApiResponse({ status: 404, description: 'Subscription not found' })
-  @ApiResponse({ status: 501, description: 'Action not implemented yet (reactivate/pause)' })
+  @ApiResponse({ status: 501, description: 'Action not implemented yet (pause)' })
   async updateStatus(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateSubscriptionStatusDto,
   ) {
-    // SUB-1: only `cancel` is wired end-to-end today. Reactivate and pause
-    // are accepted by validation (so the front knows the contract) but
-    // explicitly rejected with 501 until the payment-service handlers are
-    // implemented. Previously, anything ≠ 'cancel' fell through to
-    // REACTIVATE_SUBSCRIPTION which has no handler and silently timed out.
-    // TODO(SUB-1): implement payment.reactivate_subscription and
-    // payment.pause_subscription in payment-service, then route here.
-    if (dto.action !== SubscriptionActionEnum.CANCEL) {
-      throw new HttpException(`Subscription action '${dto.action}' is not implemented yet`, 501);
+    if (dto.action === SubscriptionActionEnum.CANCEL) {
+      return firstValueFrom(
+        this.paymentClient
+          .send(MESSAGE_PATTERNS.PAYMENT.CANCEL_SUBSCRIPTION, {
+            subscriptionId: id,
+            actor: 'admin',
+            cancelAtPeriodEnd: false,
+          })
+          .pipe(timeout(10000), retry(1), catchError(rpcToHttpError)),
+      );
     }
 
-    return firstValueFrom(
-      this.paymentClient
-        .send(MESSAGE_PATTERNS.PAYMENT.CANCEL_SUBSCRIPTION, {
-          subscriptionId: id,
-          actor: 'admin',
-          cancelAtPeriodEnd: false,
-        })
-        .pipe(timeout(10000), retry(1), catchError(rpcToHttpError)),
-    );
+    if (dto.action === SubscriptionActionEnum.REACTIVATE) {
+      return firstValueFrom(
+        this.paymentClient
+          .send(MESSAGE_PATTERNS.PAYMENT.REACTIVATE_SUBSCRIPTION, {
+            subscriptionId: id,
+            actor: 'admin',
+          })
+          .pipe(timeout(10000), retry(1), catchError(rpcToHttpError)),
+      );
+    }
+
+    // `pause` is still TODO — payment-service has no handler. We keep the
+    // explicit 501 (instead of a silent RPC timeout) so the BO can render a
+    // clear error if the button is ever clicked.
+    throw new HttpException(`Subscription action '${dto.action}' is not implemented yet`, 501);
   }
 
   @Patch(':subscriptionId/terms')

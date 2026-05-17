@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { RpcException } from '@nestjs/microservices';
-import { Repository } from 'typeorm';
+import { FindOperator, Repository } from 'typeorm';
 import { SubscriptionService } from './subscription.service';
 import { StripeService } from './stripe.service';
 import { Subscription } from '../entities/subscription.entity';
@@ -86,16 +86,23 @@ describe('SubscriptionService', () => {
   });
 
   describe('findByUserId', () => {
-    it('should return subscriptions ordered by createdAt DESC', async () => {
+    it('should return subscriptions ordered by createdAt DESC and exclude INCOMPLETE', async () => {
+      // INCOMPLETE rows are subscriptions whose initial payment never
+      // confirmed — they must never surface in the user dashboard. The cron
+      // hard-deletes them after 24h; this filter is the read-side safety net.
       (subscriptionRepository.find as jest.Mock).mockResolvedValueOnce([mockSubscription]);
 
       const result = await service.findByUserId('user-123');
 
       expect(result).toEqual([mockSubscription]);
-      expect(subscriptionRepository.find).toHaveBeenCalledWith({
-        where: { userId: 'user-123' },
-        order: { createdAt: 'DESC' },
-      });
+      const callArgs = (subscriptionRepository.find as jest.Mock).mock.calls[0][0];
+      expect(callArgs.where.userId).toBe('user-123');
+      expect(callArgs.where.status).toBeInstanceOf(FindOperator);
+      expect((callArgs.where.status as FindOperator<unknown>).type).toBe('not');
+      expect((callArgs.where.status as FindOperator<unknown>).value).toBe(
+        SubscriptionStatus.INCOMPLETE,
+      );
+      expect(callArgs.order).toEqual({ createdAt: 'DESC' });
     });
   });
 

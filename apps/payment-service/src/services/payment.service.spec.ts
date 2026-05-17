@@ -343,11 +343,16 @@ describe('PaymentService', () => {
         },
       });
 
+      // The row is persisted in INCOMPLETE state — see SubscriptionStatus and
+      // payment.service.ts: we mirror Stripe's `default_incomplete` staging
+      // state and let the `customer.subscription.updated` webhook promote it
+      // to ACTIVE once the first invoice is paid. If the customer abandons
+      // payment, the row stays INCOMPLETE and is hard-deleted by the cron.
       expect(subscriptionService.create).toHaveBeenCalledWith(
         expect.objectContaining({
           userId: 'user-1',
           productId: 'prod-1',
-          status: SubscriptionStatus.ACTIVE,
+          status: SubscriptionStatus.INCOMPLETE,
           billingPeriod: 'monthly',
           price: expect.any(Number),
           currency: 'EUR',

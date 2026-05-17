@@ -972,6 +972,28 @@ describe('OrderService', () => {
       const dt = (dateToCall![1] as { dateTo: Date }).dateTo;
       expect(dt.toISOString()).toBe('2026-06-15T10:00:00.000Z');
     });
+
+    it('excludes PENDING orders from the default admin listing', async () => {
+      // Abandoned checkouts (PENDING) are server-side staging rows and should
+      // never surface in the admin listing by default. They are hard-deleted
+      // by the PendingOrdersCleanupCron after 24h.
+      await service.adminGetOrders({});
+
+      const whereCalls = qb.andWhere.mock.calls;
+      const pendingExclusion = whereCalls.find((c) => c[0] === 'order.status != :pending');
+      expect(pendingExclusion).toBeDefined();
+      expect(pendingExclusion![1]).toEqual({ pending: OrderStatus.PENDING });
+    });
+
+    it('honors explicit status=pending filter for ad-hoc debugging', async () => {
+      // An admin can still reach PENDING rows explicitly if they really want
+      // to debug an in-flight checkout, even though the rows are 24h-lived.
+      await service.adminGetOrders({ status: 'pending' });
+
+      const whereCalls = qb.andWhere.mock.calls.map((c) => c[0] as string);
+      expect(whereCalls).toContain('order.status = :status');
+      expect(whereCalls).not.toContain('order.status != :pending');
+    });
   });
 
   describe('adminUpdateOrderStatus', () => {

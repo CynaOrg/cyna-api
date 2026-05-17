@@ -349,7 +349,7 @@ describe('SalesService', () => {
       const r = await service.getMrr();
       // MRR TTC: (20 + 120/12) × 1.2 = 36
       expect(r.currentMrr).toBe(36);
-      expect(r.history.length).toBe(4);
+      expect(r.history.length).toBe(12);
     });
 
     it('returns 0 MRR with no subscriptions', async () => {

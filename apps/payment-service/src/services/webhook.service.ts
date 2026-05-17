@@ -22,6 +22,7 @@ import {
   IssuedLicense as IssuedLicenseEvent,
 } from '@cyna-api/common';
 import { ProcessedWebhook } from '../entities/processed-webhook.entity';
+import { Subscription } from '../entities/subscription.entity';
 import { SubscriptionService } from './subscription.service';
 import {
   LicenseService,
@@ -564,8 +565,69 @@ export class WebhookService {
       return;
     }
 
+    // `customer.subscription.created` is emitted by Stripe at the moment we
+    // call `subscriptions.create` — i.e. BEFORE the first invoice is paid
+    // (Stripe status = `incomplete`). Sending the welcome email here would
+    // tell the customer "you're subscribed!" while they have not entered
+    // their card yet. We defer the welcome email to `subscription.updated`,
+    // which fires once Stripe flips the subscription to `active` after the
+    // initial PaymentIntent confirms.
+    if (subscription.status === SubscriptionStatus.INCOMPLETE) {
+      this.logger.debug(
+        `Deferring SUBSCRIPTION_CREATED notification for ${stripeSubId} until first invoice is paid`,
+      );
+      return;
+    }
+
     if (!subscription.notificationEmail) return;
 
+    this.emitSubscriptionCreatedEvent(subscription, data);
+  }
+
+  private async handleSubscriptionUpdated(data: Record<string, unknown>): Promise<void> {
+    this.logger.log(`Subscription updated on Stripe: ${data.id}`);
+
+    // Capture the local status BEFORE syncing — we use it below to detect the
+    // INCOMPLETE → ACTIVE transition and fire the deferred welcome email.
+    const previous = await this.subscriptionService.findByStripeId(data.id as string);
+    const previousStatus = previous?.status;
+
+    // Sync local state from Stripe
+    let synced: Subscription | null = null;
+    try {
+      synced = await this.subscriptionService.syncFromStripe(
+        data as unknown as Stripe.Subscription,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Could not sync subscription ${data.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
+      return;
+    }
+
+    // Welcome email is fired on the first transition out of INCOMPLETE into
+    // ACTIVE — that is the moment the first invoice has been confirmed paid
+    // and the subscription is real from the customer's perspective. Renewals
+    // ride on `invoice.paid` (SUBSCRIPTION_RENEWED), so we don't double-send.
+    if (
+      previousStatus === SubscriptionStatus.INCOMPLETE &&
+      synced.status === SubscriptionStatus.ACTIVE &&
+      synced.notificationEmail
+    ) {
+      this.emitSubscriptionCreatedEvent(synced, data);
+    }
+  }
+
+  /**
+   * Builds and emits the SUBSCRIPTION_CREATED notification event. Extracted so
+   * both the `subscription.created` (legacy path, only triggers for non-
+   * INCOMPLETE rows) and `subscription.updated` (new welcome path on the
+   * INCOMPLETE → ACTIVE transition) handlers can share the payload shape.
+   */
+  private emitSubscriptionCreatedEvent(
+    subscription: Subscription,
+    data: Record<string, unknown>,
+  ): void {
     const items = data.items as Record<string, unknown> | undefined;
     const itemsData = (items?.data as Array<Record<string, unknown>>) || [];
     const firstItem = itemsData[0];
@@ -578,7 +640,7 @@ export class WebhookService {
     const event: SubscriptionCreatedEvent = {
       subscriptionId: subscription.id,
       userId: subscription.userId,
-      email: subscription.notificationEmail,
+      email: subscription.notificationEmail as string,
       language: subscription.notificationLanguage ?? Language.FR,
       productName: subscription.productName ?? 'Subscription',
       billingPeriod,
@@ -588,24 +650,26 @@ export class WebhookService {
     this.notificationClient.emit(EVENT_PATTERNS.PAYMENT.SUBSCRIPTION_CREATED, event);
   }
 
-  private async handleSubscriptionUpdated(data: Record<string, unknown>): Promise<void> {
-    this.logger.log(`Subscription updated on Stripe: ${data.id}`);
-
-    // Sync local state from Stripe
-    try {
-      await this.subscriptionService.syncFromStripe(data as unknown as Stripe.Subscription);
-    } catch (error) {
-      this.logger.warn(
-        `Could not sync subscription ${data.id}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-      );
-    }
-  }
-
   private async handleSubscriptionDeleted(data: Record<string, unknown>): Promise<void> {
     this.logger.log(`Subscription deleted on Stripe: ${data.id}`);
 
     const subscription = await this.subscriptionService.findByStripeId(data.id as string);
     if (!subscription) return;
+
+    // If the local row is still INCOMPLETE, this `subscription.deleted` event
+    // is Stripe's `incomplete_expired` path — the customer never paid, so the
+    // subscription never really existed for the user. Hard-delete the row to
+    // mirror that, and skip the cancellation notification (sending "your
+    // subscription has been cancelled" for something the customer never paid
+    // for is confusing). The cleanup cron is the safety net for missed
+    // webhooks; this branch handles the happy path.
+    if (subscription.status === SubscriptionStatus.INCOMPLETE) {
+      await this.subscriptionService.delete(subscription.id);
+      this.logger.log(
+        `Deleted abandoned incomplete subscription ${subscription.id} (stripeId=${data.id})`,
+      );
+      return;
+    }
 
     subscription.status = SubscriptionStatus.CANCELLED;
     subscription.endedAt = new Date();

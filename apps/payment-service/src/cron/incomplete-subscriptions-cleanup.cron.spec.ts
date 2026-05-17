@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { OrderStatus } from '@cyna-api/common';
-import { Order } from '../entities/order.entity';
-import { PendingOrdersCleanupCron } from './pending-orders-cleanup.cron';
+import { SubscriptionStatus } from '@cyna-api/common';
+import { Subscription } from '../entities/subscription.entity';
+import { IncompleteSubscriptionsCleanupCron } from './incomplete-subscriptions-cleanup.cron';
 
-describe('PendingOrdersCleanupCron', () => {
-  let cron: PendingOrdersCleanupCron;
-  let orderRepository: Partial<Repository<Order>>;
+describe('IncompleteSubscriptionsCleanupCron', () => {
+  let cron: IncompleteSubscriptionsCleanupCron;
+  let subscriptionRepository: Partial<Repository<Subscription>>;
   let qbExecute: jest.Mock;
   let qbWhere: jest.Mock;
   let qbAndWhere: jest.Mock;
@@ -33,59 +33,59 @@ describe('PendingOrdersCleanupCron', () => {
     qbWhere.mockReturnValue(queryBuilder);
     qbAndWhere.mockReturnValue(queryBuilder);
 
-    orderRepository = {
+    subscriptionRepository = {
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilder),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        PendingOrdersCleanupCron,
-        { provide: getRepositoryToken(Order), useValue: orderRepository },
+        IncompleteSubscriptionsCleanupCron,
+        { provide: getRepositoryToken(Subscription), useValue: subscriptionRepository },
       ],
     }).compile();
 
-    cron = module.get<PendingOrdersCleanupCron>(PendingOrdersCleanupCron);
+    cron = module.get<IncompleteSubscriptionsCleanupCron>(IncompleteSubscriptionsCleanupCron);
   });
 
-  it('should issue a set-based DELETE constrained to stale PENDING rows', async () => {
+  it('issues a set-based DELETE constrained to stale INCOMPLETE rows', async () => {
     await cron.handle();
 
-    // Hard DELETE (not flip to CANCELLED): an abandoned cart that never paid
-    // is not a cancelled order — it is a phantom that should not exist
-    // anywhere (admin listings, customer dashboard, analytics).
+    // Hard DELETE (not soft, not flip to CANCELLED): an unpaid subscription
+    // is not a cancelled subscription. The user never owned it, the admin has
+    // nothing to do with it, analytics must not count it.
     expect(qbDelete).toHaveBeenCalled();
-    expect(qbFrom).toHaveBeenCalledWith(Order);
-    expect(qbWhere).toHaveBeenCalledWith('status = :pending', { pending: OrderStatus.PENDING });
-    // The `updated_at` cutoff is now-dependent — assert it's a Date, not a
-    // specific timestamp.
+    expect(qbFrom).toHaveBeenCalledWith(Subscription);
+    expect(qbWhere).toHaveBeenCalledWith('status = :incomplete', {
+      incomplete: SubscriptionStatus.INCOMPLETE,
+    });
     const andWhereCall = qbAndWhere.mock.calls[0];
     expect(andWhereCall[0]).toBe('updated_at < :threshold');
     expect(andWhereCall[1].threshold).toBeInstanceOf(Date);
     expect(qbExecute).toHaveBeenCalledTimes(1);
   });
 
-  it('should be a no-op when nothing matches (idempotent re-run)', async () => {
+  it('is a no-op when nothing matches (idempotent re-run)', async () => {
     qbExecute.mockResolvedValueOnce({ affected: 0 });
 
     await cron.handle();
 
-    // The WHERE clause filters on PENDING, so re-running the cron on an
-    // already-cleaned table is a true no-op (zero rows match). Set-based
-    // DELETE keeps the operation atomic against a concurrent Stripe webhook
-    // flipping the same row to PAID — the WHERE guard ensures no race.
+    // The WHERE status='incomplete' guard makes the cron race-safe against a
+    // concurrent Stripe webhook flipping the same row to ACTIVE: if the row
+    // was already promoted, the WHERE no longer matches and DELETE is a
+    // no-op. Re-running is therefore always safe.
     expect(qbExecute).toHaveBeenCalledTimes(1);
   });
 
-  it('should log when rows are deleted', async () => {
-    qbExecute.mockResolvedValueOnce({ affected: 3 });
+  it('logs the count when rows are deleted', async () => {
+    qbExecute.mockResolvedValueOnce({ affected: 5 });
     const logSpy = jest.spyOn((cron as unknown as { logger: { log: jest.Mock } }).logger, 'log');
 
     await cron.handle();
 
-    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Hard-deleted 3'));
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Hard-deleted 5'));
   });
 
-  it('should stay silent when zero rows match', async () => {
+  it('stays silent when zero rows match', async () => {
     qbExecute.mockResolvedValueOnce({ affected: 0 });
     const logSpy = jest.spyOn((cron as unknown as { logger: { log: jest.Mock } }).logger, 'log');
 

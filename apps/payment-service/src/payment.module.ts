@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 import {
@@ -17,16 +18,19 @@ import {
   LicenseService,
   WebhookService,
 } from './services';
+import { IncompleteSubscriptionsCleanupCron } from './cron/incomplete-subscriptions-cleanup.cron';
 import { AddProductSnapshotToLicenseKeys1776845407292 } from './migrations/1776845407292-AddProductSnapshotToLicenseKeys';
 import { AddActivationFlowToLicenseKeys1777200000000 } from './migrations/1777200000000-AddActivationFlowToLicenseKeys';
 import { AddStripeInvoiceUrlToSubscriptions1777300000001 } from './migrations/1777300000001-AddStripeInvoiceUrlToSubscriptions';
 import { CreateProcessedWebhooksTable1777600000001 } from './migrations/1777600000001-CreateProcessedWebhooksTable';
+import { AddIncompleteSubscriptionStatus1777700000001 } from './migrations/1777700000001-AddIncompleteSubscriptionStatus';
 
 @Module({
   imports: [
     CynaConfigModule,
     HealthModule.forService('payment-service'),
     LoggerModule,
+    ScheduleModule.forRoot(),
     TypeOrmModule.forRoot({
       type: 'postgres',
       host: process.env.DATABASE_HOST || 'localhost',
@@ -40,6 +44,7 @@ import { CreateProcessedWebhooksTable1777600000001 } from './migrations/17776000
         AddActivationFlowToLicenseKeys1777200000000,
         AddStripeInvoiceUrlToSubscriptions1777300000001,
         CreateProcessedWebhooksTable1777600000001,
+        AddIncompleteSubscriptionStatus1777700000001,
       ],
       migrationsRun: process.env.DATABASE_MIGRATIONS_RUN === 'true',
       synchronize: isDatabaseSyncEnabled(),
@@ -86,6 +91,13 @@ import { CreateProcessedWebhooksTable1777600000001 } from './migrations/17776000
     ]),
   ],
   controllers: [PaymentController, WebhookEventController],
-  providers: [StripeService, PaymentService, SubscriptionService, LicenseService, WebhookService],
+  providers: [
+    StripeService,
+    PaymentService,
+    SubscriptionService,
+    LicenseService,
+    WebhookService,
+    IncompleteSubscriptionsCleanupCron,
+  ],
 })
 export class PaymentModule {}

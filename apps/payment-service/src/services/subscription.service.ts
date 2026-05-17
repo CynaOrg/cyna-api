@@ -169,6 +169,78 @@ export class SubscriptionService {
     return this.subscriptionRepository.save(subscription);
   }
 
+  /**
+   * Reactivate a subscription that was scheduled to cancel at the end of the
+   * current billing period (cancel_at_period_end = true) but has not yet
+   * expired. Tells Stripe to drop the scheduled cancellation, then clears the
+   * matching local flags.
+   *
+   * Subscriptions that are already terminated (status = CANCELLED, endedAt set)
+   * cannot be revived this way — Stripe requires a brand-new subscription in
+   * that case. We surface this as a 400 so the UI can prompt the customer to
+   * re-subscribe instead of silently failing.
+   */
+  async reactivate(
+    subscriptionId: string,
+    actor: 'user' | 'admin',
+    userId: string | undefined,
+  ): Promise<Subscription> {
+    const subscription = await this.findById(subscriptionId);
+    if (!subscription) {
+      throw new RpcException({
+        statusCode: 404,
+        message: 'errors.payment.subscriptionNotFound',
+        code: 'SUBSCRIPTION_NOT_FOUND',
+      });
+    }
+
+    if (actor === 'user') {
+      if (!userId) {
+        throw new RpcException({
+          statusCode: 400,
+          message: 'errors.payment.subscriptionUserIdRequired',
+          code: 'SUBSCRIPTION_USER_ID_REQUIRED',
+        });
+      }
+      if (subscription.userId !== userId) {
+        throw new RpcException({
+          statusCode: 403,
+          message: 'errors.payment.subscriptionForbidden',
+          code: 'SUBSCRIPTION_FORBIDDEN',
+        });
+      }
+    }
+
+    // A subscription that already ended (terminal status) cannot be reactivated
+    // — Stripe requires a fresh `subscriptions.create`. Only the
+    // "scheduled-to-cancel, still inside the paid period" state is reversible.
+    if (subscription.status === SubscriptionStatus.CANCELLED || subscription.endedAt) {
+      throw new RpcException({
+        statusCode: 400,
+        message: 'errors.payment.subscriptionAlreadyTerminated',
+        code: 'SUBSCRIPTION_ALREADY_TERMINATED',
+      });
+    }
+
+    if (!subscription.cancelAtPeriodEnd) {
+      // Idempotent: caller asked to reactivate something that is not pending
+      // cancellation. Return the row as-is rather than 400 — keeps the BO
+      // happy if the user double-clicks.
+      return subscription;
+    }
+
+    await this.stripeService.updateSubscription(subscription.stripeSubscriptionId, {
+      cancel_at_period_end: false,
+    });
+
+    subscription.cancelAtPeriodEnd = false;
+    subscription.cancelledAt = null;
+    // status stays ACTIVE — the row was never flipped to CANCELLED for a
+    // period-end cancel; only the schedule flag was set.
+
+    return this.subscriptionRepository.save(subscription);
+  }
+
   async syncFromStripe(stripeSubscription: Stripe.Subscription): Promise<Subscription> {
     const subscription = await this.findByStripeId(stripeSubscription.id);
     if (!subscription) {

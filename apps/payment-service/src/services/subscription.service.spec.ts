@@ -42,6 +42,7 @@ describe('SubscriptionService', () => {
 
     stripeService = {
       cancelSubscription: jest.fn().mockResolvedValue({ id: 'sub_stripe_123' }),
+      updateSubscription: jest.fn().mockResolvedValue({ id: 'sub_stripe_123' }),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -230,6 +231,104 @@ describe('SubscriptionService', () => {
         const rpcError = (error as RpcException).getError() as Record<string, unknown>;
         expect(rpcError.code).toBe('SUBSCRIPTION_USER_ID_REQUIRED');
       }
+    });
+  });
+
+  describe('reactivate', () => {
+    const scheduledForCancel = {
+      ...mockSubscription,
+      status: SubscriptionStatus.ACTIVE,
+      cancelAtPeriodEnd: true,
+      cancelledAt: new Date('2026-05-17T12:00:00Z'),
+      endedAt: null,
+    };
+
+    it('clears cancel_at_period_end on Stripe and the local row when scheduled to cancel', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        ...scheduledForCancel,
+      });
+      (subscriptionRepository.save as jest.Mock).mockImplementation((sub) => sub);
+
+      const result = await service.reactivate('sub-123', 'admin', undefined);
+
+      expect(stripeService.updateSubscription).toHaveBeenCalledWith('sub_stripe_123', {
+        cancel_at_period_end: false,
+      });
+      expect(result.cancelAtPeriodEnd).toBe(false);
+      expect(result.cancelledAt).toBeNull();
+      expect(result.status).toBe(SubscriptionStatus.ACTIVE);
+    });
+
+    it('throws SUBSCRIPTION_ALREADY_TERMINATED when status is CANCELLED', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        ...mockSubscription,
+        status: SubscriptionStatus.CANCELLED,
+        endedAt: new Date(),
+      });
+
+      try {
+        await service.reactivate('sub-123', 'admin', undefined);
+        fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(RpcException);
+        const rpcError = (error as RpcException).getError() as Record<string, unknown>;
+        expect(rpcError.code).toBe('SUBSCRIPTION_ALREADY_TERMINATED');
+        expect(rpcError.statusCode).toBe(400);
+      }
+      expect(stripeService.updateSubscription).not.toHaveBeenCalled();
+    });
+
+    it('is idempotent — returns row unchanged when cancel_at_period_end is already false', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        ...mockSubscription,
+        status: SubscriptionStatus.ACTIVE,
+        cancelAtPeriodEnd: false,
+        endedAt: null,
+      });
+
+      await service.reactivate('sub-123', 'admin', undefined);
+
+      // No Stripe round trip, no save — caller double-clicked, we no-op.
+      expect(stripeService.updateSubscription).not.toHaveBeenCalled();
+      expect(subscriptionRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects user-initiated reactivate without userId', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        ...scheduledForCancel,
+      });
+
+      try {
+        await service.reactivate('sub-123', 'user', undefined);
+        fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(RpcException);
+        const rpcError = (error as RpcException).getError() as Record<string, unknown>;
+        expect(rpcError.code).toBe('SUBSCRIPTION_USER_ID_REQUIRED');
+      }
+    });
+
+    it('returns SUBSCRIPTION_FORBIDDEN when user does not own the subscription', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce({
+        ...scheduledForCancel,
+      });
+
+      try {
+        await service.reactivate('sub-123', 'user', 'other-user');
+        fail('Should have thrown');
+      } catch (error) {
+        expect(error).toBeInstanceOf(RpcException);
+        const rpcError = (error as RpcException).getError() as Record<string, unknown>;
+        expect(rpcError.code).toBe('SUBSCRIPTION_FORBIDDEN');
+      }
+    });
+
+    it('throws SUBSCRIPTION_NOT_FOUND when row is missing', async () => {
+      (subscriptionRepository.findOne as jest.Mock).mockResolvedValueOnce(null);
+
+      await expect(service.reactivate('sub-nope', 'admin', undefined)).rejects.toMatchObject({
+        constructor: RpcException,
+      });
     });
   });
 
